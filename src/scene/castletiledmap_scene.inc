@@ -58,6 +58,10 @@ type
     destructor Destroy; override;
     function PropertySections(const PropertyName: String): TPropertySections; override;
 
+    procedure PlayAnimations;
+    procedure StopAnimations(const ResetAnimations: Boolean);
+    function AnimationsCount: Integer;
+
     { Currently loaded map (from @link(URL)), if any.
       @nil if no map is loaded (when @link(URL) is empty). Read-only. }
     property Map: TCastleTiledMapData read FMap;
@@ -202,6 +206,8 @@ begin
       Converter.Layers := Layers;
       Converter.ConvertMap;
       FScene.Load(Converter.RootNode, true);
+      PlayAnimations;
+
     finally FreeAndNil(Converter) end;
   end;
 end;
@@ -244,6 +250,38 @@ begin
     FLayers := Value;
     ReloadMap;
   end;
+end;
+
+procedure TCastleTiledMap.PlayAnimations;
+var
+  I: Integer;
+  TimeSensor: TTimeSensorNode;
+begin
+  FScene.ProcessEvents := True;
+  for I := 0 to FScene.AnimationsList.Count - 1 do
+  begin
+    TimeSensor := FScene.AnimationsList.Objects[I] as TTimeSensorNode;
+    TimeSensor.Start(True);
+  end;
+end;
+
+procedure TCastleTiledMap.StopAnimations(const ResetAnimations: Boolean);
+var
+  I: Integer;
+  TimeSensor: TTimeSensorNode;
+begin
+  for I := 0 to FScene.AnimationsList.Count - 1 do
+  begin
+    TimeSensor := FScene.AnimationsList.Objects[I] as TTimeSensorNode;
+    TimeSensor.Stop;
+    if ResetAnimations then
+      TimeSensor.FakeTime(0, False, True);
+  end;
+end;
+
+function TCastleTiledMap.AnimationsCount: Integer;
+begin
+  Result := FScene.AnimationsList.Count;
 end;
 
 function TCastleTiledMap.GetAssumePerfectRenderingOrder: Boolean;
