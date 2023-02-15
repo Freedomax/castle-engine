@@ -46,9 +46,9 @@ uses // FPC and LCL units
   // CGE units
   CastleSceneCore, CastleScene, CastleLCLUtils, X3DLoad, X3DNodes, CastleCameras,
   CastleUIControls, CastleControl, CastleControls, CastleImages, CastleTransform,
-  CastleVectors, CastleUtils, CastleColors, CastleViewport, CastleDialogs,
+  CastleVectors, CastleRectangles, CastleUtils, CastleColors, CastleViewport, CastleDialogs,
   CastleTiledMap, CastleGLImages, CastleStringUtils, CastleFilesUtils,
-  CastleInternalExposeTransformsDialog, CastleInternalTiledLayersDialog,
+  CastleInternalExposeTransformsDialog, CastleInternalTiledLayersDialog,CastleInternalRegionDialog,
   CastleSoundEngine, CastleFonts,
   CastleScriptParser, CastleInternalLclDesign, CastleTerrain, CastleLog,
   CastleEditorAccess, CastleRenderOptions, CastleThirdPersonNavigation;
@@ -65,6 +65,7 @@ uses // FPC and LCL units
 {$I castlepropedits_vector.inc}
 {$I castlepropedits_image.inc}
 {$I castlepropedits_protectedsides.inc}
+{$I castlepropedits_region.inc}
 {$I castlepropedits_number.inc}
 {$I castlepropedits_exposetransforms.inc}
 {$I castlepropedits_tiledlayers.inc}
@@ -146,8 +147,12 @@ begin
     in castle-editor and Lazarus design-time. }
   RegisterPropertyEditor(TypeInfo(TCastleRootTransform), TCastleViewport, 'Items',
     TSubPropertiesEditor);
-  RegisterPropertyEditor(TypeInfo(TBorder), nil, '',
-    TCastleProtectedSidesEditor);
+  {RegisterPropertyEditor(TypeInfo(TBorder), nil, '',
+    TCastleProtectedSidesEditor);}
+  RegisterPropertyEditor(TypeInfo(TBorder), nil, 'ProtectedSides',
+    TCastleRegionEditor);
+  RegisterPropertyEditor(TypeInfo(TFloatRectanglePersistent), nil, 'RegionPersistent',
+    TCastleRegionEditor);
 
   { Other properties }
   RegisterPropertyEditor(TypeInfo(TCastleImagePersistent), nil, '',

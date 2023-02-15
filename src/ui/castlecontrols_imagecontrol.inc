@@ -62,6 +62,8 @@
     function GetSmoothScaling: Boolean;
     function GetCache: Boolean;
     function GetProtectedSides: TBorder;
+    function GetRegion: TRegion;
+    function GetRegionEnabled: Boolean;
     procedure SetURL(const Value: String);
     procedure SetDrawableImage(const Value: TDrawableImage);
     procedure SetOwnsDrawableImage(const Value: Boolean);
@@ -73,6 +75,8 @@
     procedure SetColor(const Value: TCastleColor);
     procedure SetClip(const Value: boolean);
     procedure SetClipLine(const Value: TVector3);
+    procedure SetRegion(const Value: TRegion);
+    procedure SetRegionEnabled(const Value: Boolean);
     procedure SetCustomShader(const Value: TGLSLProgram);
     procedure SetFlipVertical(const Value: Boolean);
     procedure SetFlipHorizontal(const Value: Boolean);
@@ -216,6 +220,7 @@
 
       @seealso TCastleImagePersistent.ClipLine }
     property ClipLine: TVector3 read GetClipLine write SetClipLine;
+    property Region: TRegion read GetRegion write SetRegion;
 
     { Custom GLSL shading code.
       See TDrawableImage.CustomShader for explanation.
@@ -341,6 +346,8 @@
       @seealso TCastleImagePersistent.ProtectedSides }
     property ProtectedSides: TBorder read GetProtectedSides stored false;
 
+    property RegionEnabled: Boolean read GetRegionEnabled write SetRegionEnabled stored false;
+
     { Set this to auto-detect that image is scaled compared to it's desired size.
       This detects URL endings like 'xxx@2x.png', and we will automatically adjust
       to it (the size determined by AutoSize will be actually 2x smaller than
@@ -395,7 +402,17 @@ begin
   Result := FContent.ProtectedSides;
 end;
 
-function TCastleImageControl.GetSmoothScaling: boolean;
+function TCastleImageControl.GetRegion: TRegion;
+begin
+  Result := FContent.Region;
+end;
+
+function TCastleImageControl.GetRegionEnabled: Boolean;
+begin
+  Result := FContent.RegionEnabled;
+end;
+
+function TCastleImageControl.GetSmoothScaling: Boolean;
 begin
   Result := FContent.SmoothScaling;
 end;
@@ -423,6 +440,16 @@ end;
 procedure TCastleImageControl.SetClipLine(const Value: TVector3);
 begin
   FContent.ClipLine := Value;
+end;
+
+procedure TCastleImageControl.SetRegion(const Value: TRegion);
+begin
+  FContent.Region := Value;
+end;
+
+procedure TCastleImageControl.SetRegionEnabled(const Value: Boolean);
+begin
+  FContent.RegionEnabled := Value;
 end;
 
 function TCastleImageControl.GetRotation: Single;
@@ -467,8 +494,8 @@ var
 begin
   inherited;
 
-  ImageWidth  := FContent.DrawableImage.Width;
-  ImageHeight := FContent.DrawableImage.Height;
+  ImageWidth  := FContent.Width;
+  ImageHeight := FContent.Height;
   if FDetectScaleFromUrl and (FContent.ScaleFromUrl <> 1) then
   begin
     ImageWidth  := ImageWidth / FContent.ScaleFromUrl;
@@ -712,6 +739,8 @@ begin
      (PropertyName = 'FlipHorizontal') or
      (PropertyName = 'FlipVertical') or
      (PropertyName = 'ProtectedSides') or
+     (PropertyName = 'RegionPersistent') or
+     (PropertyName = 'RegionEnabled') or
      (PropertyName = 'Rotation') then
     Result := [psBasic]
   else

@@ -68,6 +68,8 @@
 
     { Parameters used in Draw. }
     FProtectedSides: TBorder;
+    FRegion: TRegion;
+    FRegionEnabled :Boolean;
     FFlipHorizontal: Boolean;
     FFlipVertical: Boolean;
 
@@ -75,6 +77,8 @@
     function GetOwnsImage: boolean;
     procedure SetOwnsImage(const Value: boolean);
     procedure SetCache(const Value: Boolean);
+    procedure SetRegion(const AValue: TRegion);
+    procedure SetRegionEnabled(const AValue: Boolean);
     procedure SetURL(const Value: string);
     procedure SetImage(const Value: TEncodedImage);
     procedure SetDrawableImage(const Value: TDrawableImage);
@@ -192,6 +196,9 @@
       which means that image colors are unchanged. }
     property Color: TCastleColor read FColor write SetColor;
 
+    { Cropped region. "empty region"(Width<0 or Height<0) means using the whole image. }
+    property Region: TRegion read FRegion write SetRegion ;
+
     property InternalVisualizeProtectedSides: Boolean
       read FInternalVisualizeProtectedSides write FInternalVisualizeProtectedSides default true;
 
@@ -201,9 +208,16 @@
       (colors, or maybe even image size) you need to call this. }
     procedure ImageChanged;
 
+    { Value that have been cut by Region }
     function Width: Cardinal;
+
+    { Value that have been cut by Region }
     function Height: Cardinal;
+
     function Empty: Boolean;
+
+    { Determining if image should be clipped }
+    function Clipped: Boolean;
 
     { Draw the image in given screen area. }
     procedure Draw(const ScreenRectangle: TFloatRectangle);
@@ -287,6 +301,8 @@
       and https://en.wikipedia.org/wiki/9-slice_scaling to scale the image. }
     property ProtectedSides: TBorder read FProtectedSides;
 
+    property RegionEnabled: Boolean read FRegionEnabled write SetRegionEnabled default false;
+
   {$define read_interface_class}
   {$I auto_generated_persistent_vectors/tcastleimagepersistent_persistent_vectors.inc}
   {$undef read_interface_class}
@@ -307,6 +323,7 @@ begin
   FScaleCorners := 1;
   FScaleFromUrl := 1;
   FInternalVisualizeProtectedSides := true;
+  FRegion := TFloatRectangle.Empty;
 
   FProtectedSides := TBorder.Create({$ifdef FPC}@{$endif}ProtectedSidesChange);
   CreateDrawableImage;
@@ -443,6 +460,32 @@ begin
   end;
 end;
 
+procedure TCastleImagePersistent.SetRegion(const AValue: TRegion);
+function SameFloatRectangle(const a,b:TFloatRectangle):Boolean;
+begin
+ Result := (SameValue(a.Left  , b.Left)) and
+      (SameValue(a.Bottom, b.Bottom)) and
+      (SameValue(a.Width , b.Width)) and
+      (SameValue(a.Height, b.Height));
+end;
+
+begin
+  { don't use 'PerfectlyEquals' or 'Equals' to judge.
+    Otherwise, if the Region is empty, it cannot be modified in the editor.}
+  if SameFloatRectangle(FRegion, AValue) then Exit;
+
+  FRegion := AValue;
+  DoChange;
+end;
+
+procedure TCastleImagePersistent.SetRegionEnabled(const AValue: Boolean);
+begin
+  if FRegionEnabled = AValue then Exit;
+
+  FRegionEnabled := AValue;
+  DoChange;
+end;
+
 function TCastleImagePersistent.GetImage: TEncodedImage;
 begin
   Result := FDrawableImage.Image;
@@ -515,17 +558,28 @@ end;
 
 function TCastleImagePersistent.Width: Cardinal;
 begin
-  Result := FDrawableImage.Width;
+  if Clipped then
+    Result := Min(Floor(FRegion.Width), FDrawableImage.Width)
+  else
+    Result := FDrawableImage.Width;
 end;
 
 function TCastleImagePersistent.Height: Cardinal;
 begin
-  Result := FDrawableImage.Height;
+  if Clipped then
+    Result := Min(Floor(FRegion.Height), FDrawableImage.Height)
+  else
+    Result := FDrawableImage.Height;
 end;
 
 function TCastleImagePersistent.Empty: Boolean;
 begin
-  Result := (FDrawableImage.Width = 0) or (FDrawableImage.Height = 0);
+  Result := (Width = 0) or (Height = 0);
+end;
+
+function TCastleImagePersistent.Clipped: Boolean;
+begin
+  Result := FRegionEnabled and (not FRegion.IsEmpty);
 end;
 
 procedure TCastleImagePersistent.DrawUiBegin(const NewScaleCorners: Single);
@@ -596,8 +650,13 @@ procedure TCastleImagePersistent.Draw(
     ], Vector4(1, 1, 0, 0.5));
   end;
 
+  function ImageRect():TFloatRectangle;
+  begin
+    if Clipped then Result := FRegion else Result := FloatRectangle(0, 0, FDrawableImage.Width, FDrawableImage.Height);
+  end;
+
 var
-  ProtectedSidesVector: TVector4;
+  ProtectedSidesVector, SrcSidesVector: TVector4;
 begin
   if (DrawableImage.Width = 0) or (DrawableImage.Height = 0) then Exit;
 
@@ -619,9 +678,9 @@ begin
   if not FProtectedSides.Exists then
   begin
     if FlipHorizontal or FlipVertical then
-      FDrawableImage.DrawFlipped(ScreenRectangle, FlipHorizontal, FlipVertical)
+      FDrawableImage.DrawFlipped(ScreenRectangle, ImageRect, FlipHorizontal, FlipVertical)
     else
-      FDrawableImage.Draw(ScreenRectangle);
+      FDrawableImage.Draw(ScreenRectangle, ImageRect);
   end else
   begin
     // TODO: FlipHorizontal, FlipVertical ignored in this case
@@ -631,7 +690,17 @@ begin
       ProtectedSides.TotalBottom,
       ProtectedSides.TotalLeft
     );
-    FDrawableImage.Draw3x3(ScreenRectangle, ProtectedSidesVector);
+    if Clipped then
+      SrcSidesVector := Vector4(
+        FDrawableImage.Height - FRegion.Top,
+        FDrawableImage.Width - FRegion.Right,
+        FRegion.Bottom,
+        FRegion.Left
+      ) 
+	else
+      SrcSidesVector := TVector4.Zero;
+
+    FDrawableImage.Draw3x3(ScreenRectangle, ProtectedSidesVector, SrcSidesVector);
 
     if CastleDesignMode and InternalVisualizeProtectedSides and ProtectedSides.Exists then
       VisualizeProtectedSides;
