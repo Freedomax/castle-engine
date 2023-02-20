@@ -100,17 +100,30 @@ type
   }
   TCastleRenderUnlitMesh = class
   strict private
-    Shader: TGLSLProgram;
-    UniformModelViewProjectionMatrix, UniformColor: TGLSLUniform;
-    AttributeVertex: TGLSLAttribute;
-    FUseColor: Boolean;
-    FColor: TCastleColor;
-    VboVertex, VboIndex: TGLuint;
-    VertexAllocatedBytes, IndexAllocatedBytes,
-      VertexAllocatedItems, IndexAllocatedItems: Cardinal;
-    FixedFunctionVertexes: TVector4List;
-    FixedFunctionIndexes: TUInt16List;
-    Vao: TVertexArrayObject;
+    type
+      TProgram = record
+        Shader: TGLSLProgram;
+        UniformModelViewProjectionMatrix, UniformColor: TGLSLUniform;
+        AttributeVertex: TGLSLAttribute;
+      end;
+
+    class var
+      Programs: array [ { UseColor? } Boolean ] of TProgram;
+
+    var
+      FUseColor: Boolean;
+      FColor: TCastleColor;
+      VboVertex, VboIndex: TGLuint;
+      VertexAllocatedBytes, IndexAllocatedBytes,
+        VertexAllocatedItems, IndexAllocatedItems: Cardinal;
+      FixedFunctionVertexes: TVector4List;
+      FixedFunctionIndexes: TUInt16List;
+      Vao: TVertexArrayObject;
+
+    class procedure PrepareShader(const AUseColor: Boolean);
+    procedure SetUseColor(const Value: Boolean);
+  private
+    class procedure StaticGLContextClose;
   public
     { By default all zeros, you must set this before any rendering. }
     ModelViewProjection: TMatrix4;
@@ -138,7 +151,9 @@ type
     procedure SetVertexes(const Vertexes: PVector4; const VertexesCount: Cardinal;
       const UsageDynamic: Boolean); overload;
 
-    property UseColor: Boolean read FUseColor;
+    { Should we render with @link(Color) (if @false, output color is undefined). }
+    property UseColor: Boolean read FUseColor write SetUseColor;
+
     { Color used for unlit rendering, if only UseColor is @true. Opaque white by default. }
     property Color: TCastleColor read FColor write FColor;
 
@@ -165,52 +180,70 @@ const
   );
 
 constructor TCastleRenderUnlitMesh.Create(const AUseColor: Boolean);
-const
-  SimplestVS = {$I simplest.vs.inc};
-  SimplestFS = {$I simplest.fs.inc};
-  SimplestUnlitFS = {$I simplest_unlit.fs.inc};
 begin
   inherited Create;
   FUseColor := AUseColor;
   FColor := White;
-
-  if not GLFeatures.EnableFixedFunction then
-  begin
-    Assert(GLFeatures.Shaders); // EnableFixedFunction and Shaders are now synchronized
-
-    Shader := TGLSLProgram.Create;
-    Shader.AttachShader(stVertex, SimplestVS);
-
-    if AUseColor then
-    begin
-      Shader.AttachShader(stFragment, SimplestUnlitFS);
-    end else
-    begin
-      { On desktop OpenGL, fragment shader doesn't need to exist now.
-        https://www.khronos.org/opengl/wiki/Fragment_Shader#Optional }
-      {$ifdef OpenGLES}
-      Shader.AttachShader(stFragment, SimplestFS);
-      {$endif}
-    end;
-
-    Shader.Link;
-
-    AttributeVertex := Shader.Attribute('castle_Vertex');
-    UniformModelViewProjectionMatrix := Shader.Uniform('castle_ModelViewProjectionMatrix');
-    if AUseColor then
-      UniformColor := Shader.Uniform('color');
-  end;
-
+  PrepareShader(AUseColor);
   Vao := TVertexArrayObject.Create;
 end;
 
 destructor TCastleRenderUnlitMesh.Destroy;
 begin
-  FreeAndNil(Shader);
   FreeAndNil(Vao);
   glFreeBuffer(VboIndex);
   glFreeBuffer(VboVertex);
   inherited;
+end;
+
+class procedure TCastleRenderUnlitMesh.PrepareShader(const AUseColor: Boolean);
+const
+  SimplestVS = {$I simplest.vs.inc};
+  SimplestFS = {$I simplest.fs.inc};
+  SimplestUnlitFS = {$I simplest_unlit.fs.inc};
+var
+  Shader: TGLSLProgram;
+begin
+  if GLFeatures.EnableFixedFunction then
+    Exit;
+  Assert(GLFeatures.Shaders); // EnableFixedFunction and Shaders are now synchronized
+
+  // already prepared
+  if Programs[AUseColor].Shader <> nil then
+    Exit;
+
+  Shader := TGLSLProgram.Create;
+  Shader.Name := 'TCastleRenderUnlitMesh:UseColor=' + BoolToStr(AUseColor, true);
+  Shader.AttachShader(stVertex, SimplestVS);
+
+  if AUseColor then
+  begin
+    Shader.AttachShader(stFragment, SimplestUnlitFS);
+  end else
+  begin
+    { On desktop OpenGL, fragment shader doesn't need to exist now.
+      https://www.khronos.org/opengl/wiki/Fragment_Shader#Optional
+      It still has to exist with OpenGLES.
+      Also macOS requires it always (in "core" profile), otherwise rendering shadow volumes
+      makes GL error at glDrawArrays in this unit. }
+    {$if defined(OpenGLES) or defined(DARWIN)}
+    Shader.AttachShader(stFragment, SimplestFS);
+    {$endif}
+  end;
+
+  Shader.Link;
+
+  Programs[AUseColor].Shader := Shader;
+  Programs[AUseColor].AttributeVertex := Shader.Attribute('castle_Vertex');
+  Programs[AUseColor].UniformModelViewProjectionMatrix := Shader.Uniform('castle_ModelViewProjectionMatrix');
+  if AUseColor then
+    Programs[AUseColor].UniformColor := Shader.Uniform('color');
+end;
+
+class procedure TCastleRenderUnlitMesh.StaticGLContextClose;
+begin
+  FreeAndNil(Programs[false].Shader);
+  FreeAndNil(Programs[true].Shader);
 end;
 
 procedure TCastleRenderUnlitMesh.Render(const Mode: TPrimitiveMode);
@@ -233,7 +266,7 @@ procedure TCastleRenderUnlitMesh.Render(const Mode: TPrimitiveMode);
     if VboVertex = 0 then
       raise EInternalError.Create('TCastleRenderUnlitMesh has no vertexes defined to render');
 
-    RenderContext.CurrentProgram := Shader;
+    RenderContext.CurrentProgram := Programs[UseColor].Shader;
     RenderContext.CurrentVao := Vao;
 
     glBindBuffer(GL_ARRAY_BUFFER, VboVertex);
@@ -241,13 +274,13 @@ procedure TCastleRenderUnlitMesh.Render(const Mode: TPrimitiveMode);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VboIndex);
 
     if FUseColor then
-      UniformColor.SetValue(Color);
-    UniformModelViewProjectionMatrix.SetValue(ModelViewProjection);
-    AttributeVertex.EnableArrayVector4(Vao, SizeOf(TVector4), 0);
+      Programs[UseColor].UniformColor.SetValue(Color);
+    Programs[UseColor].UniformModelViewProjectionMatrix.SetValue(ModelViewProjection);
+    Programs[UseColor].AttributeVertex.EnableArrayVector4(Vao, SizeOf(TVector4), 0);
 
     RenderDrawCall(nil);
 
-    AttributeVertex.DisableArray;
+    Programs[UseColor].AttributeVertex.DisableArray;
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -400,6 +433,15 @@ procedure TCastleRenderUnlitMesh.SetVertexes(const Vertexes: TVector4List;
   const UsageDynamic: Boolean);
 begin
   SetVertexes(PVector4(Vertexes.L), Vertexes.Count, UsageDynamic);
+end;
+
+procedure TCastleRenderUnlitMesh.SetUseColor(const Value: Boolean);
+begin
+  if FUseColor <> Value then
+  begin
+    FUseColor := Value;
+    PrepareShader(Value);
+  end;
 end;
 
 {$endif read_implementation}
