@@ -252,5 +252,4 @@ castle-game-engine-*.fpm
 /tools/sprite-sheet-to-x3d/sprite-sheet-to-x3d
 /tools/texture-font-to-pascal/texture-font-to-pascal
 /tools/to-data-uri/to-data-uri
-buildTools.ps1
 examples/viewport_and_scenes/build_3d_object_by_code/test.x3d
