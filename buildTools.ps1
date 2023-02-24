@@ -2,6 +2,11 @@ cd tools/build-tool/ # first enter the build tool directory
 Set-ExecutionPolicy Bypass -Scope Process
 ./castle-engine_compile.ps1
 
+$BinDir_Exists = (Test-Path bin)
+if (!$BinDir_Exists)
+{
+    mkdir bin
+}
 
 $LAZBuildPath = "D:\soft\fpcupdeluxe\lazarus\lazbuild.exe"
 
