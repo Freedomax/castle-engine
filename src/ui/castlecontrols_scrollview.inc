@@ -23,7 +23,6 @@
   strict private
     FScrollbarFrame: TCastleImagePersistent;
     FScrollbarSlider: TCastleImagePersistent;
-    FScroll: Single;
     FScrollbarVisible: Boolean;
     FSpaceForButton: Single;
     { Rects in screen coordinates (like RenderRect),
@@ -36,7 +35,6 @@
     DragSinceLastUpdate, DragSpeed, TimeSinceDraggingStopped, TimeSinceDraggingStarted: Double;
     ScrollbarActive: Single;
     FTintScrollBarInactive: TCastleColor;
-    procedure SetScroll(Value: Single);
     { Stop any movement due to inertial force. }
     procedure ResetInertialForce;
     procedure SetSpaceForButton(const AValue: Single);
@@ -48,6 +46,10 @@
     procedure CustomScrollBarChanged(Sender: TObject);
 
     property ScrollbarVisible: Boolean read FScrollbarVisible;
+
+    function GetScroll: Single; virtual; abstract;
+    procedure SetScroll(Value: Single); virtual; abstract;
+    function GetScrollStored: Boolean; virtual; abstract;
 
     { How much @link(Scroll) is represented by the height of the scrollbar slider.
       Among other things, this determines how much @link(Scroll) changes
@@ -126,12 +128,14 @@
       (just like @link(TCastleUserInterface.Translation),
       @link(TCastleUserInterface.Height),
       @link(TCastleUserInterface.EffectiveHeight)...).
+      And it is always synchronized with @code(ScrollArea.Translation.Y).
 
       In case of @link(TCastleScrollViewManual),
       it can correspond to anything you want.
       You handle @link(TCastleScrollViewManual.OnChange) yourself,
       and interpret this value in whatever way you want. }
-    property Scroll: Single read FScroll write SetScroll {$ifdef FPC}default 0{$endif};
+    property Scroll: Single read GetScroll write SetScroll stored GetScrollStored
+      {$ifdef FPC}default 0{$endif};
 
     property ScrollbarFrame: TCastleImagePersistent read FScrollbarFrame;
     property ScrollbarSlider: TCastleImagePersistent read FScrollbarSlider;
@@ -164,17 +168,15 @@
     to be functional on both desktops and mobile
     (we handle scrolling by keys, mouse wheel, dragging by scrollbar,
     dragging the whole area - see @link(EnableDragging)). }
-
-  { TCastleScrollView }
-
   TCastleScrollView = class(TCastleScrollViewCustom)
   strict private
     FScrollArea: TCastleScrollArea;
   protected
     function GetPageSize: Single; override;
     function GetCompleteSize: Single; override;
-    procedure DoScrollChange; override;
-    procedure Loaded; override;
+    function GetScroll: Single; override;
+    procedure SetScroll(Value: Single); override;
+    function GetScrollStored: Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
   published
@@ -211,12 +213,16 @@
   strict private
     FOnChange: TNotifyEvent;
     FPageSize, FCompleteSize: Single;
+    FScroll: Single;
     procedure SetPageSize(const AValue: Single);
     procedure SetCompleteSize(const AValue: Single);
   protected
     function GetPageSize: Single; override;
     function GetCompleteSize: Single; override;
     procedure DoScrollChange; override;
+    function GetScroll: Single; override;
+    procedure SetScroll(Value: Single); override;
+    function GetScrollStored: Boolean; override;
   public
     const
       DefaultPageSize = 1;
@@ -331,16 +337,6 @@ end;
 procedure TCastleScrollViewCustom.CustomScrollBarChanged(Sender: TObject);
 begin
   VisibleChange([chRender]);
-end;
-
-procedure TCastleScrollViewCustom.SetScroll(Value: Single);
-begin
-  ClampVar(Value, ScrollMin, ScrollMax);
-  if FScroll <> Value then
-  begin
-    FScroll := Value;
-    DoScrollChange;
-  end;
 end;
 
 procedure TCastleScrollViewCustom.ResetInertialForce;
@@ -713,18 +709,21 @@ begin
   Result := ScrollArea.EffectiveHeight;
 end;
 
-procedure TCastleScrollView.DoScrollChange;
+function TCastleScrollView.GetScroll: Single;
 begin
-  inherited;
-  FScrollArea.Anchor(vpTop, Scroll);
+  Result := FScrollArea.Translation.Y;
 end;
 
-procedure TCastleScrollView.Loaded;
+procedure TCastleScrollView.SetScroll(Value: Single);
 begin
-  inherited Loaded;
+  ClampVar(Value, ScrollMin, ScrollMax);
+  FScrollArea.Anchor(vpTop, Value); // sets FScrollArea.Translation.Y
+end;
 
-  { Fixed ; Scroll is not equal to ScrollArea.Translation.Y when designed value <> 0 }
-  Scroll := FScrollArea.Translation.Y;
+function TCastleScrollView.GetScrollStored: Boolean;
+begin
+  // no point in storing Scroll, it is always synchronized with ScrollArea.Translation.Y
+  Result := false;
 end;
 
 { TCastleScrollViewManual ---------------------------------------------------- }
@@ -771,6 +770,26 @@ begin
 
   // since ScrollMax changed, make sure Scroll is within bounds
   Scroll := Scroll;
+end;
+
+function TCastleScrollViewManual.GetScroll: Single;
+begin
+  Result := FScroll;
+end;
+
+procedure TCastleScrollViewManual.SetScroll(Value: Single);
+begin
+  ClampVar(Value, ScrollMin, ScrollMax);
+  if FScroll <> Value then
+  begin
+    FScroll := Value;
+    DoScrollChange;
+  end;
+end;
+
+function TCastleScrollViewManual.GetScrollStored: Boolean;
+begin
+  Result := true;
 end;
 
 {$endif read_implementation}
