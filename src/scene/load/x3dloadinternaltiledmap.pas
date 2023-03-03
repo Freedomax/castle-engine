@@ -372,7 +372,7 @@ procedure TCastleTiledMapConverter.BuildTileLayerNode(const LayerNode: TTransfor
     const Tileset: TCastleTiledMapData.TTileset): TFloatRectangle;
   begin
     Result := FloatRectangle(
-      Map.TileRenderPosition(TilePosition),
+      Map.TileRenderPosition(TilePosition) + Vector2(Tileset.TileOffset),
       Tileset.TileWidth,
       Tileset.TileHeight
     );
@@ -628,7 +628,7 @@ var
         Exit;
       end;
 
-      CurrentZ := CurrentZ + 0.000001;
+      CurrentZ := CurrentZ + 1 / (Map.Width * Map.Height);
 	  
       { If not Created then Create and Add to Dictionary. }
       if HasAnimation then
