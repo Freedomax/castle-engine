@@ -421,7 +421,7 @@ procedure TCastleScrollViewCustom.Update(const SecondsPassed: Single;
         Scroll := Scroll + KeyScrollSpeed * SecondsPassed;
         ResetInertialForce;
       end;
-      HandleInput := not ExclusiveEvents;
+      HandleInput := false;
     end;
   end;
 
@@ -532,7 +532,7 @@ begin
       ResetInertialForce;
     end else
       ScrollBarDragging := true;
-    Exit(ExclusiveEvents);
+    Exit(true);
   end;
 end;
 
@@ -558,25 +558,25 @@ begin
             begin
               Scroll := Scroll - GetPageSize;
               ResetInertialForce;
-              Result := ExclusiveEvents;
+              Result := true;
             end;
           keyPageDown, keyNumpadPageDown:
             begin
               Scroll := Scroll + GetPageSize;
               ResetInertialForce;
-              Result := ExclusiveEvents;
+              Result := true;
             end;
           keyHome, keyNumpadHome:
             begin
               Scroll := ScrollMin;
               ResetInertialForce;
-              Result := ExclusiveEvents;
+              Result := true;
             end;
           keyEnd, keyNumpadEnd:
             begin
               Scroll := ScrollMax;
               ResetInertialForce;
-              Result := ExclusiveEvents;
+              Result := true;
             end;
           else ;
         end;
@@ -585,7 +585,7 @@ begin
         begin
           Scroll := Scroll - Event.MouseWheelScroll * WheelScrollSpeed;
           ResetInertialForce;
-          Result := ExclusiveEvents;
+          Result := true;
         end;
       else ;
     end;
@@ -607,7 +607,7 @@ begin
     with a long text (to make scrolling relevant).)  }
 
   if EnableDragging and Event.IsMouseButton(buttonLeft) and ScrollBarVisible then
-    Result := ExclusiveEvents;
+    Result := true;
 end;
 
 function TCastleScrollViewCustom.Release(const Event: TInputPressRelease): boolean;
@@ -618,7 +618,7 @@ begin
   if Event.IsMouseButton(buttonLeft) then
   begin
     ScrollBarDragging := false;
-    Result := ExclusiveEvents;
+    Result := true;
   end;
 end;
 
@@ -636,14 +636,14 @@ begin
     Scroll := Scroll + GetCompleteSize *
       (Event.OldPosition[1] - Event.Position[1]) / ScrollbarFrameRect.Height;
     ResetInertialForce;
-    Result := ExclusiveEvents;
+    Result := true;
   end else
   if EnableDragging and (buttonLeft in Event.Pressed) then
   begin
     Drag := ((Event.Position[1] - Event.OldPosition[1]) / UIScale);
     Scroll := Scroll + Drag;
     DragSinceLastUpdate := DragSinceLastUpdate + Drag;
-    Result := ExclusiveEvents;
+    Result := true;
   end;
 end;
 
