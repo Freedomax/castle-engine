@@ -3998,7 +3998,7 @@ See https://castle-engine.io/license.php for details.
         <Type Value="Include"/>
       </Item974>
       <Item975>
-        <Filename Value="../src/ui/castlecontrols_progressbar.inc"/>
+        <Filename Value="../src/ui/castlecontrols_mask.inc"/>
         <Type Value="Include"/>
       </Item975>
       <Item976>
