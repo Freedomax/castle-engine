@@ -23,8 +23,6 @@
   @orderedList(
     @item(Tiled image layers)
     @item(Tiled object ellipsoids)
-    @item(At extreme zooms, seams when rendering may appear (regardless of smooth or not filtering,
-      regardless of doing Round() on final coords).)
   )
 }
 unit X3DLoadInternalTiledMap;
@@ -60,21 +58,20 @@ type
         CycleIntervalMs: Cardinal;
       end;
 
-      { CycleInterval in milliseconds. }
-      TLayerTimeSensors = {$ifdef FPC}specialize{$endif} TDictionary<Cardinal,TTimeSensorNode>;
+      { Map from CycleInterval in milliseconds -> TTimeSensorNode. }
+      TLayerTimeSensors = {$ifdef FPC}specialize{$endif} TDictionary<Cardinal, TTimeSensorNode>;
 
-      TLayerAnimations = {$ifdef FPC}specialize{$endif} TDictionary<TCastleTiledMapData.TAnimation,TAnimationNodes>;
+      TLayerAnimations = {$ifdef FPC}specialize{$endif} TDictionary<TCastleTiledMapData.TAnimation, TAnimationNodes>;
 
-      TLayerConversion = class ({$ifdef FPC}specialize{$endif} TDictionary<TCastleTiledMapData.TTileset,TTilesetNodes>)
+      TLayerConversion = class({$ifdef FPC}specialize{$endif} TDictionary<TCastleTiledMapData.TTileset, TTilesetNodes>)
       strict private
         FLayerTimeSensors: TLayerTimeSensors;
         FLayerAnimations: TLayerAnimations;
       public
         constructor Create;{$ifdef FPC} override;{$endif}
         destructor Destroy;override;
-        property  LayerTimeSensors: TLayerTimeSensors read FLayerTimeSensors;
-        property  LayerAnimations: TLayerAnimations read FLayerAnimations;
-
+        property LayerTimeSensors: TLayerTimeSensors read FLayerTimeSensors;
+        property LayerAnimations: TLayerAnimations read FLayerAnimations;
       end;
 
     var
@@ -120,8 +117,8 @@ type
         Set before @link(ConvertMap). }
       SmoothScalingSafeBorder: Boolean;
 
-      { See @link(TCastleTiledMap.FixTileset). }
-      FixTileset : Boolean;
+      { See @link(TCastleTiledMap.ForceTilesetSpacing). }
+      ForceTilesetSpacing : Boolean;
 
       { Layers to load.  }
       Layers: TLayers;
@@ -146,16 +143,14 @@ uses
 constructor TCastleTiledMapConverter.TLayerConversion.Create;
 begin
   inherited;
-
-  FLayerTimeSensors:= TLayerTimeSensors.Create;
-  FLayerAnimations:= TLayerAnimations.Create;
+  FLayerTimeSensors := TLayerTimeSensors.Create;
+  FLayerAnimations := TLayerAnimations.Create;
 end;
 
 destructor TCastleTiledMapConverter.TLayerConversion.Destroy;
 begin
   FLayerTimeSensors.Free;
   FLayerAnimations.Free;
-
   inherited;
 end;
 
@@ -183,24 +178,26 @@ procedure TCastleTiledMapConverter.PrepareTilesets;
 var
   Tileset: TCastleTiledMapData.TTileset;
 
-  function FixedTilesetImage(const AURL: String): TCastleImage;
+  { Make a tileset image with added paddings,
+    also modify the Tileset to point to the new tileset image (with larger sizes). }
+  function ForceTilesetImageSpacing(const AURL: String): TCastleImage;
   var
     OriginalImage: TCastleImage;
     Col, Row: Integer;
     SrcPos, Pos: TVector2Integer;
     ColumnCount, RowCount: Cardinal;
 
-      function TilePosition(const AImage: TEncodedImage; const AMargin, ASpacing: Cardinal): TVector2Integer;
-      begin
-        Result.X := AMargin + Col * (Tileset.TileWidth + ASpacing);
-        Result.Y := AImage.Height - (AMargin + Row * (Tileset.TileHeight + ASpacing)
-          + Tileset.TileHeight);
-      end;
+    function TilePosition(const AImage: TEncodedImage; const AMargin, ASpacing: Cardinal): TVector2Integer;
+    begin
+      Result.X := AMargin + Col * (Tileset.TileWidth + ASpacing);
+      Result.Y := AImage.Height - (AMargin + Row * (Tileset.TileHeight + ASpacing)
+        + Tileset.TileHeight);
+    end;
 
-      procedure Draw(const APos, ASrcPos: TVector2Integer; const AWidth, AHeight: Integer);
-      begin
-        Result.DrawFrom(OriginalImage, APos.X, APos.Y, ASrcPos.X, ASrcPos.Y, AWidth, AHeight, dmOverwrite);
-      end;
+    procedure Draw(const APos, ASrcPos: TVector2Integer; const AWidth, AHeight: Integer);
+    begin
+      Result.DrawFrom(OriginalImage, APos.X, APos.Y, ASrcPos.X, ASrcPos.Y, AWidth, AHeight, dmOverwrite);
+    end;
 
   const
     NewMargin = 1;
@@ -215,8 +212,8 @@ var
       RowCount := (OriginalImage.Height - 2 * Tileset.Margin + Tileset.Spacing)
         div (Tileset.TileHeight + Tileset.Spacing);
 
-      Result.SetSize(ColumnCount * (Tileset.TileWidth + NewSpacing) - NewSpacing + 2 * NewMargin
-        ,RowCount * (Tileset.TileHeight + NewSpacing) - NewSpacing + 2 * NewMargin);
+      Result.SetSize(ColumnCount * (Tileset.TileWidth + NewSpacing) - NewSpacing + 2 * NewMargin,
+        RowCount * (Tileset.TileHeight + NewSpacing) - NewSpacing + 2 * NewMargin);
 
       for Row := 0 to RowCount - 1 do
       begin
@@ -259,11 +256,20 @@ var
         end;
       end;
 
+      WritelnLog('Tiled', 'Added spacing to tileset image "%s", new margin %d, new spacing %d, old size %d x %d -> new size %d x %d', [
+        URIDisplay(AURL),
+        NewMargin,
+        NewSpacing,
+        Tileset.Image.Width,
+        Tileset.Image.Height,
+        Result.Width,
+        Result.Height
+      ]);
+
       Tileset.Margin := NewMargin;
       Tileset.Spacing := NewSpacing;
       Tileset.Image.Width := Result.Width;
       Tileset.Image.Height := Result.Height;
-
     finally
       FreeAndNil(OriginalImage);
     end;
@@ -289,8 +295,8 @@ begin
     end;
 
     Texture := TImageTextureNode.Create;
-    if FixTileset then
-      Texture.LoadFromImage(FixedTilesetImage(Tileset.Image.URL), True, '')
+    if ForceTilesetSpacing then
+      Texture.LoadFromImage(ForceTilesetImageSpacing(Tileset.Image.URL), true, '')
     else
       Texture.SetUrl([Tileset.Image.URL]);
 
@@ -320,10 +326,19 @@ const
     and need some distance to avoid Z-fighting.
 
     This could be avoided when using RenderContext.DepthFunc := fdAlways,
-    but it comes with it's own disadvantages,
-    see TCastleTiledMap.AssumePerfectRenderingOrder docs.
-    So we always apply this layer Z distance, to work regardless
-    of AssumePerfectRenderingOrder.
+    we even tried it at one point (TCastleTiledMap.AssumePerfectRenderingOrder),
+    but it had with it's own disadvantages:
+    Rendering with RenderContext.DepthFunc = fdAlways
+    assumes that really *everything*, including other things
+    that could be behind / in front of this Tiled map, are arranged in the TCastleViewport.Items
+    tree in the correct order. That is, things behind the Tiled map must be earlier than
+    the TCastleTiledMap component in the transformation tree. And things in front of Tiled map must
+    be after the TCastleTiledMap component in the transformation tree.
+    And this assumption must be preserved by blending sorting done
+    by @link(TCastleAbstractRootTransform.BlendingSort), if any.
+
+    So we don't use RenderContext.DepthFunc = fdAlways anymore.
+    Instead we apply layer Z distance.
 
     Note: 1 is too small for examples/tiled/map_viewer/data/maps/desert_with_objects.tmx }
   LayerZDistanceIncrease: Single = 10;
@@ -483,7 +498,10 @@ procedure TCastleTiledMapConverter.BuildTileLayerNode(const LayerNode: TTransfor
     );
 
     if SmoothScalingSafeBorder then
-      Result := Result.Grow(-0.51) else Result := Result.Grow(-0.01);
+      Result := Result.Grow(-0.51)
+    else
+      { Fixes appearance of seams at certain zoom levels. }
+      Result := Result.Grow(-0.01);
 
     { fix Result to be in 0..1 range }
     Result.Left := Result.Left / Tileset.Image.Width;
@@ -581,9 +599,9 @@ var
     Result.CycleInterval := CycleIntervalMs / 1000;
     { Add TimeSensor to Root node }
     LayerNode.AddChildren(Result);
-    Result.Loop := True;
+    Result.Loop := true;
   end;
-  
+
   function CreateNodes: TTilesetNodes;
   begin
     Geometry := TQuadSetNode.CreateWithShape(Shape);
@@ -614,11 +632,11 @@ var
     if bCreate then
       Durations := 0
     else
-      begin
-        Step := AnimationNodes.TexCoordInterp.FdKeyValue.Items.Count div FrameCount;
-        StartIndex := Step;
-        Step := Step + 4;
-      end;
+    begin
+      Step := AnimationNodes.TexCoordInterp.FdKeyValue.Items.Count div FrameCount;
+      StartIndex := Step;
+      Step := Step + 4;
+    end;
 
     for I := 0 to FrameCount - 1 do
     begin
@@ -636,7 +654,6 @@ var
         AnimationNodes.TexCoordInterp.FdKeyValue.Items.InsertRange(StartIndex, TexCoordArray);
         StartIndex := StartIndex + Step;
       end;
-
     end;
   end;
 
@@ -656,7 +673,7 @@ var
     { Get TimeSensor. }
     TimeSensor := GetOrCreateTimeSensor(Result.CycleIntervalMs);
 
-    AddToTexCoordInterp(Result, True);
+    AddToTexCoordInterp(Result, true);
     { Add to rootnode. }
     LayerNode.AddChildren(Result.TexCoordInterp);
     LayerNode.AddRoute(TimeSensor.EventFraction_changed, Result.TexCoordInterp.EventSet_fraction);
@@ -671,18 +688,17 @@ var
     LayerConversion.Add(Tileset, Result);
   end;
 
-  function GetOrCreateNodesForAnimation() :TAnimationNodes;
+  function GetOrCreateNodesForAnimation: TAnimationNodes;
   begin
     if LayerConversion.LayerAnimations.TryGetValue(Tileset.Tiles[Frame].Animation, Result) then
     begin
-      AddToTexCoordInterp(Result, False);
+      AddToTexCoordInterp(Result, false);
       Exit;
     end;
 
     Result := CreateAnimationNodes;
     LayerConversion.LayerAnimations.Add(Tileset.Tiles[Frame].Animation, Result);
   end;
-
 
   procedure RenderTile(const TilePosition: TVector2Integer);
   var
@@ -722,7 +738,7 @@ var
       end;
 
       CurrentZ := CurrentZ + 1 / (Map.Width * Map.Height);
-	  
+
       { If not Created then Create and Add to Dictionary. }
       if HasAnimation then
         Nodes := GetOrCreateNodesForAnimation.CoordNodes
@@ -748,12 +764,10 @@ var
 begin
   PrepareData;
   LayerConversion := TLayerConversion.Create;
-
   try
     for Y := Map.Height - 1 downto 0 do
       for X := 0 to Map.Width - 1 do
         RenderTile(Vector2Integer(X, Y));
-
   finally
     FreeAndNil(LayerConversion);
   end;
