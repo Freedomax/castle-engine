@@ -103,6 +103,9 @@
       FPendingToRemoveAndFree: TComponentList;
       FRenderLayer: TRenderLayer;
 
+      FBlendingSort: TBlendingSort;
+      FSortedList: TCastleTransformList;
+
       // transformation
       FCenter: TVector3;
       FRotation: TVector4;
@@ -121,6 +124,7 @@
       FOnlyTranslation: Boolean;
 
       FTransformation: TTransformation;
+      FOutsideTransformation: TTransformation;
       FTransformationValid: Boolean;
 
       FWorldTransformation: TTransformation;
@@ -161,6 +165,7 @@
     procedure SetItem(const I: Integer; const Item: TCastleTransform);
     procedure InternalTransformationMult(var T: TTransformation);
     procedure InternalTransformation(out T: TTransformation);
+    procedure InternalOutsideTransformation(out T: TTransformation);
     { Update our FWorldTransformation, FWorldTransformationId. }
     procedure UpdateWorldTransformation;
     procedure WarningMatrixNan(const NewParamsInverseTransformValue: TMatrix4);
@@ -181,6 +186,7 @@
     { Never call ChangedTransform directly, always call this. }
     procedure ChangedTransformCore(const UpdatePhysicsTransform: Boolean = true);
   private
+    FYSortOffset: Single;
     { "Meaningful" parent is a parent that competes to be a value of Parent.
       This allows to avoid TCastleTransformReference from being considered
       a meaningful parent, so that transforms under TCastleTransformReference
@@ -201,6 +207,9 @@
       This is recursively called on all children as well.
       Value must not be @nil. }
     procedure AddToWorld(const Value: TCastleAbstractRootTransform);
+
+    function GetRenderTranslation: TVector3;
+
     { Update FWorld, FWorldReferences.
       This is recursively called on all children as well.
       Value must not be @nil. }
@@ -1409,6 +1418,8 @@
       transformation of parent TCastleTransform (for this, use @link(WorldTransform)). }
     function Transform: TMatrix4;
 
+    function OutsideTransform: TMatrix4;
+
     { Inverse transformation as a matrix, thus transforming from outside to local
       coordinate system. This is an inverse of @link(Transform). }
     function InverseTransform: TMatrix4;
@@ -1521,6 +1532,8 @@
       const BecauseOfGravity: boolean;
       const EnableWallSliding: boolean = true): boolean;
 
+    function RenderOutside: boolean;
+
     { Translation (move) the children. Zero by default.
 
       Set it like this:
@@ -1529,6 +1542,8 @@
         Scene.Translation := Scene.Translation + Vector3(4, 5, 6);
       #) }
     property Translation: TVector3 read FTranslation write SetTranslation;
+
+    property RenderTranslation: TVector3 read GetRenderTranslation;
 
     { Get or set the XY components of the translation.
       Useful for 2D games. }
@@ -1977,6 +1992,63 @@
       The typical use-case is to force some object to be in front, by setting rlFront. }
     property RenderLayer: TRenderLayer read FRenderLayer write FRenderLayer default rlParent;
 
+    { When rendering, sort all the children,
+      making blending correct when there are multiple partially-transparent objects
+      in the world.
+
+      This is a simple way to achieve correct blending order when rendering multiple objects.
+      You need this when multiple objects (like TCastleScene and TCastleImageTransform)
+      use blending (partial transparency) within the world.
+      Note that inside each scene (TCastleScene) the partially-transparent
+      shapes are also sorted, following TCastleRenderOptions.BlendingSort,
+      with each TCastleScene having own TCastleRenderOptions instance.
+
+      TODO: This is a simple approach to have correct blending.
+      But it is not the most efficient approach, it is also not the most capable one.
+      However, it is really simple to use and likely is enough in many practical cases.
+
+      Future: We plan to have a rendering that gathers all partially-transparent shapes
+      from all the objects, and sorts them.
+      This will make the sorting process more efficient (it will only sort partially-transparent shapes)
+      and more capable (each shape will be ordered).
+
+      Drawbacks of current approach:
+
+      @unorderedList(
+
+        @item(
+          The sorting is repeated at every render call.
+          This is not optimal in case of 2D, where it would be more efficient
+          to only call @link(SortBackToFront2D) when necessary, e.g. when adding/removing
+          objects from the world.
+
+          To avoid this overhead, just leave this property at bsNone
+          and call @link(SortBackToFront2D) when necessary.
+        )
+
+        @item(
+          The sorting accounts for all objects (not only partially transparent).
+          This is not optimal (but we cannot be more efficient because each scene
+          may contain something partially transparent).)
+
+        @item(
+          The sorting puts each TCastleScene completely in front or completely behind
+          other TCastleScene. This is not good enough when multiple TCastleScene instances
+          have multiple partially-transparent shapes and the correct order would mix their
+          shapes.)
+
+        @item(
+          The sorting is not recursive (to avoid making it really not efficient, in particular
+          to recalculate camera for each transform and to sort in each tree TCastleTransform).
+
+          This means it is not capable of dealing with some cases. It assumes that all things
+          where the order matters are direct children of TCastleAbstractRootTransform.)
+      )
+    }
+    property BlendingSort: TBlendingSort read FBlendingSort write FBlendingSort default bsNone;
+
+    property YSortOffset: Single read FYSortOffset write FYSortOffset {$IFDEF FPC}default 0{$ENDIF};
+
   {$define read_interface_class}
   {$I auto_generated_persistent_vectors/tcastletransform_persistent_vectors.inc}
   {$undef read_interface_class}
@@ -2053,6 +2125,7 @@ begin
   GLContextClose;
 
   FreeAndNil(FList);
+  FreeAndNil(FSortedList);
   FreeAndNil(FBehaviors);
   FreeAndNil(FBehaviorsWorldChangeNotificationList);
   inherited;
@@ -2191,6 +2264,20 @@ begin
   if FList <> nil then // when one list is within another, this may be called during own destruction by TCastleTransformList.Notify
     for I := 0 to List.Count - 1 do
       List[I].AddToWorld(Value);
+end;
+
+function TCastleTransform.GetRenderTranslation: TVector3;
+var
+  T: TCastleTransform;
+begin
+  Result := Translation;
+
+  T := Self;
+  while T.RenderOutside do
+  begin
+    Result := Result + T.Parent.Translation;
+    T := T.Parent;
+  end;
 end;
 
 procedure TCastleTransform.RemoveFromWorld(const Value: TCastleAbstractRootTransform);
@@ -2577,8 +2664,41 @@ begin
 end;
 
 function TCastleTransform.GetRenderList(const Params: TRenderParams): TCastleTransformList;
+
+  procedure GetRecursionChildRenderList(const AParent:TCastleTransform; const AList: TCastleTransformList);
+  var
+    T: TCastleTransform;
+    P: Pointer;
+  begin
+    for P in AParent.List do
+    begin
+      T := TCastleTransform(P);
+      if T.BlendingSort <> bsYSort then Continue;
+
+      AList.AddList(T.List);
+      GetRecursionChildRenderList(T, AList);
+    end;
+  end;
+
 begin
-  Result := List;
+  if BlendingSort <> bsNone then
+  begin
+    if FSortedList = nil then // create on-demand
+      FSortedList := TCastleTransformList.Create(false);
+
+    if (BlendingSort = bsYSort) and Assigned(FParent) and (FParent.BlendingSort = bsYSort) then
+    begin
+      FSortedList.Clear;
+    end else
+    begin
+      FSortedList.Assign(List);
+      if BlendingSort = bsYSort then
+        GetRecursionChildRenderList(Self, FSortedList);
+      FSortedList.SortBackToFront(BlendingSort, Params.RenderingCamera.Position);
+    end;
+    Result := FSortedList;
+  end else
+    Result := List;
 end;
 
 procedure TCastleTransform.LocalRender(const Params: TRenderParams);
@@ -2787,9 +2907,21 @@ begin
   if not FTransformationValid then
   begin
     InternalTransformation(FTransformation);
+    InternalOutsideTransformation(FOutsideTransformation);
     FTransformationValid := true;
   end;
   Result := FTransformation.Transform;
+end;
+
+function TCastleTransform.OutsideTransform: TMatrix4;
+begin
+  if not FTransformationValid then
+  begin
+    InternalTransformation(FTransformation);
+    InternalOutsideTransformation(FOutsideTransformation);
+    FTransformationValid := true;
+  end;
+  Result := FOutsideTransformation.Transform;
 end;
 
 function TCastleTransform.InverseTransform: TMatrix4;
@@ -3141,6 +3273,18 @@ begin
   InternalTransformationMult(T);
 end;
 
+procedure TCastleTransform.InternalOutsideTransformation(out T: TTransformation);
+begin
+  { TODO: Not done yet. Requires multiple operations from the root Ysort Transform. }
+  T.Init;
+  T.Multiply(
+  FCenter,
+  FRotation,
+  FScale,
+  FScaleOrientation,
+  RenderTranslation);
+end;
+
 function TCastleTransform.AverageScale: Single;
 begin
   Result := Approximate3DScale(Scale);
@@ -3210,9 +3354,17 @@ var
   OldParamsTransformIdentity, OldInMeaningfulParent: Boolean;
   OldFrustum: PFrustum;
   NewFrustumValue: TFrustum;
-  HasSavedDepthRange: Boolean;
+  HasSavedDepthRange, HasSavedDepthFunc: Boolean;
   SavedDepthRange: TDepthRange;
+  SavedDepthFunc: TDepthFunction;
 begin
+  HasSavedDepthFunc := BlendingSort = bsYSort;
+  if HasSavedDepthFunc then
+  begin
+    SavedDepthFunc := RenderContext.DepthFunc;
+    RenderContext.DepthFunc := dfAlways;
+  end;
+
   OldInMeaningfulParent := Params.InMeaningfulParent;
   Params.InMeaningfulParent := Params.InMeaningfulParent and
     { We look at Parent.MeaningfulParent, not Self.MeaningfulParent,
@@ -3245,7 +3397,7 @@ begin
 
   if (not InternalExistsOnlyInMeaningfulParents) or Params.InMeaningfulParent then
   begin
-    T := Translation;
+    T := RenderTranslation;
     if FOnlyTranslation and T.IsZero and (not InternalIgnoreParentScale) then
     begin
       LocalRender(Params);
@@ -3278,6 +3430,17 @@ begin
       begin
         NewParamsTransformation.Translate(T);
         NewFrustumValue.MoveVar(-T);
+      end else if RenderOutside then
+      begin
+        NewParamsTransformation.Multiply(
+          FCenter,
+          FRotation,
+          FScale,
+          FScaleOrientation,
+          RenderTranslation);
+        if IsNan(NewParamsTransformation.Transform.Data[0, 0]) then
+          WarningMatrixNan(NewParamsTransformation.Transform);
+        NewFrustumValue := NewFrustumValue.TransformByInverse(OutsideTransform);
       end else
       begin
         InternalTransformationMult(NewParamsTransformation);
@@ -3305,6 +3468,8 @@ begin
 
   if HasSavedDepthRange then
     RenderContext.DepthRange := SavedDepthRange;
+  if HasSavedDepthFunc then
+    RenderContext.DepthFunc := SavedDepthFunc;
 end;
 
 procedure TCastleTransform.RenderShadowVolume(const Params: TRenderParams;
@@ -3589,6 +3754,12 @@ begin
     Translate(NewMiddle - OldMiddle);
 end;
 
+function TCastleTransform.RenderOutside: boolean;
+begin
+  Result := Assigned(FParent) and (FParent.BlendingSort = bsYSort)
+    and Assigned(FParent.Parent) and (FParent.Parent.BlendingSort = bsYSort);
+end;
+
 procedure TCastleTransform.ChangedTransformCore(const UpdatePhysicsTransform: Boolean);
 var
   RBody: TCastleRigidBody;
@@ -3674,7 +3845,7 @@ end;
 function TCastleTransform.PropertySections(const PropertyName: String): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, [
-       'Exists', 'CastShadows', 'RenderLayer'
+       'Exists', 'CastShadows', 'RenderLayer', 'BlendingSort'
      ]) then
       Result := [psBasic]
   else

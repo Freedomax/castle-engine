@@ -89,6 +89,15 @@ begin
     PointsDistanceSqr(PointA, SortCameraPosition));
 end;
 
+function CompareBackToFrontYSort(A, B: Pointer): Integer;
+var
+  Ya, Yb: Single;
+begin
+  Ya := TCastleTransform(A).RenderTranslation.Y + TCastleTransform(A).YSortOffset;
+  Yb := TCastleTransform(B).RenderTranslation.Y + TCastleTransform(B).YSortOffset;
+  Result := Sign(Yb - Ya);
+end;
+
 { TCastleTransformList ------------------------------------------------------------ }
 
 procedure TCastleTransformList.Notify(Ptr: Pointer; Action: TListNotification);
@@ -139,6 +148,7 @@ procedure TCastleTransformList.SortBackToFront(const BlendingSort: TBlendingSort
 begin
   case BlendingSort of
     bs2D: Sort(@CompareBackToFront2D);
+    bsYSort: Sort(@CompareBackToFrontYSort);
     bs3D:
       begin
         SortCameraPosition := CameraPosition;
