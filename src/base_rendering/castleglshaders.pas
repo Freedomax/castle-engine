@@ -724,7 +724,7 @@ procedure TGLSLUniform.SetValue(const Value: TGLint);
   LogShaders confirms this (shader log), glGetUniformLocation confirms it.
   The shader is correctly active (glUseProgram right before it) when doing glUniform1i.
   The type is sampler2D, which is OK to be set by glUniform1i. }
-{$define CASTLE_WORKAROUND_KNIGHT}
+{.$define CASTLE_WORKAROUND_KNIGHT}
 {$ifdef CASTLE_WORKAROUND_KNIGHT}
 var
   ErrorCode: TGLenum;
