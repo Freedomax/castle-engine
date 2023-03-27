@@ -15,6 +15,7 @@ copy tools/build-tool/data/external_libraries/x86_64-win64/openssl/*.dll bin/
 copy tools/build-tool/castle-engine.exe bin/
 
 & $LAZBuildPath -B "packages/castle_base.lpk"
+& $LAZBuildPath -B "packages/castle_editor_components.lpk"
 & $LAZBuildPath -B "packages/castle_components.lpk"
 
 & $LAZBuildPath "tools/castle-editor/castle_editor.lpr"
