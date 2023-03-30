@@ -105,6 +105,7 @@
 
       FBlendingSort: TBlendingSort;
       FSortedList: TCastleTransformList;
+      FOutsideList: TCastleTransformList;
 
       // transformation
       FCenter: TVector3;
@@ -124,7 +125,6 @@
       FOnlyTranslation: Boolean;
 
       FTransformation: TTransformation;
-      FOutsideTransformation: TTransformation;
       FTransformationValid: Boolean;
 
       FWorldTransformation: TTransformation;
@@ -164,6 +164,7 @@
     function GetItem(const I: Integer): TCastleTransform;
     procedure SetItem(const I: Integer; const Item: TCastleTransform);
     procedure InternalTransformationMult(var T: TTransformation);
+    procedure InternalOutsideTransformationMult(var T: TTransformation);
     procedure InternalTransformation(out T: TTransformation);
     procedure InternalOutsideTransformation(out T: TTransformation);
     { Update our FWorldTransformation, FWorldTransformationId. }
@@ -207,8 +208,6 @@
       This is recursively called on all children as well.
       Value must not be @nil. }
     procedure AddToWorld(const Value: TCastleAbstractRootTransform);
-
-    function GetRenderTranslation: TVector3;
 
     { Update FWorld, FWorldReferences.
       This is recursively called on all children as well.
@@ -279,6 +278,8 @@
   protected
     { Returns list of TCastleTransform to render. By default, it just returns @link(List). }
     function GetRenderList(const Params: TRenderParams): TCastleTransformList; virtual;
+
+    procedure UpdateOutsideList;
 
     { Call this when doing anything that allocates GL resources.
       This will make sure GLContextClose will get called. }
@@ -1424,6 +1425,8 @@
       coordinate system. This is an inverse of @link(Transform). }
     function InverseTransform: TMatrix4;
 
+    function InverseOutsideTransform: TMatrix4;
+
     { All conditions are satisfied to have @link(WorldTransform).
       When this returns @true, you know that @link(WorldTransform)
       and @link(WorldInverseTransform) will not raise @link(ETransformParentUndefined). }
@@ -1542,8 +1545,6 @@
         Scene.Translation := Scene.Translation + Vector3(4, 5, 6);
       #) }
     property Translation: TVector3 read FTranslation write SetTranslation;
-
-    property RenderTranslation: TVector3 read GetRenderTranslation;
 
     { Get or set the XY components of the translation.
       Useful for 2D games. }
@@ -1752,6 +1753,10 @@
       This method just doesn't calculation anything else, thus it is faster
       than @link(GetWorldView) if you don't need direction/up. }
     function WorldTranslation: TVector3;
+
+    function OutsideTranslation: TVector3;
+
+    function OutsideRoot: TCastleTransform;
 
     { Set at once vectors: position, direction, up.
 
@@ -2126,6 +2131,7 @@ begin
 
   FreeAndNil(FList);
   FreeAndNil(FSortedList);
+  FreeAndNil(FOutsideList);
   FreeAndNil(FBehaviors);
   FreeAndNil(FBehaviorsWorldChangeNotificationList);
   inherited;
@@ -2264,20 +2270,6 @@ begin
   if FList <> nil then // when one list is within another, this may be called during own destruction by TCastleTransformList.Notify
     for I := 0 to List.Count - 1 do
       List[I].AddToWorld(Value);
-end;
-
-function TCastleTransform.GetRenderTranslation: TVector3;
-var
-  T: TCastleTransform;
-begin
-  Result := Translation;
-
-  T := Self;
-  while T.RenderOutside do
-  begin
-    Result := Result + T.Parent.Translation;
-    T := T.Parent;
-  end;
 end;
 
 procedure TCastleTransform.RemoveFromWorld(const Value: TCastleAbstractRootTransform);
@@ -2701,6 +2693,33 @@ begin
     Result := List;
 end;
 
+procedure TCastleTransform.UpdateOutsideList;
+var
+  Tf: TCastleTransform;
+begin
+  if not Assigned(FOutsideList) then
+  begin
+    FOutsideList := TCastleTransformList.Create(False);
+    FOutsideList.Capacity := 10;
+  end;
+
+  FOutsideList.Clear;
+  if not RenderOutside then Exit;
+
+  Tf := Self.Parent.Parent;
+  FOutsideList.Add(Self.Parent);
+  FOutsideList.Add(Self.Parent.Parent);
+  while (Tf <> World) and Assigned(Tf) and (Tf.BlendingSort = bsYSort)  do
+  begin
+    if Assigned(Tf.Parent) and (Tf.Parent.BlendingSort = bsYSort) then
+    begin
+      Tf := Tf.Parent;
+      FOutsideList.Add(Tf);
+    end
+    else Break;
+  end;
+end;
+
 procedure TCastleTransform.LocalRender(const Params: TRenderParams);
 var
   I: Integer;
@@ -2907,21 +2926,20 @@ begin
   if not FTransformationValid then
   begin
     InternalTransformation(FTransformation);
-    InternalOutsideTransformation(FOutsideTransformation);
     FTransformationValid := true;
   end;
   Result := FTransformation.Transform;
 end;
 
 function TCastleTransform.OutsideTransform: TMatrix4;
+var
+  AOutsideRoot: TCastleTransform;
 begin
-  if not FTransformationValid then
-  begin
-    InternalTransformation(FTransformation);
-    InternalOutsideTransformation(FOutsideTransformation);
-    FTransformationValid := true;
-  end;
-  Result := FOutsideTransformation.Transform;
+  AOutsideRoot := OutsideRoot;
+  if Assigned(AOutsideRoot) then
+    Result := AOutsideRoot.WorldInverseTransform * WorldTransform
+  else
+    Result := Transform;
 end;
 
 function TCastleTransform.InverseTransform: TMatrix4;
@@ -2932,6 +2950,17 @@ begin
     FTransformationValid := true;
   end;
   Result := FTransformation.InverseTransform;
+end;
+
+function TCastleTransform.InverseOutsideTransform: TMatrix4;
+var
+  AOutsideRoot: TCastleTransform;
+begin
+  AOutsideRoot := OutsideRoot;
+  if Assigned(AOutsideRoot) then
+    Result := WorldInverseTransform * AOutsideRoot.WorldTransform
+  else
+    Result := InverseTransform;
 end;
 
 function TCastleTransform.WorldTransform: TMatrix4;
@@ -3267,6 +3296,20 @@ begin
 {$endif}
 end;
 
+procedure TCastleTransform.InternalOutsideTransformationMult(
+  var T: TTransformation);
+var
+  i: Integer;
+begin
+  UpdateOutsideList;
+  if (FOutsideList.Count < 2) then
+    Raise Exception.Create('InternalOutsideTransformationMult: No need to call this.');
+
+  { The last item in FOutsideList is OutsideRoot, so exclude it.}
+  for i := FOutsideList.Count - 2 downto 0 do FOutsideList[i].InternalTransformationMult(T);
+  InternalTransformationMult(T);
+end;
+
 procedure TCastleTransform.InternalTransformation(out T: TTransformation);
 begin
   T.Init;
@@ -3275,14 +3318,8 @@ end;
 
 procedure TCastleTransform.InternalOutsideTransformation(out T: TTransformation);
 begin
-  { TODO: Not done yet. Requires multiple operations from the root Ysort Transform. }
   T.Init;
-  T.Multiply(
-  FCenter,
-  FRotation,
-  FScale,
-  FScaleOrientation,
-  RenderTranslation);
+  InternalOutsideTransformationMult(T);
 end;
 
 function TCastleTransform.AverageScale: Single;
@@ -3357,6 +3394,7 @@ var
   HasSavedDepthRange, HasSavedDepthFunc: Boolean;
   SavedDepthRange: TDepthRange;
   SavedDepthFunc: TDepthFunction;
+  ARenderOutside: Boolean;
 begin
   HasSavedDepthFunc := BlendingSort = bsYSort;
   if HasSavedDepthFunc then
@@ -3397,8 +3435,10 @@ begin
 
   if (not InternalExistsOnlyInMeaningfulParents) or Params.InMeaningfulParent then
   begin
-    T := RenderTranslation;
-    if FOnlyTranslation and T.IsZero and (not InternalIgnoreParentScale) then
+    { TODO: It is not fully dealt with here. }
+    T := Translation;
+    ARenderOutside := RenderOutside;
+    if not ARenderOutside and FOnlyTranslation and T.IsZero and (not InternalIgnoreParentScale) then
     begin
       LocalRender(Params);
     end else
@@ -3426,21 +3466,16 @@ begin
       { Update NewXxx to apply the transformation defined by this TCastleTransform.
         LocalRender expects Frustum in local coordinates (without transformation),
         so we subtract transformation below. }
-      if FOnlyTranslation then
+      if ARenderOutside then
       begin
-        NewParamsTransformation.Translate(T);
-        NewFrustumValue.MoveVar(-T);
-      end else if RenderOutside then
-      begin
-        NewParamsTransformation.Multiply(
-          FCenter,
-          FRotation,
-          FScale,
-          FScaleOrientation,
-          RenderTranslation);
+        InternalOutsideTransformationMult(NewParamsTransformation);
         if IsNan(NewParamsTransformation.Transform.Data[0, 0]) then
           WarningMatrixNan(NewParamsTransformation.Transform);
         NewFrustumValue := NewFrustumValue.TransformByInverse(OutsideTransform);
+      end else if FOnlyTranslation then
+      begin
+        NewParamsTransformation.Translate(T);
+        NewFrustumValue.MoveVar(-T);
       end else
       begin
         InternalTransformationMult(NewParamsTransformation);
@@ -4036,6 +4071,29 @@ end;
 function TCastleTransform.WorldTranslation: TVector3;
 begin
   Result := TranslationFromMatrix(WorldTransform);
+end;
+
+function TCastleTransform.OutsideTranslation: TVector3;
+var
+  AOutsideRoot: TCastleTransform;
+begin
+  AOutsideRoot := OutsideRoot;
+  if Assigned(AOutsideRoot) then
+    Result := TranslationFromMatrix(AOutsideRoot.WorldInverseTransform * WorldTransform)
+  else
+    Result := Translation;
+end;
+
+function TCastleTransform.OutsideRoot: TCastleTransform;
+begin
+  if not RenderOutside then Exit(nil);
+
+  Result := Self.Parent.Parent;
+  while (Result <> World) and Assigned(Result) and (Result.BlendingSort = bsYSort)  do
+  begin
+    if Assigned(Result.Parent) and (Result.Parent.BlendingSort = bsYSort) then Result := Result.Parent
+    else Break;
+  end;
 end;
 
 procedure TCastleTransform.SetView(const APos, ADir, AUp: TVector3;

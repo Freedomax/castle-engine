@@ -19,11 +19,17 @@
 {$ifdef read_interface}
 
 type
+  TAssignableObject = class(TPersistent)
+  end;
+  TAssignableObjectClass = class of TAssignableObject;
+
+  TTilesData = array of Cardinal;
+
   { Loading and manipulating "Tiled" map files (http://mapeditor.org). }
-  TCastleTiledMapData = class
+  TCastleTiledMapData = class(TAssignableObject)
   public
     type
-      TProperty = class
+      TProperty = class(TAssignableObject)
       private
         procedure Load(const Element: TDOMElement; const BaseUrl: String);
       public
@@ -34,19 +40,39 @@ type
         { The type of the property. Can be string (default), int, float, bool, color
           or file (since 0.16, with color and file added in 0.17). }
         AType: string;
+        procedure Assign(Source: TPersistent);override;
+
+        function AsFloat(const ADefaultValue: Single): Single;
+        function AsInteger(const ADefaultValue: Integer): Integer;
+        function AsString():String;
+        function AsBoolean(const ADefaultValue: Boolean): Boolean;
+        function AsColor(const ADefaultValue: TCastleColor): TCastleColor;
       end;
 
       { List of properties. }
       TPropertyList = class({$ifdef FPC}specialize{$endif} TObjectList<TProperty>)
       private
+        function GetItems(const S: String): TProperty;
         procedure Load(const Element: TDOMElement; const BaseUrl: String);
+      public
+        procedure Assign(const APropertyList: TPropertyList);
+
+        function FloatValue(const AName: string; var AValue: Single): Boolean;
+        function IntegerValue(const AName: string; var AValue: Integer): Boolean;
+        function StringValue(const AName: string; var AValue: String): Boolean;
+        function BooleanValue(const AName: string; var AValue: Boolean): Boolean;
+        function ColorValue(const AName: string; var AValue: TCastleColor): Boolean;
+
+        procedure AddOrSetProperty(const AName, ATypeStr, AValue: String);
+
+        property Items[const S: String]: TProperty read GetItems ;
       end;
 
       TEncodingType = (etNone, etBase64, etCSV);
       TCompressionType = (ctNone, ctGZip, ctZLib);
 
       { Binary data definition. }
-      TData = class
+      TData = class(TAssignableObject)
       private
         procedure Load(const Element: TDOMElement; const BaseUrl: String);
       public
@@ -57,11 +83,14 @@ type
           "gzip" and "zlib". }
         Compression: TCompressionType;
         { Binary data. Uncompressed and decoded. }
-        Data: array of Cardinal;
+        Data: TTilesData;
+
+        IgnoreDataAssign: Boolean;
+        procedure Assign(Source: TPersistent);override;
       end;
 
       { Image definition. }
-      TImage = class
+      TImage = class(TAssignableObject)
       private
         procedure Load(const Element: TDOMElement; const BaseUrl: String);
       public
@@ -82,6 +111,7 @@ type
         Data: TData;
         destructor Destroy; override;
         procedure DetermineSize;
+        procedure Assign(Source: TPersistent);override;
       end;
 
       TObjectsDrawOrder = (odoIndex, odoTopDown);
@@ -90,7 +120,7 @@ type
         topPolyLine);
 
       { Object definition. }
-      TTiledObject = class
+      TTiledObject = class(TAssignableObject)
       private
         procedure Load(const Element: TDOMElement; const BaseUrl: String);
       public
@@ -125,13 +155,18 @@ type
         destructor Destroy; override;
         { X and Y packed in a vector. }
         function Position: TVector2;
+        procedure Assign(Source: TPersistent);override;
       end;
 
-      TTiledObjectList = {$ifdef FPC}specialize{$endif} TObjectList<TTiledObject>;
+      TTiledObjectList = class({$ifdef FPC}specialize{$endif} TObjectList<TTiledObject>)
+      public
+        procedure Assign(const ATiledObjectList: TTiledObjectList);
+      end;
 
-      TLayer = class
+      TLayer = class(TAssignableObject)
       private
         procedure Load(const Element: TDOMElement; const BaseUrl: String); virtual;
+        procedure SetYSortEnabled(const AValue: Boolean);
       public
         { The name of the layer. }
         Name: string;
@@ -155,6 +190,10 @@ type
         destructor Destroy; override;
         { OffsetX and OffsetY packed in a vector. }
         function Offset: TVector2;
+        procedure Assign(Source: TPersistent);override;
+        function GetYSortEnabled: Boolean;
+
+        property YSortEnabled: Boolean read GetYSortEnabled write SetYSortEnabled ;
       end;
 
       TObjectGroupLayer = class(TLayer)
@@ -167,6 +206,7 @@ type
         Objects: TTiledObjectList;
         constructor Create;
         destructor Destroy; override;
+        procedure Assign(Source: TPersistent);override;
       end;
 
       TImageLayer = class(TLayer)
@@ -175,14 +215,21 @@ type
       public
         { Used by ImageLayer. }
         Image: TImage;
+        constructor Create;
         destructor Destroy; override;
+        procedure Assign(Source: TPersistent);override;
       end;
 
+      TLayerClass = class of TLayer;
+
       { List of layers. }
-      TLayerList = {$ifdef FPC}specialize{$endif} TObjectList<TLayer>;
+      TLayerList = class({$ifdef FPC}specialize{$endif} TObjectList<TLayer>)
+      public
+      procedure Assign(const ALayerList: TLayerList);
+      end;
 
       { Single frame of animation. }
-      TFrame = class
+      TFrame = class(TAssignableObject)
       private
         procedure Load(const Element: TDOMElement; const BaseUrl: String);
       public
@@ -191,6 +238,7 @@ type
         { How long (in milliseconds) this frame should be displayed before advancing
           to the next frame. }
         Duration: Cardinal;
+        procedure Assign(Source: TPersistent);override;
       end;
 
       { Contains a list of animation frames.
@@ -199,9 +247,11 @@ type
       TAnimation = class({$ifdef FPC}specialize{$endif} TObjectList<TFrame>)
       private
         procedure Load(const Element: TDOMElement; const BaseUrl: String);
+      public
+        procedure Assign(const AAnimation: TAnimation);
       end;
 
-      TTile = class
+      TTile = class(TAssignableObject)
       private
         procedure Load(const Element: TDOMElement; const BaseUrl: String);
       public
@@ -225,25 +275,36 @@ type
         RendererData: TObject;
         constructor Create;
         destructor Destroy; override;
+        procedure Assign(Source: TPersistent);override;
       end;
 
       { Tiles list. }
-      TTileList = {$ifdef FPC}specialize{$endif} TObjectList<TTile>;
+      TTileList = class({$ifdef FPC}specialize{$endif} TObjectList<TTile>)
+      public
+        procedure Assign(const ATileList: TTileList);
+      end;
 
-      TTerrain = class
+      TTerrain = class(TAssignableObject)
+      public
         { The name of the terrain type. }
         Name: string;
         { The local tile-id of the tile that represents the terrain visually. }
         Tile: Cardinal;
         Properties: TPropertyList;
+        constructor Create;
+        destructor Destroy; override;
+        procedure Assign(Source: TPersistent);override;
       end;
 
       { This element defines an array of terrain types, which can be referenced from
         the terrain attribute of the tile element. }
-      TTerrainTypes = {$ifdef FPC}specialize{$endif} TObjectList<TTerrain>;
+      TTerrainTypes = class({$ifdef FPC}specialize{$endif} TObjectList<TTerrain>)
+      public
+        procedure Assign(const ATerrainTypes: TTerrainTypes);
+      end;
 
       { Tileset definition. }
-      TTileset = class
+      TTileset = class(TAssignableObject)
       private
         procedure Load(const Element: TDOMElement; const BaseUrl: String);
       public
@@ -282,12 +343,23 @@ type
         { Use to render the tileset. Not a part of the file format.
           In case of TCastleTiledMapControl, this is always TSprite. }
         RendererData: TObject;
+
+        { Already handled by ForceTilesetSpacing. }
+        Modified: Boolean;
+        CacheImage: TCastleImage;
+        { Original data, before handled by ForceTilesetSpacing. }
+        OriginalMargin, OriginalSpacing: Cardinal;
         constructor Create;
         destructor Destroy; override;
+        procedure Assign(Source: TPersistent);override;
+        function ValidTileId(const TileId : Integer): Boolean;
       end;
 
       { List of tilesets. }
-      TTilesetList = {$ifdef FPC}specialize{$endif} TObjectList<TTileset>;
+      TTilesetList = class({$ifdef FPC}specialize{$endif} TObjectList<TTileset>)
+      public
+        procedure Assign(const ATilesetList: TTilesetList);
+      end;
 
       TMapOrientation = (
         moOrthogonal,
@@ -323,16 +395,19 @@ type
     procedure LoadTMXFile(const AURL: String); overload;
     { Load TMX file internally from XMLDocument instance. }
     procedure LoadTMXFileInternal(const Doc: TXMLDocument);
+
+    procedure CreateLists;
+    procedure AssignVars(const AMapData: TCastleTiledMapData);
   public
-    property Layers: TLayerList read FLayers;
+    property Layers: TLayerList read FLayers write FLayers;
     { Map orientation. }
     property Orientation: TMapOrientation read FOrientation;
     property Properties: TPropertyList read FProperties;
     property Tilesets: TTilesetList read FTilesets;
     { The map width in tiles. }
-    property Width: Cardinal read FWidth;
+    property Width: Cardinal read FWidth write FWidth;
     { The map height in tiles. }
-    property Height: Cardinal read FHeight;
+    property Height: Cardinal read FHeight write FHeight;
     { The width of a tile. }
     property TileWidth: Cardinal read FTileWidth;
     { The height of a tile. }
@@ -357,6 +432,7 @@ type
       @param(AURL URL to Tiled (TMX) file.) }
     constructor Create(const Stream: TStream; const ABaseUrl: String); overload;
     constructor Create(const AURL: string); overload;
+    constructor Create; overload;
     destructor Destroy; override;
 
     { Is the given tile number valid.
@@ -376,8 +452,18 @@ type
     function PositionToTile(const Position: TVector2;
       out TilePosition: TVector2Integer): Boolean;
 
+    function TilePositionToIndex(const ATilePosition: TVector2Integer):integer;
+
     { Left-bottom corner where the given tile should be rendered. }
     function TileRenderPosition(const TilePosition: TVector2Integer): TVector2;
+
+    { Information about which image (and how) should be displayed at given map position.
+      Similar to the following @link(TileRenderData).}
+    function TileRenderDataSimple(const TilePosition: TVector2Integer;
+      const Layer: TLayer;
+      out Tileset: TTileset;
+      out Frame: Integer;
+      out Data: Cardinal): Boolean;
 
     { Information about which image (and how) should be displayed at given map position. }
     function TileRenderData(const TilePosition: TVector2Integer;
@@ -391,10 +477,11 @@ type
       orthogonal etc. maps. }
     function TileNeighbor(const Tile1, Tile2: TVector2Integer;
       const CornersAreNeighbors: Boolean): Boolean;
+
+    procedure Assign(Source: TPersistent);override;
   end;
 
   TTiledMap = TCastleTiledMapData deprecated 'use TCastleTiledMapData';
-
 {$endif read_interface}
 
 {$ifdef read_implementation}
@@ -413,6 +500,96 @@ begin
   Result := Vector4(TiledToColorRGB(S), 1);
 end;
 
+procedure TCastleTiledMapData.TLayerList.Assign(const ALayerList: TLayerList);
+var
+  Layer, NewLayer: TLayer;
+begin
+  Clear;
+  for Layer in ALayerList do
+  begin
+    NewLayer := TLayerClass(Layer.ClassType).Create;
+    NewLayer.Assign(Layer);
+    Add(NewLayer);
+  end;
+end;
+
+procedure TCastleTiledMapData.TTerrainTypes.Assign(
+  const ATerrainTypes: TTerrainTypes);
+var
+  Terrain, NewTerrain: TTerrain;
+begin
+  Clear;
+  for Terrain in ATerrainTypes do
+  begin
+    NewTerrain := TTerrain.Create;
+    NewTerrain.Assign(Terrain);
+    Add(NewTerrain);
+  end;
+end;
+
+procedure TCastleTiledMapData.TTileList.Assign(const ATileList: TTileList);
+var
+  Tile, NewTile: TTile;
+begin
+  Clear;
+  for Tile in ATileList do
+  begin
+    NewTile := TTile.Create;
+    NewTile.Assign(Tile);
+    Add(NewTile);
+  end;
+end;
+
+constructor TCastleTiledMapData.TTerrain.Create;
+begin
+  inherited;
+  Properties := TPropertyList.Create;
+end;
+
+destructor TCastleTiledMapData.TTerrain.Destroy;
+begin
+  FreeAndNil(Properties);
+  inherited Destroy;
+end;
+
+procedure TCastleTiledMapData.TTerrain.Assign(Source: TPersistent);
+begin
+  if (Source is TTerrain) then
+  begin
+    Name := TTerrain(Source).Name;
+    Tile := TTerrain(Source).Tile;
+    Properties.Assign(TTerrain(Source).Properties);
+  end else inherited;
+end;
+
+procedure TCastleTiledMapData.TTiledObjectList.Assign(
+  const ATiledObjectList: TTiledObjectList);
+var
+  TiledObject, NewTiledObject: TTiledObject;
+begin
+  Clear;
+  for TiledObject in ATiledObjectList do
+  begin
+    NewTiledObject := TTiledObject.Create;
+    NewTiledObject.Assign(TiledObject);
+    Add(NewTiledObject);
+  end;
+end;
+
+procedure TCastleTiledMapData.TTilesetList.Assign(
+  const ATilesetList: TTilesetList);
+var
+  Tileset, NewTileset: TTileset;
+begin
+  Clear;
+  for Tileset in ATilesetList do
+  begin
+    NewTileset := TTileset.Create;
+    NewTileset.Assign(Tileset);
+    Add(NewTileset);
+  end;
+end;
+
 { TProperty ------------------------------------------------------------------ }
 
 procedure TCastleTiledMapData.TProperty.Load(const Element: TDOMElement; const BaseUrl: String);
@@ -422,7 +599,61 @@ begin
   AType := Element.AttributeStringDef('type', '');
 end;
 
+procedure TCastleTiledMapData.TProperty.Assign(Source: TPersistent
+  );
+begin
+  if (Source is TProperty) then
+  begin
+    Name := TProperty(Source).Name;
+    AType := TProperty(Source).AType;
+    Value := TProperty(Source).Value;
+  end else inherited;
+end;
+
+function TCastleTiledMapData.TProperty.AsFloat(const ADefaultValue: Single): Single;
+begin
+  Result := StrToFloatDefDot(Value, ADefaultValue);
+end;
+
+function TCastleTiledMapData.TProperty.AsInteger(const ADefaultValue: Integer): Integer;
+begin
+  Result := StrToIntDef(Value, ADefaultValue);
+end;
+
+function TCastleTiledMapData.TProperty.AsString(): String;
+begin
+  Result := Value;
+end;
+
+function TCastleTiledMapData.TProperty.AsBoolean(
+  const ADefaultValue: Boolean): Boolean;
+begin
+  if Value = 'true' then Result := True
+  else
+  if Value = 'false' then Result := False
+  else
+    Result := ADefaultValue;
+end;
+
+function TCastleTiledMapData.TProperty.AsColor(
+  const ADefaultValue: TCastleColor): TCastleColor;
+begin
+  {ToDO: convert color value}
+  Result := ADefaultValue;
+end;
+
 { TPropertyList -------------------------------------------------------------- }
+
+function TCastleTiledMapData.TPropertyList.GetItems(const S: String): TProperty;
+var
+  P: TProperty;
+begin
+  for P in Self do
+  begin
+    if P.Name = S then Exit(P);
+  end;
+  Result := nil;
+end;
 
 procedure TCastleTiledMapData.TPropertyList.Load(const Element: TDOMElement; const BaseUrl: String);
 var
@@ -441,6 +672,86 @@ begin
       end;
     end;
   finally FreeAndNil(I) end;
+end;
+
+procedure TCastleTiledMapData.TPropertyList.Assign(
+  const APropertyList: TPropertyList);
+var
+  Prop, NewProp: TProperty;
+begin
+  Clear;
+  for Prop in APropertyList do
+  begin
+    NewProp := TProperty.Create;
+    NewProp.Assign(Prop);
+    Add(NewProp);
+  end;
+end;
+
+function TCastleTiledMapData.TPropertyList.FloatValue(const AName: string;
+  var AValue: Single): Boolean;
+var
+  P: TProperty;
+begin
+  P := self.Items[AName];
+  Result := Assigned(P);
+  if Assigned(P) then AValue := P.AsFloat(AValue);
+end;
+
+function TCastleTiledMapData.TPropertyList.IntegerValue(const AName: string;
+  var AValue: Integer): Boolean;
+var
+  P: TProperty;
+begin
+  P := self.Items[AName];
+  Result := Assigned(P);
+  if Assigned(P) then AValue := P.AsInteger(AValue);
+end;
+
+function TCastleTiledMapData.TPropertyList.StringValue(const AName: string;
+  var AValue: String): Boolean;
+var
+  P: TProperty;
+begin
+  P := self.Items[AName];
+  Result := Assigned(P);
+  if Assigned(P) then AValue := P.AsString;
+end;
+
+function TCastleTiledMapData.TPropertyList.BooleanValue(const AName: string;
+  var AValue: Boolean): Boolean;
+var
+  P: TProperty;
+begin
+  P := self.Items[AName];
+  Result := Assigned(P);
+  if Assigned(P) then AValue := P.AsBoolean(AValue);
+end;
+
+function TCastleTiledMapData.TPropertyList.ColorValue(const AName: string;
+  var AValue: TCastleColor): Boolean;
+var
+  P: TProperty;
+begin
+  P := self.Items[AName];
+  Result := Assigned(P);
+  if Assigned(P) then AValue := P.AsColor(AValue);
+end;
+
+procedure TCastleTiledMapData.TPropertyList.AddOrSetProperty(const AName,
+  ATypeStr, AValue: String);
+var
+  P: TProperty;
+begin
+  P := Items[AName];
+  if not Assigned(P) then
+  begin
+    P := TProperty.Create;
+    Add(P);
+  end;
+  P.Name := AName;
+  P.AType := ATypeStr;
+  P.Value := AValue;
 end;
 
 { TData ---------------------------------------------------------------------- }
@@ -565,6 +876,17 @@ begin
   end;
 end;
 
+procedure TCastleTiledMapData.TData.Assign(Source: TPersistent);
+begin
+  if (Source is TData) then
+  begin
+    Encoding := TData(Source).Encoding;
+    Compression := TData(Source).Compression;
+    if not IgnoreDataAssign then
+      Data := TData(Source).Data;
+  end else inherited;
+end;
+
 { TImage --------------------------------------------------------------------- }
 
 destructor TCastleTiledMapData.TImage.Destroy;
@@ -637,6 +959,26 @@ begin
   end;
 end;
 
+procedure TCastleTiledMapData.TImage.Assign(Source: TPersistent);
+begin
+  if (Source is TImage) then
+  begin
+    Format := TImage(Source).Format;
+    URL := TImage(Source).URL;
+    Trans := TImage(Source).Trans;
+    Width := TImage(Source).Width;
+    Height := TImage(Source).Height;
+    { Data is created on demand }
+    if not Assigned(TImage(Source).Data) then
+      FreeAndNil(Data) else
+    begin
+      if not Assigned(Data) then Data := TData.Create;
+      Data.Assign(TImage(Source).Data);
+    end;
+  end else inherited;
+
+end;
+
 { TFrame --------------------------------------------------------------------- }
 
 procedure TCastleTiledMapData.TFrame.Load(const Element: TDOMElement; const BaseUrl: String);
@@ -647,6 +989,15 @@ begin
     TileId := StrToInt(TmpStr);
   if Element.AttributeString('duration', TmpStr) then
     Duration := StrToInt(TmpStr);
+end;
+
+procedure TCastleTiledMapData.TFrame.Assign(Source: TPersistent);
+begin
+  if (Source is TFrame) then
+  begin
+    TileId := TFrame(Source).TileId;
+    Duration := TFrame(Source).Duration;
+  end else inherited;
 end;
 
 { TAnimation ----------------------------------------------------------------- }
@@ -670,6 +1021,19 @@ begin
   finally FreeAndNil(I) end;
 end;
 
+procedure TCastleTiledMapData.TAnimation.Assign(const AAnimation: TAnimation);
+var
+  Frame, NewFrame: TFrame;
+begin
+  Clear;
+  for Frame in AAnimation do
+  begin
+    NewFrame := TFrame.Create;
+    NewFrame.Assign(Frame);
+    Add(NewFrame);
+  end;
+end;
+
 { TTile ------------------------------------------------------------------- }
 
 constructor TCastleTiledMapData.TTile.Create;
@@ -690,6 +1054,27 @@ begin
   FreeAndNil(Image);
   FreeAndNil(ObjectGroup);
   inherited;
+end;
+
+procedure TCastleTiledMapData.TTile.Assign(Source: TPersistent);
+begin
+  if (Source is TTile) then
+  begin
+    Id := TTile(Source).Id;
+    Terrain := TTile(Source).Terrain;
+    Probability := TTile(Source).Probability;
+    Properties.Assign(TTile(Source).Properties);
+    Image.Assign(TTile(Source).Image);
+    { ObjectGroup is created on demand }
+    if not Assigned(TTile(Source).ObjectGroup) then
+      FreeAndNil(ObjectGroup) else
+    begin
+      if not Assigned(ObjectGroup) then ObjectGroup := TObjectGroupLayer.Create;
+      ObjectGroup.Assign(TTile(Source).ObjectGroup);
+    end;
+    Animation.Assign(TTile(Source).Animation);
+    RendererData := TTile(Source).RendererData;
+  end else inherited;
 end;
 
 procedure TCastleTiledMapData.TTile.Load(const Element: TDOMElement; const BaseUrl: String);
@@ -741,12 +1126,14 @@ constructor TCastleTiledMapData.TTiledObject.Create;
 begin
   inherited;
   Properties := TPropertyList.Create;
+  Image := TImage.Create;
 end;
 
 destructor TCastleTiledMapData.TTiledObject.Destroy;
 begin
   FreeAndNil(Properties);
   FreeAndNil(Points);
+  FreeAndNil(Image);
   inherited;
 end;
 
@@ -853,12 +1240,36 @@ begin
   Result := Vector2(X, Y);
 end;
 
+procedure TCastleTiledMapData.TTiledObject.Assign(
+  Source: TPersistent);
+begin
+  if (Source is TTiledObject) then
+  begin
+    Id := TTiledObject(Source).Id;
+    Name := TTiledObject(Source).Name;
+    Type_ := TTiledObject(Source).Type_;
+    X := TTiledObject(Source).X;
+    Y := TTiledObject(Source).Y;
+    Width := TTiledObject(Source).Width;
+    Height := TTiledObject(Source).Height;
+    Rotation := TTiledObject(Source).Rotation;
+    GId := TTiledObject(Source).GId;
+    Visible := TTiledObject(Source).Visible;
+    Properties.Assign(TTiledObject(Source).Properties);
+    Points.Assign(TTiledObject(Source).Points);
+    Primitive := TTiledObject(Source).Primitive;
+    Image.Assign(TTiledObject(Source).Image);
+  end else inherited;
+
+end;
+
 { TLayer ------------------------------------------------------------------- }
 
 constructor TCastleTiledMapData.TLayer.Create;
 begin
   inherited;
   Properties := TPropertyList.Create;
+  Data := TData.Create;
 end;
 
 destructor TCastleTiledMapData.TLayer.Destroy;
@@ -907,9 +1318,40 @@ begin
   finally FreeAndNil(I) end;
 end;
 
+procedure TCastleTiledMapData.TLayer.SetYSortEnabled(const AValue: Boolean);
+var
+  s: string;
+begin
+  if AValue then s := 'true' else s := 'false';
+  Properties.AddOrSetProperty('ysort', 'bool', s);
+end;
+
 function TCastleTiledMapData.TLayer.Offset: TVector2;
 begin
   Result := Vector2(OffsetX, OffsetY);
+end;
+
+procedure TCastleTiledMapData.TLayer.Assign(Source: TPersistent);
+begin
+  if (Source is TLayer) then
+  begin
+    Name := TLayer(Source).Name;
+    Opacity := TLayer(Source).Opacity;
+    Visible := TLayer(Source).Visible;
+    OffsetX := TLayer(Source).OffsetX;
+    OffsetY := TLayer(Source).OffsetY;
+    Properties.Assign(TLayer(Source).Properties);
+    Data.Assign(TLayer(Source).Data);
+    Color := TLayer(Source).Color;
+    Width := TLayer(Source).Width;
+    Height := TLayer(Source).Height;
+  end else inherited;
+end;
+
+function TCastleTiledMapData.TLayer.GetYSortEnabled: Boolean;
+begin
+  Result := False;
+  Properties.BooleanValue('ysort', Result);
 end;
 
 { TObjectGroupLayer ---------------------------------------------------------- }
@@ -923,6 +1365,17 @@ end;
 destructor TCastleTiledMapData.TObjectGroupLayer.Destroy;
 begin
   FreeAndNil(Objects);
+  inherited;
+end;
+
+procedure TCastleTiledMapData.TObjectGroupLayer.Assign(
+  Source: TPersistent);
+begin
+  if (Source is TObjectGroupLayer) then
+  begin
+    DrawOrder := TObjectGroupLayer(Source).DrawOrder;
+    Objects.Assign(TObjectGroupLayer(Source).Objects);
+  end;
   inherited;
 end;
 
@@ -967,6 +1420,16 @@ begin
   inherited;
 end;
 
+procedure TCastleTiledMapData.TImageLayer.Assign(
+  Source: TPersistent);
+begin
+  if (Source is TImageLayer) then
+  begin
+    Image.Assign(TImageLayer(Source).Image);
+  end;
+  inherited;
+end;
+
 procedure TCastleTiledMapData.TImageLayer.Load(const Element: TDOMElement; const BaseUrl: String);
 var
   I: TXMLElementIterator;
@@ -987,6 +1450,12 @@ begin
   finally FreeAndNil(I) end;
 end;
 
+constructor TCastleTiledMapData.TImageLayer.Create;
+begin
+  inherited;
+  Image := TImage.Create;
+end;
+
 { TTileset ------------------------------------------------------------------- }
 
 constructor TCastleTiledMapData.TTileset.Create;
@@ -994,16 +1463,50 @@ begin
   inherited;
   Properties := TPropertyList.Create;
   Tiles := TTileList.Create;
+  TerrainTypes := TTerrainTypes.Create;
   Image := TImage.Create;
   FirstGID := 1;
 end;
 
 destructor TCastleTiledMapData.TTileset.Destroy;
 begin
+  FreeAndNil(CacheImage);
   FreeAndNil(Image);
   FreeAndNil(Tiles);
+  FreeAndNil(TerrainTypes);
   FreeAndNil(Properties);
   inherited;
+end;
+
+procedure TCastleTiledMapData.TTileset.Assign(Source: TPersistent);
+begin
+  if (Source is TTileset) then
+  begin
+    FirstGID := TTileset(Source).FirstGID;
+    URL := TTileset(Source).URL;
+    Name := TTileset(Source).Name;
+    TileWidth := TTileset(Source).TileWidth;
+    TileHeight := TTileset(Source).TileHeight;
+    Spacing := TTileset(Source).Spacing;
+    Margin := TTileset(Source).Margin;
+    TileCount := TTileset(Source).TileCount;
+    Columns := TTileset(Source).Columns;
+    TileOffset := TTileset(Source).TileOffset;
+    Properties.Assign(TTileset(Source).Properties);
+    Image.Assign(TTileset(Source).Image);
+    Tiles.Assign(TTileset(Source).Tiles);
+    TerrainTypes.Assign(TTileset(Source).TerrainTypes);
+    RendererData := TTileset(Source).RendererData;
+    Modified := TTileset(Source).Modified;
+    OriginalMargin := TTileset(Source).OriginalMargin;
+    OriginalSpacing := TTileset(Source).OriginalSpacing;
+  end else inherited;
+end;
+
+function TCastleTiledMapData.TTileset.ValidTileId(const TileId: Integer
+  ): Boolean;
+begin
+  Result := Between(TileId, 0, Tiles.Count - 1);
 end;
 
 procedure TCastleTiledMapData.TTileset.Load(const Element: TDOMElement; const BaseUrl: String);
@@ -1292,13 +1795,34 @@ begin
   finally FreeAndNil(I) end;
 end;
 
+procedure TCastleTiledMapData.CreateLists;
+begin
+  FTilesets := TTilesetList.Create(true);
+  FProperties := TPropertyList.Create(true);
+  FLayers := TLayerList.Create(true);
+end;
+
+procedure TCastleTiledMapData.AssignVars(const AMapData: TCastleTiledMapData);
+begin
+  FVersion := AMapData.FVersion;
+  FOrientation := AMapData.FOrientation;
+  FWidth := AMapData.FWidth;
+  FHeight := AMapData.FHeight;
+  FTileWidth := AMapData.FTileWidth;
+  FTileHeight := AMapData.FTileHeight;
+  FHexSideLength := AMapData.FHexSideLength;
+  FStaggerAxis := AMapData.FStaggerAxis;
+  FStaggerIndex := AMapData.FStaggerIndex;
+  FBackgroundColor := AMapData.FBackgroundColor;
+  FRenderOrder := AMapData.FRenderOrder;
+  FBaseUrl := AMapData.FBaseUrl;
+end;
+
 constructor TCastleTiledMapData.Create(const Stream: TStream; const ABaseUrl: String);
 begin
   inherited Create;
 
-  FTilesets := TTilesetList.Create;
-  FProperties := TPropertyList.Create;
-  FLayers := TLayerList.Create(true);
+  CreateLists;
   FBaseUrl := ABaseUrl;
 
   //Load TMX
@@ -1320,6 +1844,12 @@ begin
   try
     Create(Stream, AURL);
   finally FreeAndNil(Stream) end;
+end;
+
+constructor TCastleTiledMapData.Create;
+begin
+  inherited Create;
+  CreateLists;
 end;
 
 destructor TCastleTiledMapData.Destroy;
@@ -1394,6 +1924,12 @@ begin
   Result := TilePositionValid(TilePosition);
 end;
 
+function TCastleTiledMapData.TilePositionToIndex(
+  const ATilePosition: TVector2Integer): integer;
+begin
+  Result := ATilePosition.X + (Height - 1 - ATilePosition.Y) * Width;
+end;
+
 function TCastleTiledMapData.TileRenderPosition(const TilePosition: TVector2Integer): TVector2;
 var
   X, Y: Integer;
@@ -1444,11 +1980,9 @@ begin
   end;
 end;
 
-function TCastleTiledMapData.TileRenderData(const TilePosition: TVector2Integer;
-  const Layer: TLayer;
-  out Tileset: TTileset;
-  out Frame: Integer;
-  out HorizontalFlip, VerticalFlip, DiagonalFlip: Boolean): Boolean;
+function TCastleTiledMapData.TileRenderDataSimple(
+  const TilePosition: TVector2Integer; const Layer: TLayer; out
+  Tileset: TTileset; out Frame: Integer; out Data: Cardinal): Boolean;
 
   { Returns the tileset that contains the global ID. }
   function GIDToTileset(const AGID: Cardinal): TTileSet;
@@ -1465,28 +1999,43 @@ function TCastleTiledMapData.TileRenderData(const TilePosition: TVector2Integer;
   end;
 
 const
-  HorizontalFlag = $80000000;
-  VerticalFlag   = $40000000;
-  DiagonalFlag   = $20000000;
   ClearFlag      = $1FFFFFFF;
 var
   Index: Integer;
-  GID, Dat: Cardinal;
+  GID: Cardinal;
 begin
   Result := false;
 
-  Index := TilePosition.X + (Height - 1 - TilePosition.Y) * Width;
-  Dat := Layer.Data.Data[Index];
-  GID := Dat and ClearFlag;
+  Index := TilePositionToIndex(TilePosition);
+  Data := Layer.Data.Data[Index];
+  GID := Data and ClearFlag;
   if GID = 0 then Exit;
 
   Tileset := GIDToTileset(GID);
   Frame := GID - Tileset.FirstGID;
+
+  Result := true;
+end;
+
+function TCastleTiledMapData.TileRenderData(const TilePosition: TVector2Integer;
+  const Layer: TLayer;
+  out Tileset: TTileset;
+  out Frame: Integer;
+  out HorizontalFlip, VerticalFlip, DiagonalFlip: Boolean): Boolean;
+
+const
+  HorizontalFlag = $80000000;
+  VerticalFlag   = $40000000;
+  DiagonalFlag   = $20000000;
+var
+  Dat: Cardinal;
+begin
+  Result := TileRenderDataSimple(TilePosition, Layer, Tileset, Frame, Dat);
+  if not Result then Exit;
+
   HorizontalFlip := Dat and HorizontalFlag > 0;
   VerticalFlip := Dat and VerticalFlag > 0;
   DiagonalFlip := Dat and DiagonalFlag > 0;
-
-  Result := true;
 end;
 
 function TCastleTiledMapData.TileNeighbor(const Tile1, Tile2: TVector2Integer;
@@ -1565,6 +2114,21 @@ begin
             ( (YDiff = 0) and ((XDiff = -1) or (XDiff = 1)) );
       end;
   end;
+end;
+
+procedure TCastleTiledMapData.Assign(Source: TPersistent);
+var
+  AMapData: TCastleTiledMapData;
+begin
+  if (Source is TCastleTiledMapData) then
+  begin
+    AMapData := TCastleTiledMapData(Source);
+
+    AssignVars(AMapData);
+    FTilesets.Assign(AMapData.Tilesets);
+    FProperties.Assign(AMapData.Properties);
+    FLayers.Assign(AMapData.Layers);
+  end else inherited;
 end;
 
 {$endif read_implementation}

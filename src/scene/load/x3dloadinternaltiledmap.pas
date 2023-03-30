@@ -202,15 +202,36 @@ var
   const
     NewMargin = 1;
     NewSpacing = 2;
+  var
+    OldMargin, OldSpacing:Cardinal;
   begin
+    if Tileset.Modified and Assigned(Tileset.CacheImage) and (NewMargin = Tileset.Margin)
+      and (NewSpacing = Tileset.Spacing) then
+    begin
+      //WritelnLog('ForceTilesetImageSpacing', Format('Using CacheImage for %s', [AURL]));
+      Exit(Tileset.CacheImage.CreateCopy as TCastleImage);
+    end;
+
     OriginalImage := LoadImage(AURL);
     Result := TCastleImageClass(OriginalImage.ClassType).Create;
 
     try
-      ColumnCount := (OriginalImage.Width - 2 * Tileset.Margin + Tileset.Spacing)
-        div (Tileset.TileWidth + Tileset.Spacing);
-      RowCount := (OriginalImage.Height - 2 * Tileset.Margin + Tileset.Spacing)
-        div (Tileset.TileHeight + Tileset.Spacing);
+      { Must read Margin,Spacing before processed by ForceTilesetImageSpacing. }
+      if Tileset.Modified then
+      begin
+        Assert(NewMargin = Tileset.Margin, 'ForceTilesetImageSpacing: Wrong margin');
+        Assert(NewSpacing = Tileset.Spacing, 'ForceTilesetImageSpacing: Wrong spacing');
+        OldMargin := Tileset.OriginalMargin;
+        OldSpacing := Tileset.OriginalSpacing;
+      end else
+      begin
+        OldMargin := Tileset.Margin;
+        OldSpacing := Tileset.Spacing;
+      end;
+      ColumnCount := (OriginalImage.Width - 2 * OldMargin + OldSpacing)
+        div (Tileset.TileWidth + OldSpacing);
+      RowCount := (OriginalImage.Height - 2 * OldMargin + OldSpacing)
+        div (Tileset.TileHeight + OldSpacing);
 
       Result.SetSize(ColumnCount * (Tileset.TileWidth + NewSpacing) - NewSpacing + 2 * NewMargin,
         RowCount * (Tileset.TileHeight + NewSpacing) - NewSpacing + 2 * NewMargin);
@@ -220,7 +241,7 @@ var
         for Col := 0 to ColumnCount - 1 do
         begin
           Pos := TilePosition(Result, NewMargin, NewSpacing);
-          SrcPos := TilePosition(OriginalImage, Tileset.Margin, Tileset.Spacing);
+          SrcPos := TilePosition(OriginalImage, OldMargin, OldSpacing);
 
           { Draw original tiles -----------------------------------------------}
           Draw(Pos, SrcPos, Tileset.TileWidth, Tileset.TileHeight);
@@ -266,10 +287,19 @@ var
         Result.Height
       ]);
 
-      Tileset.Margin := NewMargin;
-      Tileset.Spacing := NewSpacing;
-      Tileset.Image.Width := Result.Width;
-      Tileset.Image.Height := Result.Height;
+      if not Tileset.Modified then
+      begin
+        Tileset.OriginalMargin := OldMargin;
+        Tileset.OriginalSpacing := OldSpacing;
+        Tileset.Modified := True;
+        FreeAndNil(Tileset.CacheImage);
+        Tileset.CacheImage := Result.CreateCopy as TCastleImage;
+
+        Tileset.Margin := NewMargin;
+        Tileset.Spacing := NewSpacing;
+        Tileset.Image.Width := Result.Width;
+        Tileset.Image.Height := Result.Height;
+      end;
     finally
       FreeAndNil(OriginalImage);
     end;
@@ -348,6 +378,7 @@ begin
   for LayerIndex := 0 to Map.Layers.Count - 1 do
   begin
     Layer := Map.Layers[LayerIndex];
+    if Layer.YSortEnabled then Continue;
     if not (
          Layer.Visible and
          (
@@ -572,7 +603,7 @@ var
 
   function ValidTileId(const TileId : Integer):Boolean;
   begin
-    Result := Between(TileId, 0, Tileset.Tiles.Count - 1);
+    Result := Tileset.ValidTileId(TileId);
   end;
 
   procedure CalcTexCoordArray(const TileId:Integer);

@@ -33,19 +33,31 @@ type
       { Indicates that all @link(Layers) should be visible. }
       AllLayers = [Low(TLayerIndex)..High(TLayerIndex)];
   strict private
-    FForceTilesetSpacing: Boolean;
-    FMap: TCastleTiledMapData;
-    FURL: String;
-    FSmoothScaling, FSmoothScalingSafeBorder: Boolean;
-    FScene: TCastleScene;
-    FLayers: TLayers;
+    type
+      TMapList = {$Ifdef fpc}specialize{$endif}TObjectList<TCastleScene>;
+    var
+      FForceTilesetSpacing: Boolean;
+      FItems: TCastleTransform;
+      FMap: TCastleTiledMapData;
+      FSubMaps: TMapList;
+      FURL: String;
+      FSmoothScaling, FSmoothScalingSafeBorder: Boolean;
+      FScene: TCastleScene;
+      FLayers: TLayers;
     procedure SetForceTilesetSpacing(const AValue: Boolean);
     procedure SetURL(const Value: string);
     procedure SetSmoothScaling(const Value: Boolean);
     procedure SetSmoothScalingSafeBorder(const Value: Boolean);
-    procedure ReloadMap;
+    procedure ReloadMapData;
+    procedure ConvertMap;
+    procedure ConvertToScene(const AMapData: TCastleTiledMapData;const AScene: TCastleScene;const ALayers: TLayers);
+    procedure CreateYSortScenes;
+    procedure ReloadMap(const KeepMapData: Boolean = False);
     procedure UpdateSmoothScaling;
+    procedure UpdateSmoothScalingOneScene(const AScene: TCastleScene);
     procedure SetLayers(const Value: TLayers);
+    procedure PlayAnimationsOneScene(const AScene: TCastleScene);
+    procedure StopAnimationsOneScene(const AScene: TCastleScene; const ResetAnimations: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -132,6 +144,8 @@ type
       and automatically starts animations.
       You can stop them with @link(StopAnimations). }
     property Layers: TLayers read FLayers write SetLayers default AllLayers;
+
+    property Items:TCastleTransform read FItems ;
   end;
 
 {$endif read_interface}
@@ -153,6 +167,15 @@ begin
   FScene.RenderOptions.BlendingSort := bsNone;
   Add(FScene);
 
+  FSubMaps := TMapList.Create(True);
+  FItems := TCastleTransform.Create(Self);
+  FItems.SetSubComponent(true);
+  FItems.Name := 'Items';
+  Add(FItems);
+  FItems.BlendingSort := bsYSort;
+
+  FMap := TCastleTiledMapData.Create;
+
   FSmoothScaling := false;
   FSmoothScalingSafeBorder := false;
   FForceTilesetSpacing := false;
@@ -164,6 +187,7 @@ end;
 
 destructor TCastleTiledMap.Destroy;
 begin
+  FreeAndNil(FSubMaps);
   FreeAndNil(FScene);
   FreeAndNil(FMap);
   inherited;
@@ -210,31 +234,14 @@ begin
   if FForceTilesetSpacing <> AValue then
   begin
     FForceTilesetSpacing := AValue;
-    ReloadMap;
+    ReloadMap(False);
   end;
 end;
 
-procedure TCastleTiledMap.ReloadMap;
-var
-  Converter: TCastleTiledMapConverter;
+procedure TCastleTiledMap.ReloadMap(const KeepMapData: Boolean);
 begin
-  FreeAndNil(FMap);
-  FScene.Load(nil, true);
-
-  if FURL <> '' then
-  begin
-    FMap := TCastleTiledMapData.Create(URL);
-    Converter := TCastleTiledMapConverter.Create(FMap);
-    try
-      Converter.SmoothScalingSafeBorder := SmoothScalingSafeBorder;
-      Converter.ForceTilesetSpacing := ForceTilesetSpacing;
-      Converter.Layers := Layers;
-      Converter.ConvertMap;
-      FScene.Load(Converter.RootNode, true);
-      PlayAnimations;
-
-    finally FreeAndNil(Converter) end;
-  end;
+  if not KeepMapData then ReloadMapData;
+  ConvertMap;
 end;
 
 procedure TCastleTiledMap.SetSmoothScaling(const Value: Boolean);
@@ -247,15 +254,27 @@ begin
 end;
 
 procedure TCastleTiledMap.UpdateSmoothScaling;
+var
+  AScene: TCastleScene;
+begin
+  UpdateSmoothScalingOneScene(FScene);
+  for AScene in FSubMaps do
+  begin
+    UpdateSmoothScalingOneScene(AScene);
+  end;
+end;
+
+procedure TCastleTiledMap.UpdateSmoothScalingOneScene(const AScene: TCastleScene
+  );
 begin
   if SmoothScaling then
   begin
-    FScene.RenderOptions.MinificationFilter := minLinear;
-    FScene.RenderOptions.MagnificationFilter := magLinear;
+    AScene.RenderOptions.MinificationFilter := minLinear;
+    AScene.RenderOptions.MagnificationFilter := magLinear;
   end else
   begin
-    FScene.RenderOptions.MinificationFilter := minNearest;
-    FScene.RenderOptions.MagnificationFilter := magNearest;
+    AScene.RenderOptions.MinificationFilter := minNearest;
+    AScene.RenderOptions.MagnificationFilter := magNearest;
   end;
 end;
 
@@ -264,8 +283,219 @@ begin
   if FSmoothScalingSafeBorder <> Value then
   begin
     FSmoothScalingSafeBorder := Value;
-    ReloadMap;
+    ReloadMap(True);
   end;
+end;
+
+procedure TCastleTiledMap.ReloadMapData;
+begin
+  FreeAndNil(FMap);
+  if FURL <> '' then
+    FMap := TCastleTiledMapData.Create(URL);
+end;
+
+procedure TCastleTiledMap.ConvertMap;
+begin
+  ConvertToScene(FMap, FScene, Layers);
+  CreateYSortScenes;
+end;
+
+procedure TCastleTiledMap.ConvertToScene(const AMapData: TCastleTiledMapData;
+  const AScene: TCastleScene; const ALayers: TLayers);
+var
+  Converter: TCastleTiledMapConverter;
+begin
+  AScene.Load(nil, true);
+  if AMapData = nil then Exit;
+
+  Converter := TCastleTiledMapConverter.Create(AMapData);
+  try
+    Converter.SmoothScalingSafeBorder := SmoothScalingSafeBorder;
+    Converter.ForceTilesetSpacing := ForceTilesetSpacing;
+    Converter.Layers := ALayers;
+    Converter.ConvertMap;
+    AScene.Load(Converter.RootNode, true);
+    PlayAnimations;
+
+  finally FreeAndNil(Converter) end;
+end;
+
+procedure TCastleTiledMap.CreateYSortScenes;
+var
+  Layer: TCastleTiledMapData.TLayer;
+  LayerIndex: integer;
+
+  procedure ProcessLayer;
+  type
+    TTileData = record
+      Position: TVector2Integer;
+      Data: Cardinal;
+    end;
+
+    TTileDataList = {$Ifdef fpc}specialize {$endif}TList<TTileData>;
+    { Abs YSortOffset, Data }
+    TTilesCompositing = {$Ifdef fpc}specialize {$endif}TObjectDictionary<Single, TTileDataList>;
+  var
+    TilesCompositing: TTilesCompositing;
+    X, Y: Integer;
+    Tileset: TCastleTiledMapData.TTileset;
+    Frame: Integer;
+    TileYSortOffset: Single;
+    Data: Cardinal;
+    TileDataList: TTileDataList;
+    TileData: TTileData;
+
+    function GetYSortOffset: Single;
+    var
+      ZIndex: Single;
+    begin
+      ZIndex := 0;
+      Tileset.Tiles[Frame].Properties.FloatValue('z', ZIndex);
+      Result := - ZIndex + (Y + 0.5) * Map.TileHeight;
+    end;
+
+    procedure AddToTilesCompositing;
+    begin
+      TileData.Position := Vector2Integer(X, Y);
+      TileData.Data := Data;
+
+      if TilesCompositing.TryGetValue(TileYSortOffset, TileDataList) then
+        TileDataList.Add(TileData)
+      else
+      begin
+        TileDataList := TTileDataList.Create;
+        TileDataList.Add(TileData);
+        TilesCompositing.Add(TileYSortOffset, TileDataList);
+      end;
+    end;
+
+    procedure CreateMaps;
+
+      procedure CreateMap;
+      var
+        NewMap: TCastleScene;
+        ARect: TRectangle;
+        AData: TTilesData;
+        NewPos: TVector2Integer;
+
+          function ComposeMapData: Boolean;
+          begin
+            ARect := TRectangle.Empty;
+            for TileData in TileDataList do
+            begin
+              ARect := ARect + Rectangle(TileData.Position, 1, 1);
+            end;
+            Result := not ARect.IsEmpty;
+            if not Result then Exit;
+
+            SetLength(AData, ARect.Width * ARect.Height);
+            if Length(AData) > 0 then
+              FillChar(AData[0], Length(AData) * SizeOf(AData[0]), 0);
+            for TileData in TileDataList do
+            begin
+              NewPos := TileData.Position - ARect.LeftBottom;
+              NewPos.Y := ARect.Height -1 - NewPos.Y;
+              AData[NewPos.X + NewPos.Y * ARect.Width] := TileData.Data;
+            end;
+
+          end;
+      var
+        OldLayerList, NewLayerList: TCastleTiledMapData.TLayerList;
+        OldWidth, OldHeight: Cardinal;
+        NewLayer: TCastleTiledMapData.TLayer;
+      begin
+        if not ComposeMapData then Exit;
+
+        NewMap := TCastleScene.Create(FItems);
+        NewMap.SetTransient;
+        NewMap.RenderOptions.BlendingSort := bsNone;
+        UpdateSmoothScalingOneScene(NewMap);
+        FItems.Add(NewMap);
+
+        OldLayerList := FMap.Layers;
+        OldWidth := FMap.Width;
+        OldHeight := FMap.Height;
+
+        NewLayer := TCastleTiledMapData.TLayer.Create;
+        NewLayer.Data.IgnoreDataAssign := True;
+        NewLayer.Assign(Layer);
+        NewLayer.YSortEnabled := False;
+        NewLayer.Data.Data := AData;
+        NewLayerList := TCastleTiledMapData.TLayerList.Create(True);
+        NewLayerList.Add(NewLayer);
+
+        FMap.Layers := NewLayerList;
+        FMap.Width := ARect.Width;
+        FMap.Height := ARect.Height;
+
+        ConvertToScene(FMap, NewMap, AllLayers);
+
+        FMap.Layers := OldLayerList;
+        FMap.Width := OldWidth;
+        FMap.Height := OldHeight;
+        FreeAndNil(NewLayerList);
+
+        NewMap.Translation := Vector3(ARect.Left * FMap.TileWidth, ARect.Bottom * FMap.TileHeight, 0);
+        NewMap.YSortOffset := TileYSortOffset - ARect.Bottom * FMap.TileHeight;
+        FSubMaps.Add(NewMap);
+
+        {
+        WritelnLog('CreateMap', 'Compose Tile Count: ' + TileDataList.Count.ToString);
+        WritelnLog('CreateMap', Format('Pos: %f, %f Size: %d, %d',[NewMap.Translation.X,
+          NewMap.Translation.Y, NewMap.Map.Width, NewMap.Map.Height]));
+          }
+      end;
+
+    begin
+      for TileYSortOffset in TilesCompositing.Keys do
+      begin
+        if TilesCompositing.TryGetValue(TileYSortOffset, TileDataList) then
+          CreateMap;
+      end;
+    end;
+
+  begin
+    TilesCompositing := TTilesCompositing.Create([doOwnsValues]);
+    try
+      for Y := Map.Height - 1 downto 0 do
+        for X := 0 to Map.Width - 1 do
+        begin
+          if not FMap.TileRenderDataSimple(Vector2Integer(X, Y), Layer, Tileset, Frame,
+            Data) then Continue;
+          if not Tileset.ValidTileId(Frame) then
+          begin
+            WritelnWarning('CreateYSortScenes', 'ProcessLayer => ValidTileId: ' + Frame.ToString);
+            Continue;
+          end;
+          TileYSortOffset := GetYSortOffset;
+          AddToTilesCompositing;
+        end;
+
+      CreateMaps;
+    finally
+      FreeAndNil(TilesCompositing);
+    end;
+  end;
+
+begin
+  FSubMaps.Clear;
+
+  if FMap = nil then Exit;
+
+  for LayerIndex := 0 to FMap.Layers.Count - 1 do
+  begin
+    Layer := FMap.Layers[LayerIndex];
+    if not (
+       Layer.Visible and Layer.YSortEnabled and
+       (
+         (LayerIndex > High(TLayerIndex)) or
+         (LayerIndex in Layers)
+       )
+     ) then Continue;
+    ProcessLayer;
+  end;
+
+  WritelnLog('SubMap Count',FSubMaps.Count.ToString);
 end;
 
 procedure TCastleTiledMap.SetLayers(const Value: TLayers);
@@ -273,35 +503,52 @@ begin
   if FLayers <> Value then
   begin
     FLayers := Value;
-    ReloadMap;
+    ReloadMap(True);
+  end;
+end;
+
+procedure TCastleTiledMap.PlayAnimationsOneScene(const AScene: TCastleScene);
+var
+  I: Integer;
+  TimeSensor: TTimeSensorNode;
+begin
+  AScene.ProcessEvents := true;
+  for I := 0 to AScene.AnimationsList.Count - 1 do
+  begin
+    TimeSensor := AScene.AnimationsList.Objects[I] as TTimeSensorNode;
+    TimeSensor.Start(true);
+  end;
+end;
+
+procedure TCastleTiledMap.StopAnimationsOneScene(const AScene: TCastleScene;
+  const ResetAnimations: Boolean);
+var
+  I: Integer;
+  TimeSensor: TTimeSensorNode;
+begin
+  for I := 0 to AScene.AnimationsList.Count - 1 do
+  begin
+    TimeSensor := AScene.AnimationsList.Objects[I] as TTimeSensorNode;
+    TimeSensor.Stop;
+    if ResetAnimations then
+      TimeSensor.FakeTime(0, false, true);
   end;
 end;
 
 procedure TCastleTiledMap.PlayAnimations;
 var
-  I: Integer;
-  TimeSensor: TTimeSensorNode;
+  AScene: TCastleScene;
 begin
-  FScene.ProcessEvents := true;
-  for I := 0 to FScene.AnimationsList.Count - 1 do
-  begin
-    TimeSensor := FScene.AnimationsList.Objects[I] as TTimeSensorNode;
-    TimeSensor.Start(true);
-  end;
+  PlayAnimationsOneScene(FScene);
+  for AScene in FSubMaps do PlayAnimationsOneScene(AScene);
 end;
 
 procedure TCastleTiledMap.StopAnimations(const ResetAnimations: Boolean);
 var
-  I: Integer;
-  TimeSensor: TTimeSensorNode;
+  AScene: TCastleScene;
 begin
-  for I := 0 to FScene.AnimationsList.Count - 1 do
-  begin
-    TimeSensor := FScene.AnimationsList.Objects[I] as TTimeSensorNode;
-    TimeSensor.Stop;
-    if ResetAnimations then
-      TimeSensor.FakeTime(0, false, true);
-  end;
+  StopAnimationsOneScene(FScene, ResetAnimations);
+  for AScene in FSubMaps do StopAnimationsOneScene(AScene, ResetAnimations);
 end;
 
 function TCastleTiledMap.HasAnimations: Boolean;
