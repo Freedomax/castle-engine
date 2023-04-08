@@ -4343,9 +4343,9 @@ See https://castle-engine.io/license.php for details.
         <Type Value="Include"/>
       </Item1059>
 	  <Item1060>
-		<Filename Value="../src/base/castlerectangles_persistent.inc"/>
-		<Type Value="Include"/>
-	  </Item1060>
+        <Filename Value="../src/base/castlerectangles_persistent.inc"/>
+        <Type Value="Include"/>
+      </Item1060>
     </Files>
     <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="3">
