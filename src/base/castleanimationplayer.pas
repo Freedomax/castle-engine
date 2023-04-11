@@ -1,5 +1,20 @@
-unit CastleAnimationPlayer;
+{
+  Copyright 2023 Michalis Kamburelis, Freedomax.
 
+  This file is part of "Castle Game Engine".
+
+  "Castle Game Engine" is free software; see the file COPYING.txt,
+  included in this distribution, for details about the copyright.
+
+  "Castle Game Engine" is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+  ----------------------------------------------------------------------------
+}
+
+unit CastleAnimationPlayer;
+{$I castleconf.inc}
 interface
 
 uses
@@ -31,8 +46,8 @@ type
     FProperty: string;
     FKeyframes: TAnimationKeyframeList;
     FMode: TAnimationTrackMode;
-    procedure KeyframesNotify(ASender: TObject; {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe;
-      AAction: TCollectionNotification);
+    procedure KeyframesNotify(ASender: TObject;
+ {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
     function Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
       const Time: TFloatTime): TValue;
     procedure SetOnChange(const AValue: TNotifyEvent);
@@ -59,12 +74,11 @@ type
     FPlaying: boolean;
     FLoop: boolean;
     FSpeed: single;
-    procedure FTrackListNotify(ASender: TObject; {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack;
-      AAction: TCollectionNotification);
+    procedure FTrackListNotify(ASender: TObject;
+ {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
     procedure SetPlaying(const Value: boolean);
     procedure SetLoop(const Value: boolean);
     procedure SetSpeed(const Value: single);
-    function GetMaxTime: TFloatTime;
     procedure Changed;
     procedure TrackChange(Sender: TObject);
   public
@@ -300,7 +314,7 @@ var
   Track: TAnimationTrack;
 begin
   if not FPlaying then  Exit;
-  if CastleDesignMode then Exit;
+  //if CastleDesignMode then Exit;
 
   FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
   if FLoop then
@@ -321,23 +335,16 @@ begin
   FPlaying := True;
 end;
 
-function TAnimation.GetMaxTime: TFloatTime;
+procedure TAnimation.Changed;
 var
-  I: integer;
   Track: TAnimationTrack;
 begin
-  Result := 0;
-  for I := 0 to FTrackList.Count - 1 do
+  FMaxTime := 0;
+  for Track in FTrackList do
   begin
-    Track := FTrackList[I];
-    if Track.Duration > Result then
-      Result := Track.Duration;
+    if Track.Duration > FMaxTime then
+      FMaxTime := Track.Duration;
   end;
-end;
-
-procedure TAnimation.Changed;
-begin
-  FMaxTime := GetMaxTime;
 end;
 
 procedure TAnimation.TrackChange(Sender: TObject);
@@ -471,7 +478,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
