@@ -19,6 +19,7 @@
   { Timer, running the @link(OnTimer) event periodically. }
   TCastleAnimationPlayer = class(TCastleUserInterface)
   strict private
+    FAnimationPlayer: TAnimationPlayer;
     FCounteractDelays: boolean;
     FIntervalSeconds, IntervalRemaining: TFloatTime;
     FOnTimer: TNotifyEvent;
@@ -26,6 +27,7 @@
   protected
     procedure DoTimer; virtual;
   public
+    constructor Create(AOwner: TComponent); override;
     procedure Update(const SecondsPassed: Single;
       var HandleInput: boolean); override;
     function PropertySections(const PropertyName: String): TPropertySections; override;
@@ -43,6 +45,7 @@
       in case the application hung for some time. }
     property CounteractDelays: boolean
       read FCounteractDelays write FCounteractDelays default false;
+    property AnimationPlayer: TAnimationPlayer read FAnimationPlayer;
   end;
 
 {$endif read_interface}
@@ -64,6 +67,13 @@ procedure TCastleAnimationPlayer.DoTimer;
 begin
   if Assigned(OnTimer) then
     OnTimer(Self);
+end;
+
+constructor TCastleAnimationPlayer.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FAnimationPlayer := TAnimationPlayer.Create(Self);
+  FAnimationPlayer.SetSubComponent(True);
 end;
 
 procedure TCastleAnimationPlayer.Update(const SecondsPassed: Single; var HandleInput: boolean);

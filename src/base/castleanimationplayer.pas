@@ -194,18 +194,17 @@ var
   I: integer;
   Track: TAnimationTrack;
 begin
-  if FPlaying then
+  if not FPlaying then  exit;
+
+  FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
+  if FLoop then
+    FCurrentTime := FCurrentTime mod MaxTime
+  else if FCurrentTime > MaxTime then
+    Stop;
+  for I := 0 to FTrackList.Count - 1 do
   begin
-    FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
-    if FLoop then
-      FCurrentTime := FCurrentTime mod MaxTime
-    else if FCurrentTime > MaxTime then
-      Stop;
-    for I := 0 to FTrackList.Count - 1 do
-    begin
-      Track := TAnimationTrack(FTrackList[I]);
-      Track.Evaluate(FCurrentTime);
-    end;
+    Track := TAnimationTrack(FTrackList[I]);
+    Track.Evaluate(FCurrentTime);
   end;
 end;
 
@@ -233,18 +232,18 @@ begin
   if Keyframe1.Value.Kind <> Keyframe2.Value.Kind then
     raise Exception.Create('Interpolation of different value types is not supported.');
 
+  Lerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
+
   if Keyframe1.Value.Kind in [tkInteger, tkEnumeration, tkSet, tkChar, tkWChar] then
   begin
     V1_int := Keyframe1.Value.AsOrdinal;
     V2_int := Keyframe2.Value.AsOrdinal;
-    Lerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
     Result := Round((1 - Lerp) * V1_int + Lerp * V2_int);
   end
   else if Keyframe1.Value.Kind in [tkFloat, tkInt64] then
   begin
     V1_float := Keyframe1.Value.AsExtended;
     V2_float := Keyframe2.Value.AsExtended;
-    Lerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
     Result := (1 - Lerp) * V1_float + Lerp * V2_float;
   end
   else

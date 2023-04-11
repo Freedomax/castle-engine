@@ -25,7 +25,7 @@ uses Classes, Generics.Collections,
   CastleKeysMouse, CastleImages, CastleUtils, CastleGLImages, CastleRectangles,
   CastleColors, CastleTimeUtils, CastleInternalRichText, CastleGLUtils,
   CastleURIUtils, CastleLog, CastleStringUtils, CastleGLShaders, CastleClassUtils,
-  CastleRenderContext;
+  CastleRenderContext, CastleAnimationPlayer;
 
 type
   {$define read_interface}
@@ -104,6 +104,7 @@ initialization
   RegisterSerializableComponent(TCastleIntegerSlider, 'Integer Slider');
   RegisterSerializableComponent(TCastleFloatSlider, 'Float Slider');
   RegisterSerializableComponent(TCastleTimer, 'Timer');
+  RegisterSerializableComponent(TCastleAnimationPlayer, 'AnimationPlayer');
   RegisterSerializableComponent(TCastleEdit, 'Edit');
   RegisterSerializableComponent(TCastleFloatEdit, 'Edit (Float)');
   RegisterSerializableComponent(TCastleIntegerEdit, 'Edit (Integer)');
