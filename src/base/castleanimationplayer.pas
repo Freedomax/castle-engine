@@ -18,7 +18,10 @@ type
     end;
 
     TAnimationKeyframeList = class(
-      {$IFDEF FPC}specialize{$ENDIF} TList<TAnimationKeyframe>)
+      {$IFDEF FPC}specialize{$ENDIF} TSortedList<TAnimationKeyframe>)
+    public
+      function SearchIndex(const AValue: TAnimationKeyframe): SizeInt;
+
     end;
 
   strict private
@@ -39,7 +42,6 @@ type
     procedure AddKeyframe(const ATime: TFloatTime; const AValue: TValue);
     procedure Evaluate(const ATime: TFloatTime);
     function Duration: TFloatTime;
-    function getListLog: string;
 
     property Mode: TAnimationTrackMode read FMode write FMode;
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
@@ -86,7 +88,7 @@ type
 
 implementation
 
-uses Math, TypInfo, Generics.Defaults;
+uses Math, TypInfo, Generics.Defaults, Generics.Strings;
 
 function CompareKeyframe(const Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
 begin
@@ -163,31 +165,25 @@ procedure TAnimationTrack.Evaluate(const ATime: TFloatTime);
   end;
 
 var
-  I: integer;
   AValue: TValue;
+  Index: SizeInt;
+  Keyframe: TAnimationKeyframe;
 begin
   if FKeyframes.Count = 0 then
     Exit;
 
   if ATime < FKeyframes.First.Time then
+    AValue := FKeyframes.First.Value
+  else
   begin
-    SetProperty(FProperty, FKeyframes.First.Value);
-    Exit;
+    Keyframe.Time := ATime;
+    Index := FKeyframes.SearchIndex(Keyframe) - 1;
+    if Between(Index, 0, FKeyframes.Count - 2) then
+      AValue := Interpolate(FKeyframes[Index], FKeyframes[Index + 1], ATime)
+    else
+      AValue := FKeyframes.Last.Value;
   end;
-
-  {  FKeyframes.BinarySearch(Keyframe, Index);
-  if Index < 0 then
-    Index := -Index - 1;
-  FKeyframes.Insert(Index, Keyframe); }
-  for I := 0 to FKeyframes.Count - 2 do
-    if (ATime >= FKeyframes[I].Time) and (ATime < FKeyframes[I + 1].Time) then
-    begin
-      AValue := Interpolate(FKeyframes[I], FKeyframes[I + 1], ATime);
-      SetProperty(FProperty, AValue);
-      Exit;
-    end;
-
-  SetProperty(FProperty, FKeyframes.Last.Value);
+  SetProperty(FProperty, AValue);
 end;
 
 function TAnimationTrack.Duration: TFloatTime;
@@ -195,16 +191,6 @@ begin
   if FKeyframes.Count < 2 then
     Exit(0);
   Result := FKeyframes.Last.Time - FKeyframes.First.Time;
-end;
-
-function TAnimationTrack.getListLog: string;
-var
-  Frame: TAnimationKeyframe;
-begin
-  for Frame in self.FKeyframes do
-  begin
-    Result := Result + Frame.Time.ToString + ', ' + Frame.Value.ToString + sLineBreak;
-  end;
 end;
 
 procedure TAnimationPlayer.SetPlaying(const Value: boolean);
@@ -375,8 +361,35 @@ end;
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
   const AItem: TAnimationKeyframe; AAction: TCollectionNotification);
 begin
-  FKeyframes.Sort;
   if Assigned(FOnChange) then FOnChange(Self);
+end;
+
+function TAnimationTrack.TAnimationKeyframeList.SearchIndex(
+  const AValue: TAnimationKeyframe): SizeInt;
+var
+  LSearchResult: TBinarySearchResult;
+begin
+  if
+  {$IFDEF FPC}
+   specialize
+   {$ENDIF}
+  TArrayHelper<TAnimationKeyframe>.BinarySearch(FItems, AValue,
+    LSearchResult, FComparer, 0, Count) then
+    case FDuplicates of
+      dupAccept: Result := LSearchResult.FoundIndex;
+      dupIgnore: Exit(LSearchResult.FoundIndex);
+      dupError: raise EListError.Create(SCollectionDuplicate);
+    end
+  else
+  begin
+    if LSearchResult.CandidateIndex = -1 then
+      Result := 0
+    else
+    if LSearchResult.CompareResult > 0 then
+      Result := LSearchResult.CandidateIndex
+    else
+      Result := LSearchResult.CandidateIndex + 1;
+  end;
 end;
 
 procedure TAnimationPlayer.Stop;
@@ -385,7 +398,8 @@ begin
   FPlaying := False;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Loop', 'Speed']) then
     Result := [psBasic]
