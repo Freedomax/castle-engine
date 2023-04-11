@@ -51,7 +51,7 @@ type
     {$IFDEF FPC}specialize{$ENDIF} TObjectList<TAnimationTrack>)
   end;
 
-  TAnimationPlayer = class(TCastleComponent)
+  TAnimation = class
   strict private
     FMaxTime: TFloatTime;
     FTrackList: TAnimationTrackList;
@@ -68,22 +68,50 @@ type
     procedure Changed;
     procedure TrackChange(Sender: TObject);
   public
-    constructor Create(AOwner: TComponent); override;
+    constructor Create;
     destructor Destroy; override;
     procedure AddTrack(const Track: TAnimationTrack);
     procedure RemoveTrack(const Track: TAnimationTrack);
     procedure ClearTracks;
     procedure Update(const DeltaTime: TFloatTime);
-    procedure Start;
-    procedure Stop;
-    function PropertySections(const PropertyName: string): TPropertySections; override;
-
+    procedure Start(const ResetTime: boolean = True);
+    procedure Stop(const ResetTime: boolean = True);
     property MaxTime: TFloatTime read FMaxTime;
-  published
-    property Playing: boolean read FPlaying write SetPlaying default False;
+
     property Loop: boolean read FLoop write SetLoop default False;
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
+    property Playing: boolean read FPlaying write SetPlaying default False;
+  end;
 
+  TAnimationList = {$IFDEF FPC}
+    specialize
+  {$ENDIF}  TObjectDictionary<string, TAnimation>;
+
+
+  TAnimationPlayer = class(TCastleComponent)
+  private
+    FAnimation: string;
+    FCurrentAnimation: TAnimation;
+    FAnimationList: TAnimationList;
+    FPlaying: boolean;
+    procedure UpdateAnimation;
+    procedure SetAnimation(const AValue: string);
+    procedure SetPlaying(const AValue: boolean);
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function PropertySections(const PropertyName: string): TPropertySections; override;
+    procedure Update(const DeltaTime: TFloatTime);
+    procedure AddAnimation(const AName: string; const AAnimation: TAnimation);
+    procedure RemoveAnimation(const AName: string);
+    procedure ClearAnimations;
+    procedure Start(const ResetTime: boolean = True);
+    procedure Stop(const ResetTime: boolean = True);
+
+    property Animation: string read FAnimation write SetAnimation;
+  published
+
+    property Playing: boolean read FPlaying write SetPlaying default False;
   end;
 
 implementation
@@ -193,7 +221,7 @@ begin
   Result := FKeyframes.Last.Time - FKeyframes.First.Time;
 end;
 
-procedure TAnimationPlayer.SetPlaying(const Value: boolean);
+procedure TAnimation.SetPlaying(const Value: boolean);
 begin
   if FPlaying <> Value then
   begin
@@ -202,13 +230,13 @@ begin
   end;
 end;
 
-procedure TAnimationPlayer.FTrackListNotify(ASender: TObject;
+procedure TAnimation.FTrackListNotify(ASender: TObject;
   const AItem: TAnimationTrack; AAction: TCollectionNotification);
 begin
   Changed;
 end;
 
-procedure TAnimationPlayer.SetLoop(const Value: boolean);
+procedure TAnimation.SetLoop(const Value: boolean);
 begin
   if FLoop <> Value then
   begin
@@ -216,7 +244,7 @@ begin
   end;
 end;
 
-procedure TAnimationPlayer.SetSpeed(const Value: single);
+procedure TAnimation.SetSpeed(const Value: single);
 begin
   if FSpeed <> Value then
   begin
@@ -224,7 +252,7 @@ begin
   end;
 end;
 
-constructor TAnimationPlayer.Create(AOwner: TComponent);
+constructor TAnimation.Create;
 begin
   inherited;
   FTrackList := TAnimationTrackList.Create(True);
@@ -240,13 +268,13 @@ begin
   FSpeed := 1;
 end;
 
-destructor TAnimationPlayer.Destroy;
+destructor TAnimation.Destroy;
 begin
   FTrackList.Free;
   inherited;
 end;
 
-procedure TAnimationPlayer.AddTrack(const Track: TAnimationTrack);
+procedure TAnimation.AddTrack(const Track: TAnimationTrack);
 begin
   FTrackList.Add(Track);
   Track.OnChange :=
@@ -256,17 +284,17 @@ begin
     TrackChange;
 end;
 
-procedure TAnimationPlayer.RemoveTrack(const Track: TAnimationTrack);
+procedure TAnimation.RemoveTrack(const Track: TAnimationTrack);
 begin
   FTrackList.Remove(Track);
 end;
 
-procedure TAnimationPlayer.ClearTracks;
+procedure TAnimation.ClearTracks;
 begin
   FTrackList.Clear;
 end;
 
-procedure TAnimationPlayer.Update(const DeltaTime: TFloatTime);
+procedure TAnimation.Update(const DeltaTime: TFloatTime);
 var
   I: integer;
   Track: TAnimationTrack;
@@ -286,13 +314,14 @@ begin
   end;
 end;
 
-procedure TAnimationPlayer.Start;
+procedure TAnimation.Start(const ResetTime: boolean);
 begin
-  FCurrentTime := 0;
+  if ResetTime then
+    FCurrentTime := 0;
   FPlaying := True;
 end;
 
-function TAnimationPlayer.GetMaxTime: TFloatTime;
+function TAnimation.GetMaxTime: TFloatTime;
 var
   I: integer;
   Track: TAnimationTrack;
@@ -306,12 +335,12 @@ begin
   end;
 end;
 
-procedure TAnimationPlayer.Changed;
+procedure TAnimation.Changed;
 begin
   FMaxTime := GetMaxTime;
 end;
 
-procedure TAnimationPlayer.TrackChange(Sender: TObject);
+procedure TAnimation.TrackChange(Sender: TObject);
 begin
   Changed;
 end;
@@ -392,19 +421,110 @@ begin
   end;
 end;
 
-procedure TAnimationPlayer.Stop;
+procedure TAnimation.Stop(const ResetTime: boolean);
 begin
-  FCurrentTime := 0;
+  if ResetTime then
+    FCurrentTime := 0;
   FPlaying := False;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+procedure TAnimationPlayer.UpdateAnimation;
 begin
-  if ArrayContainsString(PropertyName, ['Playing', 'Loop', 'Speed']) then
+  if not Assigned(FCurrentAnimation) then exit;
+  if FPlaying then FCurrentAnimation.Start(True)
+  else
+    FCurrentAnimation.Stop(True);
+end;
+
+procedure TAnimationPlayer.SetAnimation(const AValue: string);
+begin
+  if FAnimation = AValue then Exit;
+  FAnimation := AValue;
+
+  FCurrentAnimation := nil;
+  if not FAnimationList.TryGetValue(FAnimation, FCurrentAnimation) then
+  begin
+    FAnimation := '';
+    WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
+  end;
+
+  UpdateAnimation;
+end;
+
+procedure TAnimationPlayer.SetPlaying(const AValue: boolean);
+begin
+  if FPlaying = AValue then Exit;
+
+  FPlaying := AValue;
+  UpdateAnimation;
+end;
+
+constructor TAnimationPlayer.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FAnimationList := TAnimationList.Create([doOwnsValues]);
+end;
+
+destructor TAnimationPlayer.Destroy;
+begin
+  FAnimationList.Free;
+  inherited Destroy;
+end;
+
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+begin
+  if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
   else
     Result := inherited PropertySections(PropertyName);
+end;
+
+procedure TAnimationPlayer.Update(const DeltaTime: TFloatTime);
+begin
+  if not FPlaying then Exit;
+  if not Assigned(FCurrentAnimation) then Exit;
+
+  FCurrentAnimation.Update(DeltaTime);
+end;
+
+procedure TAnimationPlayer.AddAnimation(const AName: string;
+  const AAnimation: TAnimation);
+begin
+  if AName = '' then
+    raise Exception.Create('AnimationPlayer: Name must not be empty');
+
+  if not Assigned(AAnimation) then
+    raise Exception.Create('AnimationPlayer: TAnimation is nil');
+
+  if not FAnimationList.TryAdd(AName, AAnimation) then
+    raise Exception.Create('AnimationPlayer: AddAnimation fail');
+end;
+
+procedure TAnimationPlayer.RemoveAnimation(const AName: string);
+begin
+  if FAnimation = AName then
+    Animation := '';
+
+  FAnimationList.Remove(AName);
+end;
+
+procedure TAnimationPlayer.ClearAnimations;
+begin
+  FAnimationList.Clear;
+end;
+
+procedure TAnimationPlayer.Start(const ResetTime: boolean);
+begin
+  if not FPlaying then
+    FPlaying := True;
+  if Assigned(FCurrentAnimation) then FCurrentAnimation.Start(ResetTime);
+end;
+
+procedure TAnimationPlayer.Stop(const ResetTime: boolean);
+begin
+  if FPlaying then
+    FPlaying := False;
+  if Assigned(FCurrentAnimation) then FCurrentAnimation.Stop(ResetTime);
 end;
 
 
