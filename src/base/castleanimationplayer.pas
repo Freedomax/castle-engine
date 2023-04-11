@@ -14,6 +14,7 @@
 }
 
 unit CastleAnimationPlayer;
+
 {$I castleconf.inc}
 interface
 
@@ -117,6 +118,7 @@ type
     function PropertySections(const PropertyName: string): TPropertySections; override;
     procedure Update(const DeltaTime: TFloatTime);
     procedure AddAnimation(const AName: string; const AAnimation: TAnimation);
+    function AnimationExists(const AName: string): boolean;
     procedure RemoveAnimation(const AName: string);
     procedure ClearAnimations;
     procedure Start(const ResetTime: boolean = True);
@@ -478,8 +480,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
@@ -504,8 +505,15 @@ begin
   if not Assigned(AAnimation) then
     raise Exception.Create('AnimationPlayer: TAnimation is nil');
 
-  if not FAnimationList.TryAdd(AName, AAnimation) then
-    raise Exception.Create('AnimationPlayer: AddAnimation fail');
+  if AnimationExists(AName) then
+    raise Exception.CreateFmt('AnimationPlayer: Name "%s" already exists', [AName]);
+
+  FAnimationList.Add(AName, AAnimation);
+end;
+
+function TAnimationPlayer.AnimationExists(const AName: string): boolean;
+begin
+  Result := FAnimationList.ContainsKey(AName);
 end;
 
 procedure TAnimationPlayer.RemoveAnimation(const AName: string);
