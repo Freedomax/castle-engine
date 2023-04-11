@@ -20,31 +20,13 @@
   TCastleAnimationPlayer = class(TCastleUserInterface)
   strict private
     FAnimationPlayer: TAnimationPlayer;
-    FCounteractDelays: boolean;
-    FIntervalSeconds, IntervalRemaining: TFloatTime;
-    FOnTimer: TNotifyEvent;
-    procedure SetIntervalSeconds(AValue: TFloatTime);
   protected
-    procedure DoTimer; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     procedure Update(const SecondsPassed: Single;
       var HandleInput: boolean); override;
     function PropertySections(const PropertyName: String): TPropertySections; override;
   published
-    { How often should we call OnTimer. Value of 0 means to call OnTimer
-      in every Update event. }
-    property IntervalSeconds: TFloatTime read FIntervalSeconds write SetIntervalSeconds;
-    { The event called periodically. }
-    property OnTimer: TNotifyEvent read FOnTimer write FOnTimer;
-    { Should we counteract the delays in timer by firing next event sooner.
-      This helps to keep a constant frequency of timer events over a long time,
-      and to keep multiple things (like multiple timer instances)
-      perfectly synchronized with each other.
-      But it may cause to execute a @italic(lot) of timer events at once,
-      in case the application hung for some time. }
-    property CounteractDelays: boolean
-      read FCounteractDelays write FCounteractDelays default false;
     property AnimationPlayer: TAnimationPlayer read FAnimationPlayer;
   end;
 
@@ -53,22 +35,6 @@
 {$ifdef read_implementation}
 
 { TCastleTimer --------------------------------------------------------------- }
-
-procedure TCastleAnimationPlayer.SetIntervalSeconds(AValue: TFloatTime);
-begin
-  if FIntervalSeconds <> AValue then
-  begin
-    FIntervalSeconds := AValue;
-    IntervalRemaining := FIntervalSeconds;
-  end;
-end;
-
-procedure TCastleAnimationPlayer.DoTimer;
-begin
-  if Assigned(OnTimer) then
-    OnTimer(Self);
-end;
-
 constructor TCastleAnimationPlayer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -79,29 +45,7 @@ end;
 procedure TCastleAnimationPlayer.Update(const SecondsPassed: Single; var HandleInput: boolean);
 begin
   inherited;
-  if IntervalSeconds <> 0 then
-  begin
-    IntervalRemaining := IntervalRemaining - SecondsPassed;
-    if CounteractDelays then
-    begin
-      while IntervalRemaining < 0 do
-      begin
-        IntervalRemaining := IntervalRemaining + IntervalSeconds;
-        DoTimer;
-      end;
-    end else
-    begin
-      if IntervalRemaining < 0 then
-      begin
-        IntervalRemaining := IntervalSeconds;
-        DoTimer;
-      end;
-    end;
-  end else
-  begin
-    { for IntervalSeconds = 0, just call timer at every Update. }
-    DoTimer;
-  end;
+  FAnimationPlayer.Update(SecondsPassed);
 end;
 
 function TCastleAnimationPlayer.PropertySections(

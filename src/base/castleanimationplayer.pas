@@ -50,12 +50,13 @@ type
     procedure ClearTracks;
     procedure Update(const DeltaTime: TFloatTime);
     procedure Stop;
+    function PropertySections(const PropertyName: string): TPropertySections; override;
 
     property MaxTime: TFloatTime read GetMaxTime;
   published
-    property Playing: boolean read FPlaying write SetPlaying;
-    property Loop: boolean read FLoop write SetLoop;
-    property Speed: single read FSpeed write SetSpeed;
+    property Playing: boolean read FPlaying write SetPlaying default False;
+    property Loop: boolean read FLoop write SetLoop default False;
+    property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
 
   end;
 
@@ -257,6 +258,15 @@ procedure TAnimationPlayer.Stop;
 begin
   FCurrentTime := 0;
   FPlaying := False;
+end;
+
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
+begin
+  if ArrayContainsString(PropertyName, ['Playing', 'Loop', 'Speed']) then
+    Result := [psBasic]
+  else
+    Result := inherited PropertySections(PropertyName);
 end;
 
 
