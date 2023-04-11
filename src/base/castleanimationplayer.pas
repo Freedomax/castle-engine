@@ -10,8 +10,7 @@ type
   TAnimationTrackMode = (amDiscrete, amContinuous);
 
   TAnimationTrack = class
-  private
-    FOnChange: TNotifyEvent;
+  public
   type
     TAnimationKeyframe = record
       Time: TFloatTime;
@@ -22,12 +21,14 @@ type
       {$IFDEF FPC}specialize{$ENDIF} TList<TAnimationKeyframe>)
     end;
 
+  strict private
+    FOnChange: TNotifyEvent;
   var
     FComponent: TPersistent;
     FProperty: string;
     FKeyframes: TAnimationKeyframeList;
     FMode: TAnimationTrackMode;
-    procedure FKeyframesNotify(ASender: TObject; const AItem: TAnimationKeyframe;
+    procedure KeyframesNotify(ASender: TObject; const AItem: TAnimationKeyframe;
       AAction: TCollectionNotification);
     function Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
       const Time: TFloatTime): TValue;
@@ -35,9 +36,10 @@ type
   public
     constructor Create(AComponent: TPersistent; const AProperty: string);
     destructor Destroy; override;
-    procedure AddKeyframe(ATime: TFloatTime; const AValue: TValue);
+    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TValue);
     procedure Evaluate(const ATime: TFloatTime);
     function Duration: TFloatTime;
+    function getListLog: string;
 
     property Mode: TAnimationTrackMode read FMode write FMode;
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
@@ -48,7 +50,7 @@ type
   end;
 
   TAnimationPlayer = class(TCastleComponent)
-  private
+  strict private
     FMaxTime: TFloatTime;
     FTrackList: TAnimationTrackList;
     FCurrentTime: TFloatTime;
@@ -84,17 +86,32 @@ type
 
 implementation
 
-uses Math, TypInfo;
+uses Math, TypInfo, Generics.Defaults;
+
+function CompareKeyframe(const Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
+begin
+  Result := CompareValue(Left.Time, Right.Time);
+end;
 
 constructor TAnimationTrack.Create(AComponent: TPersistent; const AProperty: string);
+type
+  TInternalKeyframeComparer =
+    {$ifdef FPC}
+    specialize
+     {$endif}
+    TComparer<TAnimationKeyframe>;
 begin
   inherited Create;
-  FKeyframes := TAnimationKeyframeList.Create;
+  FKeyframes := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
+    {$IFDEF FPC}
+@
+     {$ENDIF}
+    CompareKeyframe));
   FKeyframes.OnNotify :=
     {$IFDEF FPC}
    @
      {$ENDIF}
-    FKeyframesNotify;
+    KeyframesNotify;
   FComponent := AComponent;
   FProperty := AProperty;
 end;
@@ -105,7 +122,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TAnimationTrack.AddKeyframe(ATime: TFloatTime; const AValue: TValue);
+procedure TAnimationTrack.AddKeyframe(const ATime: TFloatTime; const AValue: TValue);
 var
   Keyframe: TAnimationKeyframe;
 begin
@@ -158,6 +175,10 @@ begin
     Exit;
   end;
 
+  {  FKeyframes.BinarySearch(Keyframe, Index);
+  if Index < 0 then
+    Index := -Index - 1;
+  FKeyframes.Insert(Index, Keyframe); }
   for I := 0 to FKeyframes.Count - 2 do
     if (ATime >= FKeyframes[I].Time) and (ATime < FKeyframes[I + 1].Time) then
     begin
@@ -174,6 +195,16 @@ begin
   if FKeyframes.Count < 2 then
     Exit(0);
   Result := FKeyframes.Last.Time - FKeyframes.First.Time;
+end;
+
+function TAnimationTrack.getListLog: string;
+var
+  Frame: TAnimationKeyframe;
+begin
+  for Frame in self.FKeyframes do
+  begin
+    Result := Result + Frame.Time.ToString + ', ' + Frame.Value.ToString + sLineBreak;
+  end;
 end;
 
 procedure TAnimationPlayer.SetPlaying(const Value: boolean);
@@ -341,9 +372,10 @@ begin
   FOnChange := AValue;
 end;
 
-procedure TAnimationTrack.FKeyframesNotify(ASender: TObject;
+procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
   const AItem: TAnimationKeyframe; AAction: TCollectionNotification);
 begin
+  FKeyframes.Sort;
   if Assigned(FOnChange) then FOnChange(Self);
 end;
 
@@ -353,8 +385,7 @@ begin
   FPlaying := False;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Loop', 'Speed']) then
     Result := [psBasic]
