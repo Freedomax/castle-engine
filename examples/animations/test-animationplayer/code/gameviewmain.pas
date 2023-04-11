@@ -100,12 +100,12 @@ begin
   Track.AddKeyframe(1, 60);
   Animation.AddTrack(Track);
 
-  Track := TAnimationTrack.Create(
-    (AnimationPlayer1.Parent as TCastleLabel).TranslationPersistent, 'Y');
-  Track.Mode := amContinuous;
-  Track.AddKeyframe(0, 60);
-  Track.AddKeyframe(0.5, 71);
-  Track.AddKeyframe(1, 60);
+  Track := TAnimationTrack.Create((AnimationPlayer1.Parent as TCastleLabel),
+    'Caption');
+  Track.Mode := amDiscrete;
+  Track.AddKeyframe(0, 'Click <font color="#00FF00FF">Button</font> to shake camera');
+  Track.AddKeyframe(0.5, 'Hello world');
+  Track.AddKeyframe(1, 'Click <font color="#00FF00FF">Button</font> to shake camera');
   Animation.AddTrack(Track);
 
   Animation.Loop := True;
