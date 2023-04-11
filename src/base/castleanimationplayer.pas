@@ -7,7 +7,6 @@ uses
   Generics.Collections, CastleTimeUtils, Rtti;
 
 type
-
   TAnimationKeyframe = record
     Time: TFloatTime;
     Value: TValue;
@@ -15,14 +14,14 @@ type
 
   TAnimationTrack = class
   private
-    FComponent: TCastleComponent;
+    FComponent: TPersistent;
     FProperty: string;
     FKeyframes: array of TAnimationKeyframe;
     function Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
       const Time: TFloatTime): TValue;
   public
-    constructor Create(AComponent: TCastleComponent; const AProperty: string);
-    procedure AddKeyframe(Time: TFloatTime; const Value: variant);
+    constructor Create(AComponent: TPersistent; const AProperty: string);
+    procedure AddKeyframe(Time: TFloatTime; const Value: TValue);
     procedure Evaluate(Time: TFloatTime);
     function Duration: TFloatTime;
   end;
@@ -64,8 +63,7 @@ implementation
 
 uses Math, TypInfo;
 
-constructor TAnimationTrack.Create(AComponent: TCastleComponent;
-  const AProperty: string);
+constructor TAnimationTrack.Create(AComponent: TPersistent; const AProperty: string);
 begin
   inherited Create;
   FComponent := AComponent;
@@ -73,7 +71,7 @@ begin
   SetLength(FKeyframes, 0);
 end;
 
-procedure TAnimationTrack.AddKeyframe(Time: TFloatTime; const Value: variant);
+procedure TAnimationTrack.AddKeyframe(Time: TFloatTime; const Value: TValue);
 begin
   SetLength(FKeyframes, Length(FKeyframes) + 1);
   FKeyframes[High(FKeyframes)].Time := Time;
@@ -113,19 +111,22 @@ var
 begin
   if Length(FKeyframes) = 0 then
     Exit;
+
   if Time < FKeyframes[0].Time then
   begin
     AValue := FKeyframes[0].Value;
     SetProperty(FProperty, AValue);
     Exit;
   end;
-  for I := 0 to High(FKeyframes) - 1 do
+
+  for I := Low(FKeyframes) to High(FKeyframes) - 1 do
     if (Time >= FKeyframes[I].Time) and (Time < FKeyframes[I + 1].Time) then
     begin
       AValue := Interpolate(FKeyframes[I], FKeyframes[I + 1], Time);
       SetProperty(FProperty, AValue);
       Exit;
     end;
+
   AValue := FKeyframes[High(FKeyframes)].Value;
   SetProperty(FProperty, AValue);
 end;
@@ -198,7 +199,8 @@ var
   I: integer;
   Track: TAnimationTrack;
 begin
-  if not FPlaying then  exit;
+  if not FPlaying then  Exit;
+  if CastleDesignMode then Exit;
 
   FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
   if FLoop then
@@ -260,8 +262,7 @@ begin
   FPlaying := False;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Loop', 'Speed']) then
     Result := [psBasic]
