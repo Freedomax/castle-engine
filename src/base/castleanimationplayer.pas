@@ -31,7 +31,7 @@ type
     FProperty: string;
     FKeyframes: TAnimationKeyframeList;
     FMode: TAnimationTrackMode;
-    procedure KeyframesNotify(ASender: TObject; const AItem: TAnimationKeyframe;
+    procedure KeyframesNotify(ASender: TObject; {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe;
       AAction: TCollectionNotification);
     function Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
       const Time: TFloatTime): TValue;
@@ -59,7 +59,7 @@ type
     FPlaying: boolean;
     FLoop: boolean;
     FSpeed: single;
-    procedure FTrackListNotify(ASender: TObject; const AItem: TAnimationTrack;
+    procedure FTrackListNotify(ASender: TObject; {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack;
       AAction: TCollectionNotification);
     procedure SetPlaying(const Value: boolean);
     procedure SetLoop(const Value: boolean);
@@ -118,7 +118,7 @@ implementation
 
 uses Math, TypInfo, Generics.Defaults, Generics.Strings;
 
-function CompareKeyframe(const Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
+function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
 begin
   Result := CompareValue(Left.Time, Right.Time);
 end;
@@ -231,7 +231,7 @@ begin
 end;
 
 procedure TAnimation.FTrackListNotify(ASender: TObject;
-  const AItem: TAnimationTrack; AAction: TCollectionNotification);
+  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
 begin
   Changed;
 end;
@@ -388,7 +388,7 @@ begin
 end;
 
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
-  const AItem: TAnimationKeyframe; AAction: TCollectionNotification);
+  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
 begin
   if Assigned(FOnChange) then FOnChange(Self);
 end;
