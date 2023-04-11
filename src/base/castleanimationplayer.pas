@@ -48,6 +48,7 @@ type
     procedure RemoveTrack(const Track: TAnimationTrack);
     procedure ClearTracks;
     procedure Update(const DeltaTime: TFloatTime);
+    procedure Start;
     procedure Stop;
     function PropertySections(const PropertyName: string): TPropertySections; override;
 
@@ -212,6 +213,12 @@ begin
     Track := TAnimationTrack(FTrackList[I]);
     Track.Evaluate(FCurrentTime);
   end;
+end;
+
+procedure TAnimationPlayer.Start;
+begin
+  FCurrentTime := 0;
+  FPlaying := True;
 end;
 
 function TAnimationPlayer.GetMaxTime: TFloatTime;
