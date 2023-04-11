@@ -50,10 +50,13 @@ type
     procedure ClearTracks;
     procedure Update(const DeltaTime: TFloatTime);
     procedure Stop;
+
+    property MaxTime: TFloatTime read GetMaxTime;
+  published
     property Playing: boolean read FPlaying write SetPlaying;
     property Loop: boolean read FLoop write SetLoop;
     property Speed: single read FSpeed write SetSpeed;
-    property MaxTime: TFloatTime read GetMaxTime;
+
   end;
 
 implementation

@@ -107,8 +107,8 @@ end;
 function TCastleAnimationPlayer.PropertySections(
   const PropertyName: String): TPropertySections;
 begin
-  if (PropertyName = 'IntervalSeconds') or
-     (PropertyName = 'CounteractDelays') then
+  if ArrayContainsString(PropertyName, ['IntervalSeconds', 'CounteractDelays',
+    'AnimationPlayer']) then
     Result := [psBasic]
   else
     Result := inherited PropertySections(PropertyName);
