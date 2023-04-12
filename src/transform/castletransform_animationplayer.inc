@@ -15,6 +15,14 @@
 }
 
 {$ifdef read_interface}
+  TAnimationTranslationTrack = class(TAnimationVector3Track)
+  strict private
+    FTransform: TCastleTransform;
+  strict protected
+    procedure SetValue(const AValue: variant); override;
+  public
+    constructor Create(ATransform: TCastleTransform);
+  end;
 
   TCastleAnimationPlayerTransform = class(TCastleTransform)
   strict private

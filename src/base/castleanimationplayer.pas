@@ -20,7 +20,7 @@ interface
 
 uses
   Classes, SysUtils, CastleClassUtils, CastleUtils,
-  Generics.Collections, CastleTimeUtils, CastleLog, TypInfo, Variants;
+  Generics.Collections, CastleTimeUtils, CastleLog, TypInfo, Variants, CastleVectors;
 
 type
   TAnimationTrackMode = (amDiscrete, amContinuous);
@@ -77,6 +77,14 @@ type
     function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
   public
     constructor Create(AComponent: TPersistent; const AProperty: string);overload;
+  end;
+
+  TAnimationVector3Track = class abstract(TAnimationTrack)
+  strict protected
+    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
+  public
+    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector3;
+      const ALerpFunc: TLerpFunc = nil);
   end;
 
   TAnimationTrackList = class(
@@ -156,14 +164,45 @@ type
       read FOnAnimationComplete write SetOnAnimationComplete;
   end;
 
+  function VariantToVector2(const V: Variant): TVector2;
+  function VariantFromVector2(const V: TVector2): Variant;
+  function VariantToVector3(const V: Variant): TVector3;
+  function VariantFromVector3(const V: TVector3): Variant;
+  function VariantToVector4(const V: Variant): TVector4;
+  function VariantFromVector4(const V: TVector4): Variant;
+
 implementation
 
 uses Math, Generics.Defaults, Generics.Strings;
 
-function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} Left,
-  Right: TAnimationTrack.TAnimationKeyframe): integer;
+function VariantToVector2(const V: Variant): TVector2;
 begin
-  Result := CompareValue(Left.Time, Right.Time);
+  Result := Vector2(V[0], V[1]);
+end;
+
+function VariantFromVector2(const V: TVector2): Variant;
+begin
+  Result := VarArrayOf([V.X, V.Y]);
+end;
+
+function VariantToVector3(const V: Variant): TVector3;
+begin
+  Result := Vector3(V[0], V[1], V[2]);
+end;
+
+function VariantFromVector3(const V: TVector3): Variant;
+begin
+  Result := VarArrayOf([V.X, V.Y, V.Z]);
+end;
+
+function VariantToVector4(const V: Variant): TVector4;
+begin
+  Result := Vector4(V[0], V[1], V[2], V[3]);
+end;
+
+function VariantFromVector4(const V: TVector4): Variant;
+begin
+  Result := VarArrayOf([V.X, V.Y, V.Z, V.W]);
 end;
 
 destructor TAnimationTrack.Destroy;
@@ -383,6 +422,12 @@ begin
 
 end;
 
+function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} Left,
+  Right: TAnimationTrack.TAnimationKeyframe): integer;
+begin
+  Result := CompareValue(Left.Time, Right.Time);
+end;
+
 constructor TAnimationTrack.Create;
 type
   TInternalKeyframeComparer = {$IFDEF FPC}specialize{$ENDIF} TComparer<TAnimationKeyframe>;
@@ -469,6 +514,23 @@ begin
   if not Assigned(FPropertyInfo) then
     raise Exception.CreateFmt('%s does not exist in %s',
       [FProperty, FComponent.ClassName]);
+end;
+
+function TAnimationVector3Track.CalcValue(const Value1, Value2: variant;
+  const ALerp: Single): variant;
+var
+  V1, V2, V3: TVector3;
+begin
+  V1 := VariantToVector3(Value1);
+  V2 := VariantToVector3(Value2);
+  V3 := (1 - ALerp) * V1 + ALerp * V2;
+  Result := VariantFromVector3(V3);
+end;
+
+procedure TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc);
+begin
+  inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
 
 procedure TAnimation.Stop(const ResetTime: boolean);

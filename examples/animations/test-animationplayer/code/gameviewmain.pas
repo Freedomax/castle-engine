@@ -72,7 +72,8 @@ end;
 procedure TViewMain.Start;
 var
   Animation: TAnimation;
-  Track: TAnimationPropertyTrack;
+  Track: TAnimationTrack;
+  TranslationTrack: TAnimationTranslationTrack;
   AIndex: SizeInt;
 begin
   inherited;
@@ -80,6 +81,7 @@ begin
   ;
   { Box }
   //1
+  {
   Animation := TAnimation.Create;
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'X');
@@ -88,6 +90,16 @@ begin
   Track.AddKeyframe(2, 1.0, {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
   Track.AddKeyframe(4, 3.5);
   Animation.AddTrack(Track);
+  AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);  }
+  //x 1 -3
+  Animation := TAnimation.Create;
+  TranslationTrack := TAnimationTranslationTrack.Create(
+    (AnimationPlayerBox1.Parent as TCastleBox));
+  TranslationTrack.Mode := amContinuous;
+  TranslationTrack.AddKeyframe(0, Vector3(-4.0, 1, -3));
+  TranslationTrack.AddKeyframe(20, Vector3(1.0, 1, -3), {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
+  TranslationTrack.AddKeyframe(40, Vector3(3.5, 1, -3));
+  Animation.AddTrack(TranslationTrack);
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);
   //2
   Animation := TAnimation.Create;

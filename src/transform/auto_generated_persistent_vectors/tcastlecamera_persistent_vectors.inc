@@ -47,6 +47,18 @@ procedure TCastleCamera.SetGravityUpForPersistent(const AValue: TVector3);
 begin
   GravityUp := AValue;
 end;
+
+procedure TAnimationTranslationTrack.SetValue(const AValue: variant);
+begin
+  FTransform.Translation := VariantToVector3(AValue);
+end;
+
+constructor TAnimationTranslationTrack.Create(ATransform: TCastleTransform);
+begin
+  inherited Create;
+  FTransform := ATransform;
+end;
+
 {$endif read_implementation_methods}
 
 {$ifdef read_implementation_constructor}
