@@ -16,7 +16,7 @@ type
   { Main view, where most of the application logic takes place. }
   TViewMain = class(TCastleView)
   private
-    procedure AnimationPlayerBox1AnimationPlayerAnimationComplete(Sender: TObject);
+    procedure Box1AnimationComplete(Sender: TObject);
     procedure Button1Click(Sender: TObject);
   published
     { Components designed using CGE editor.
@@ -42,14 +42,15 @@ uses SysUtils;
 
 { TViewMain ----------------------------------------------------------------- }
 
-procedure TViewMain.AnimationPlayerBox1AnimationPlayerAnimationComplete(
-  Sender: TObject);
+procedure TViewMain.Box1AnimationComplete(Sender: TObject);
 var
   AniPlayer: TAnimationPlayer;
 begin
   AniPlayer := Sender as TAnimationPlayer;
   WriteLnlog(AniPlayer.Animation);
-  if AniPlayer.Animation = '1' then AniPlayer.Animation := '2';
+  if AniPlayer.Animation = '1' then AniPlayer.Animation := '2'
+  else
+  if AniPlayer.Animation = '2' then AniPlayer.Animation := '3';
 end;
 
 procedure TViewMain.Button1Click(Sender: TObject);
@@ -82,6 +83,7 @@ begin
     Button1Click;
   ;
   { Box }
+  //1
   Animation := TAnimation.Create;
   Track := TAnimationTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'X');
@@ -95,7 +97,16 @@ begin
   Track.AddKeyframe(4, 3.5);
   Animation.AddTrack(Track);
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);
-
+  //2
+  Animation := TAnimation.Create;
+  Track := TAnimationTrack.Create(
+    (AnimationPlayerBox1.Parent as TCastleBox).RotationPersistent, 'W');
+  Track.Mode := amContinuous;
+  Track.AddKeyframe(0, 0.0);
+  Track.AddKeyframe(1, -Pi / 2);
+  Animation.AddTrack(Track);
+  AnimationPlayerBox1.AnimationPlayer.AddAnimation('2', Animation);
+  //3
   Animation := TAnimation.Create;
   Track := TAnimationTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'Z');
@@ -108,14 +119,13 @@ begin
     UniformDecelerationFunc);
   Track.AddKeyframe(4, 4.0);
   Animation.AddTrack(Track);
-  AnimationPlayerBox1.AnimationPlayer.AddAnimation('2', Animation);
-
-  //
+  AnimationPlayerBox1.AnimationPlayer.AddAnimation('3', Animation);
+  //Play 1
   AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete :=
     {$IFDEF FPC}
      @
      {$ENDIF}
-    AnimationPlayerBox1AnimationPlayerAnimationComplete;
+    Box1AnimationComplete;
   AnimationPlayerBox1.AnimationPlayer.Animation := '1';
   AnimationPlayerBox1.AnimationPlayer.Playing := True;
 

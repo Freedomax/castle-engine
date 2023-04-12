@@ -109,6 +109,10 @@
             "RenderOptions" : {
               "$$ClassName" : "TCastleScene.TSceneRenderOptions"
             },
+            "RotationPersistent" : {
+              "$$ClassName" : "TCastleVector4RotationPersistent",
+              "Y" : 1.0000000000000000E+000
+            },
             "SizePersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
               "X" : 1.0000000000000000E+000,
