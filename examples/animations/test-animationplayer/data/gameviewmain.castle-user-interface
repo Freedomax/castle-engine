@@ -267,9 +267,15 @@
     },
     {
       "$$ClassName" : "TCastleLabel",
+      "ColorPersistent" : {
+        "$$ClassName" : "TCastleColorPersistent",
+        "Blue" : 9.2549020051956177E-001,
+        "Green" : 9.2549020051956177E-001,
+        "Red" : 9.2549020051956177E-001
+      },
       "Name" : "LabelLog",
       "Text" : [
-        "LabelLog"
+        "log:"
       ],
       "TranslationPersistent" : {
         "$$ClassName" : "TCastleVector2Persistent",

@@ -47,7 +47,7 @@ var
   AniPlayer: TAnimationPlayer;
 begin
   AniPlayer := Sender as TAnimationPlayer;
-  WriteLnlog(AniPlayer.Animation);
+  LabelLog.Text.Add('Animation: "%s" completed', [AniPlayer.Animation]);
   if AniPlayer.Animation = '1' then AniPlayer.Animation := '2'
   else
   if AniPlayer.Animation = '2' then AniPlayer.Animation := '3';
