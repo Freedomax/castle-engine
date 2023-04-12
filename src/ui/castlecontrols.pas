@@ -25,7 +25,7 @@ uses Classes, Generics.Collections,
   CastleKeysMouse, CastleImages, CastleUtils, CastleGLImages, CastleRectangles,
   CastleColors, CastleTimeUtils, CastleInternalRichText, CastleGLUtils,
   CastleURIUtils, CastleLog, CastleStringUtils, CastleGLShaders, CastleClassUtils,
-  CastleRenderContext;
+  CastleRenderContext, CastleAnimationPlayer;
 
 type
   {$define read_interface}
@@ -47,6 +47,7 @@ type
   {$I castlecontrols_checkbox.inc}
   {$I castlecontrols_tableview.inc}
   {$I castlecontrols_timer.inc}
+  {$I castlecontrols_animationplayer.inc}
   {$I castlecontrols_edit.inc}
   {$I castlecontrols_groups.inc}
   {$I castlecontrols_design.inc}
@@ -84,6 +85,7 @@ uses SysUtils, Math, CastleTextureFont_DjvSans_20,
 {$I castlecontrols_checkbox.inc}
 {$I castlecontrols_tableview.inc}
 {$I castlecontrols_timer.inc}
+{$I castlecontrols_animationplayer.inc}
 {$I castlecontrols_edit.inc}
 {$I castlecontrols_groups.inc}
 {$I castlecontrols_design.inc}
@@ -102,6 +104,7 @@ initialization
   RegisterSerializableComponent(TCastleIntegerSlider, 'Integer Slider');
   RegisterSerializableComponent(TCastleFloatSlider, 'Float Slider');
   RegisterSerializableComponent(TCastleTimer, 'Timer');
+  RegisterSerializableComponent(TCastleAnimationPlayer, 'AnimationPlayer');
   RegisterSerializableComponent(TCastleEdit, 'Edit');
   RegisterSerializableComponent(TCastleFloatEdit, 'Edit (Float)');
   RegisterSerializableComponent(TCastleIntegerEdit, 'Edit (Integer)');

@@ -1,0 +1,59 @@
+{%MainUnit castletransform.pas}
+{
+  Copyright 2017-2023 Michalis Kamburelis.
+
+  This file is part of "Castle Game Engine".
+
+  "Castle Game Engine" is free software; see the file COPYING.txt,
+  included in this distribution, for details about the copyright.
+
+  "Castle Game Engine" is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+  ----------------------------------------------------------------------------
+}
+
+{$ifdef read_interface}
+
+  { Timer, running the @link(OnTimer) event periodically. }
+  TCastleAnimationPlayerTransform = class(TCastleTransform)
+  strict private
+    FAnimationPlayer: TAnimationPlayer;
+  protected
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure Update(const SecondsPassed: Single; var RemoveMe: TRemoveType); override;
+    function PropertySections(const PropertyName: String): TPropertySections; override;
+  published
+    property AnimationPlayer: TAnimationPlayer read FAnimationPlayer;
+  end;
+
+{$endif read_interface}
+
+{$ifdef read_implementation}
+
+{ TCastleTimer --------------------------------------------------------------- }
+constructor TCastleAnimationPlayerTransform.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FAnimationPlayer := TAnimationPlayer.Create(Self);
+  FAnimationPlayer.SetSubComponent(True);
+end;
+
+procedure TCastleAnimationPlayerTransform.Update(const SecondsPassed: Single; var RemoveMe: TRemoveType);
+begin
+  inherited;
+  FAnimationPlayer.Update(SecondsPassed);
+end;
+
+function TCastleAnimationPlayerTransform.PropertySections(
+  const PropertyName: String): TPropertySections;
+begin
+  if ArrayContainsString(PropertyName, ['AnimationPlayer']) then
+    Result := [psBasic]
+  else
+    Result := inherited PropertySections(PropertyName);
+end;
+
+{$endif read_implementation}

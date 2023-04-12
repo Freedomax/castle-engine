@@ -23,7 +23,7 @@ uses SysUtils, Classes, Math, Generics.Collections, Contnrs, Kraft,
   CastleVectors, CastleFrustum, CastleBoxes, CastleClassUtils, CastleKeysMouse,
   CastleRectangles, CastleUtils, CastleTimeUtils, CastleComponentSerialize,
   CastleSoundEngine, CastleTriangles, CastleRenderOptions, CastleProjection,
-  CastleUIControls, CastleQuaternions, CastleColors, CastleInternalClassUtils;
+  CastleUIControls, CastleQuaternions, CastleColors, CastleInternalClassUtils, CastleAnimationPlayer;
 
 type
   {$define read_interface}
@@ -36,6 +36,7 @@ type
   {$I castletransform_design.inc}
   {$I castletransform_reference.inc}
   {$I castletransform_camera.inc}
+  {$I castletransform_animationplayer.inc}
 
 {$I castletransform_physics.inc}
 {$I castletransform_physics_deprecated.inc}
@@ -71,6 +72,7 @@ uses CastleLog, CastleApplicationProperties, CastleURIUtils, CastleInternalRays,
 {$I castletransform_camera.inc}
 {$I castletransform_miscellaneous_globals.inc}
 {$I castletransform_camera_utils.inc}
+{$I castletransform_animationplayer.inc}
 {$undef read_implementation}
 
 var
@@ -86,6 +88,7 @@ initialization
   RegisterSerializableComponent(TCastleTransformDesign, 'Transform Design (Use Another castle-transform File)');
   RegisterSerializableComponent(TCastleTransformReference, 'Reference Another Transform');
   RegisterSerializableComponent(TCastleCamera, 'Camera');
+  RegisterSerializableComponent(TCastleAnimationPlayerTransform, 'AnimationPlayer');
 
   RegisterSerializableComponent(TCastleRigidBody, ['Physics', 'Rigid Body']);
 
