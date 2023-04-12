@@ -201,34 +201,8 @@ end;
 procedure TAnimationTrack.Evaluate(const ATime: TFloatTime);
 
   procedure SetProperty(const AValue: variant);
-  {var
-    ctx: TRttiContext;
-    t: TRttiType;
-    p: TRttiProperty;  }
   begin
     SetPropValue(FComponent, FPropertyInfo, AValue);
-    {
-    t := ctx.GetType(FComponent.ClassType);
-    for p in t.GetProperties do
-    begin
-      if (p.Visibility = mvPublished) and (p.Name = AProperty) then
-      begin
-        try
-          if p.IsWritable then
-          begin
-            p.SetValue(FComponent, AValue);
-          end;
-
-        except
-          on E: Exception do
-          begin
-            WritelnWarning('TAnimationTrack', 'SetProperty fail');
-            WritelnWarning('TAnimationTrack', E.Message);
-          end;
-        end;
-      end;
-    end;
-      }
   end;
 
 var
@@ -535,8 +509,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
