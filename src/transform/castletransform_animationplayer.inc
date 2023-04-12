@@ -24,6 +24,24 @@
     constructor Create(ATransform: TCastleTransform);
   end;
 
+  TAnimationRotationTrack = class(TAnimationVector4Track)
+  strict private
+    FTransform: TCastleTransform;
+  strict protected
+    procedure SetValue(const AValue: variant); override;
+  public
+    constructor Create(ATransform: TCastleTransform);
+  end;
+
+  TAnimationScaleTrack = class(TAnimationVector3Track)
+  strict private
+    FTransform: TCastleTransform;
+  strict protected
+    procedure SetValue(const AValue: variant); override;
+  public
+    constructor Create(ATransform: TCastleTransform);
+  end;
+
   TCastleAnimationPlayerTransform = class(TCastleTransform)
   strict private
     FAnimationPlayer: TAnimationPlayer;
@@ -50,6 +68,31 @@ begin
   inherited Create;
   FTransform := ATransform;
 end;
+
+{ TAnimationRotationTrack --------------------------------------------------------------- }
+procedure TAnimationRotationTrack.SetValue(const AValue: variant);
+begin
+  FTransform.Rotation := VariantToVector4(AValue);
+end;
+
+constructor TAnimationRotationTrack.Create(ATransform: TCastleTransform);
+begin
+  inherited Create;
+  FTransform := ATransform;
+end;
+
+{ TAnimationScaleTrack --------------------------------------------------------------- }
+procedure TAnimationScaleTrack.SetValue(const AValue: variant);
+begin
+  FTransform.Scale := VariantToVector3(AValue);
+end;
+
+constructor TAnimationScaleTrack.Create(ATransform: TCastleTransform);
+begin
+  inherited Create;
+  FTransform := ATransform;
+end;
+
 { TCastleAnimationPlayerTransform --------------------------------------------------------------- }
 constructor TCastleAnimationPlayerTransform.Create(AOwner: TComponent);
 begin

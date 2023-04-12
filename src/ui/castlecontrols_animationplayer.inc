@@ -27,7 +27,6 @@
   TCastleAnimationPlayer = class(TCastleUserInterface)
   strict private
     FAnimationPlayer: TAnimationPlayer;
-  protected
   public
     constructor Create(AOwner: TComponent); override;
     procedure Update(const SecondsPassed: Single;

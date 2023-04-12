@@ -10,7 +10,7 @@ interface
 uses Classes,
   CastleVectors, CastleComponentSerialize,
   CastleUIControls, CastleControls, CastleKeysMouse, CastleAnimationPlayer,
-  CastleTransform, CastleScene, CastleLog;
+  CastleTransform, CastleScene, CastleLog, CastleColors;
 
 type
   { Main view, where most of the application logic takes place. }
@@ -31,6 +31,15 @@ type
     procedure Start; override;
     procedure Update(const SecondsPassed: single; var HandleInput: boolean); override;
     function Press(const Event: TInputPressRelease): boolean; override;
+  end;
+
+  TLabelColorTrack = class(TAnimationVector4Track)
+  strict private
+    FControl: TCastleLabel;
+  strict protected
+    procedure SetValue(const AValue: variant); override;
+  public
+    constructor Create(AControl: TCastleLabel);
   end;
 
 var
@@ -75,11 +84,12 @@ var
   Track: TAnimationTrack;
   TranslationTrack: TAnimationTranslationTrack;
   PositionTrack: TAnimationPositionTrack;
-  AIndex: SizeInt;
+  RotationTrack: TAnimationRotationTrack;
+  LabelColorTrack: TLabelColorTrack;
 begin
   inherited;
   Button1.OnClick := {$IFDEF FPC}@{$ENDIF}Button1Click;
-  ;
+
   { Box animations }
   //1
   Animation := TAnimation.Create;
@@ -118,21 +128,13 @@ begin
   { Label animations }
   Animation := TAnimation.Create;
 
-  Track := TAnimationPropertyTrack.Create(
-    (AnimationPlayer1.Parent as TCastleLabel).ColorPersistent, 'Alpha');
-  Track.Mode := amContinuous;
-  Track.AddKeyframe(0.5, 0.2);
-  Track.AddKeyframe(1, 1.0);
-  Track.AddKeyframe(0, 1.0);
-  Animation.AddTrack(Track);
-
-  Track := TAnimationPropertyTrack.Create(
-    (AnimationPlayer1.Parent as TCastleLabel).ColorPersistent, 'Red');
-  Track.Mode := amContinuous;
-  Track.AddKeyframe(0, 1.0);
-  Track.AddKeyframe(0.25, 0.2);
-  Track.AddKeyframe(0.5, 1.0);
-  Animation.AddTrack(Track);
+  LabelColorTrack:= TLabelColorTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
+  LabelColorTrack.Mode := amContinuous;
+  LabelColorTrack.AddKeyframe(0, Vector4(1, 0.3, 0.2, 1));
+  LabelColorTrack.AddKeyframe(0.25, Vector4(0.2, 0.3, 0.2, 0.6));
+  LabelColorTrack.AddKeyframe(0.5, Vector4(1, 0.3, 0.2, 0.2));
+  LabelColorTrack.AddKeyframe(1, Vector4(1, 0.3, 0.2, 1));
+  Animation.AddTrack(LabelColorTrack);
 
   PositionTrack:= TAnimationPositionTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
   PositionTrack.Mode := amContinuous;
@@ -158,31 +160,14 @@ begin
   { Camera }
   Animation := TAnimation.Create;
 
-  Track := TAnimationPropertyTrack.Create(
-    (AnimationPlayerTransform1.Parent as TCastleCamera).RotationPersistent, 'W');
-  Track.Mode := amContinuous;
-  Track.AddKeyframe(0, 1.3);
-  Track.AddKeyframe(0.5, 1.2);
-  Track.AddKeyframe(1, 1.3);
-  Animation.AddTrack(Track);
-
-  Track := TAnimationPropertyTrack.Create(
-    (AnimationPlayerTransform1.Parent as TCastleCamera).RotationPersistent, 'Y');
-  Track.Mode := amContinuous;
-  Track.AddKeyframe(0, 0.0);
-  Track.AddKeyframe(1 / 3, 0.1);
-  Track.AddKeyframe(2 / 3, -0.1);
-  Track.AddKeyframe(1, 0.0);
-  Animation.AddTrack(Track);
-
-  Track := TAnimationPropertyTrack.Create(
-    (AnimationPlayerTransform1.Parent as TCastleCamera).RotationPersistent, 'Z');
-  Track.Mode := amContinuous;
-  Track.AddKeyframe(0, 0.0);
-  Track.AddKeyframe(1 / 3, 0.11);
-  Track.AddKeyframe(2 / 3, -0.11);
-  Track.AddKeyframe(1, 0.0);
-  Animation.AddTrack(Track);
+  RotationTrack:= TAnimationRotationTrack.Create(AnimationPlayerTransform1.Parent as TCastleCamera);
+  RotationTrack.Mode := amContinuous;
+  RotationTrack.AddKeyframe(0, Vector4(-1, 0, 0, 1.3));
+  RotationTrack.AddKeyframe(1 / 3, Vector4(-1, 0.05, 0.04, 1.25));
+  RotationTrack.AddKeyframe(0.5, Vector4(-1, 0, 0, 1.2));
+  RotationTrack.AddKeyframe(2 / 3, Vector4(-1, -0.05, -0.03, 1.25));
+  RotationTrack.AddKeyframe(1, Vector4(-1, 0, 0, 1.3));
+  Animation.AddTrack(RotationTrack);
 
   Animation.Loop := False;
   Animation.Speed := 5;
@@ -224,6 +209,17 @@ begin
     Exit(true); // key was handled
   end;
   }
+end;
+
+procedure TLabelColorTrack.SetValue(const AValue: variant);
+begin
+  FControl.Color := VariantToVector4(AValue);
+end;
+
+constructor TLabelColorTrack.Create(AControl: TCastleLabel);
+begin
+  inherited Create;
+  FControl := AControl;
 end;
 
 end.
