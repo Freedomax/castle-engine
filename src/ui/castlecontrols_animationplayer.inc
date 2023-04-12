@@ -1,6 +1,6 @@
 {%MainUnit castlecontrols.pas}
 {
-  Copyright 2010-2018 Michalis Kamburelis.
+  Copyright 2023 Michalis Kamburelis.
 
   This file is part of "Castle Game Engine".
 
@@ -16,7 +16,6 @@
 
 {$ifdef read_interface}
 
-  { Timer, running the @link(OnTimer) event periodically. }
   TCastleAnimationPlayer = class(TCastleUserInterface)
   strict private
     FAnimationPlayer: TAnimationPlayer;

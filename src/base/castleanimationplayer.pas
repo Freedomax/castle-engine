@@ -44,7 +44,6 @@ type
 
   strict private
     FOnChange: TNotifyEvent;
-  var
     FComponent: TPersistent;
     FProperty: string;
     FPropertyInfo: PPropInfo;
@@ -82,7 +81,8 @@ type
     FSpeed: single;
     procedure SetOnComplete(const AValue: TNotifyEvent);
     procedure TrackListNotify(ASender: TObject;
- {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
+      {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack;
+        AAction: TCollectionNotification);
     procedure SetPlaying(const Value: boolean);
     procedure SetLoop(const Value: boolean);
     procedure SetSpeed(const Value: single);
@@ -107,9 +107,7 @@ type
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
   end;
 
-  TAnimationList = {$IFDEF FPC}
-    specialize
-  {$ENDIF}  TObjectDictionary<string, TAnimation>;
+  TAnimationList = {$IFDEF FPC}specialize{$ENDIF} TObjectDictionary<string, TAnimation>;
 
 
   TAnimationPlayer = class(TCastleComponent)
@@ -156,23 +154,12 @@ end;
 
 constructor TAnimationTrack.Create(AComponent: TPersistent; const AProperty: string);
 type
-  TInternalKeyframeComparer =
-    {$ifdef FPC}
-    specialize
-     {$endif}
-    TComparer<TAnimationKeyframe>;
+  TInternalKeyframeComparer = {$IFDEF FPC}specialize{$ENDIF} TComparer<TAnimationKeyframe>;
 begin
   inherited Create;
   FKeyframes := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
-    {$IFDEF FPC}
-@
-     {$ENDIF}
-    CompareKeyframe));
-  FKeyframes.OnNotify :=
-    {$IFDEF FPC}
-   @
-     {$ENDIF}
-    KeyframesNotify;
+    {$IFDEF FPC}@{$ENDIF}CompareKeyframe));
+  FKeyframes.OnNotify := {$IFDEF FPC}@{$ENDIF}KeyframesNotify;
   FComponent := AComponent;
   FProperty := AProperty;
   FPropertyInfo := GetPropInfo(FComponent, FProperty);
@@ -275,11 +262,7 @@ constructor TAnimation.Create;
 begin
   inherited;
   FTrackList := TAnimationTrackList.Create(True);
-  FTrackList.OnNotify :=
-    {$IFDEF FPC}
-    @
-     {$ENDIF}
-    TrackListNotify;
+  FTrackList.OnNotify := {$IFDEF FPC}@{$ENDIF}TrackListNotify;
   FCurrentTime := 0;
   FMaxTime := 0;
   FPlaying := False;
@@ -296,11 +279,7 @@ end;
 procedure TAnimation.AddTrack(const Track: TAnimationTrack);
 begin
   FTrackList.Add(Track);
-  Track.OnChange :=
-    {$IFDEF FPC}
-    @
-     {$ENDIF}
-    TrackChange;
+  Track.OnChange := {$IFDEF FPC}@{$ENDIF}TrackChange;
 end;
 
 procedure TAnimation.RemoveTrack(const Track: TAnimationTrack);
@@ -406,8 +385,7 @@ end;
 
 procedure TAnimationTrack.SetOnChange(const AValue: TNotifyEvent);
 begin
-  if FOnChange = AValue then Exit;
-  FOnChange := AValue;
+  if FOnChange <> AValue then FOnChange := AValue;
 end;
 
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
@@ -421,11 +399,7 @@ function TAnimationTrack.TAnimationKeyframeList.SearchIndex(
 var
   LSearchResult: TBinarySearchResult;
 begin
-  if
-  {$IFDEF FPC}
-   specialize
-   {$ENDIF}
-  TArrayHelper<TAnimationKeyframe>.BinarySearch(FItems, AValue,
+  if {$IFDEF FPC}specialize{$ENDIF} TArrayHelper<TAnimationKeyframe>.BinarySearch(FItems, AValue,
     LSearchResult, FComparer, 0, Count) then
     case FDuplicates of
       dupAccept: Result := LSearchResult.FoundIndex;
@@ -464,31 +438,32 @@ end;
 
 procedure TAnimationPlayer.SetOnAnimationComplete(const AValue: TNotifyEvent);
 begin
-  if FOnAnimationComplete = AValue then Exit;
-  FOnAnimationComplete := AValue;
+  if FOnAnimationComplete <> AValue then FOnAnimationComplete := AValue;
 end;
 
 procedure TAnimationPlayer.SetAnimation(const AValue: string);
 begin
-  if FAnimation = AValue then Exit;
-  FAnimation := AValue;
-
-  FCurrentAnimation := nil;
-  if not FAnimationList.TryGetValue(FAnimation, FCurrentAnimation) then
+  if FAnimation <> AValue then
   begin
-    FAnimation := '';
-    WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
+    FAnimation := AValue;
+    FCurrentAnimation := nil;
+    if not FAnimationList.TryGetValue(FAnimation, FCurrentAnimation) then
+    begin
+      FAnimation := '';
+      WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
+    end;
+    UpdateAnimation;
   end;
 
-  UpdateAnimation;
 end;
 
 procedure TAnimationPlayer.SetPlaying(const AValue: boolean);
 begin
-  if FPlaying = AValue then Exit;
-
-  FPlaying := AValue;
-  UpdateAnimation;
+  if FPlaying <> AValue then
+  begin
+    FPlaying := AValue;
+    UpdateAnimation;
+  end;
 end;
 
 procedure TAnimationPlayer.InternalAnimationComplete(Sender: TObject);
@@ -538,11 +513,7 @@ begin
   if AnimationExists(AName) then
     raise Exception.CreateFmt('AnimationPlayer: Name "%s" already exists', [AName]);
 
-  AAnimation.OnComplete :=
-    {$IFDEF FPC}
-   @
-     {$ENDIF}
-    InternalAnimationComplete;
+  AAnimation.OnComplete := {$IFDEF FPC}@{$ENDIF}InternalAnimationComplete;
   FAnimationList.Add(AName, AAnimation);
 end;
 
@@ -561,20 +532,19 @@ end;
 
 procedure TAnimationPlayer.ClearAnimations;
 begin
+  Animation := '';
   FAnimationList.Clear;
 end;
 
 procedure TAnimationPlayer.Start(const ResetTime: boolean);
 begin
-  if not FPlaying then
-    FPlaying := True;
+  if not FPlaying then FPlaying := True;
   if Assigned(FCurrentAnimation) then FCurrentAnimation.Start(ResetTime);
 end;
 
 procedure TAnimationPlayer.Stop(const ResetTime: boolean);
 begin
-  if FPlaying then
-    FPlaying := False;
+  if FPlaying then FPlaying := False;
   if Assigned(FCurrentAnimation) then FCurrentAnimation.Stop(ResetTime);
 end;
 
