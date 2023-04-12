@@ -72,7 +72,7 @@ end;
 procedure TViewMain.Start;
 var
   Animation: TAnimation;
-  Track: TAnimationTrack;
+  Track: TAnimationPropertyTrack;
   AIndex: SizeInt;
 begin
   inherited;
@@ -81,7 +81,7 @@ begin
   { Box }
   //1
   Animation := TAnimation.Create;
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'X');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, -4.0);
@@ -91,7 +91,7 @@ begin
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);
   //2
   Animation := TAnimation.Create;
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).RotationPersistent, 'W');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, 0.0);
@@ -100,7 +100,7 @@ begin
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('2', Animation);
   //3
   Animation := TAnimation.Create;
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'Z');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, -3.0);
@@ -117,7 +117,7 @@ begin
   { UI }
   Animation := TAnimation.Create;
 
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayer1.Parent as TCastleLabel).ColorPersistent, 'Alpha');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0.5, 0.2);
@@ -126,7 +126,7 @@ begin
   Animation.AddTrack(Track);
 
 
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayer1.Parent as TCastleLabel).ColorPersistent, 'Red');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, 1.0);
@@ -134,7 +134,7 @@ begin
   Track.AddKeyframe(0.5, 1.0);
   Animation.AddTrack(Track);
 
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayer1.Parent as TCastleLabel).TranslationPersistent, 'X');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, 20);
@@ -142,7 +142,7 @@ begin
   Track.AddKeyframe(1, 20);
   Animation.AddTrack(Track);
 
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayer1.Parent as TCastleLabel).TranslationPersistent, 'Y');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, 60);
@@ -150,7 +150,7 @@ begin
   Track.AddKeyframe(1, 60);
   Animation.AddTrack(Track);
 
-  Track := TAnimationTrack.Create((AnimationPlayer1.Parent as TCastleLabel),
+  Track := TAnimationPropertyTrack.Create((AnimationPlayer1.Parent as TCastleLabel),
     'Caption');
   Track.Mode := amDiscrete;
   Track.AddKeyframe(0, 'Click <font color="#00FF00FF">Button</font> to shake camera');
@@ -167,7 +167,7 @@ begin
   { Camera }
   Animation := TAnimation.Create;
 
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerTransform1.Parent as TCastleCamera).RotationPersistent, 'W');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, 1.3);
@@ -175,7 +175,7 @@ begin
   Track.AddKeyframe(1, 1.3);
   Animation.AddTrack(Track);
 
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerTransform1.Parent as TCastleCamera).RotationPersistent, 'Y');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, 0.0);
@@ -184,7 +184,7 @@ begin
   Track.AddKeyframe(1, 0.0);
   Animation.AddTrack(Track);
 
-  Track := TAnimationTrack.Create(
+  Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerTransform1.Parent as TCastleCamera).RotationPersistent, 'Z');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, 0.0);

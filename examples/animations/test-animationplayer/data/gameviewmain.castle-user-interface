@@ -230,13 +230,6 @@
       "HorizontalAnchorSelf" : "hpMiddle",
       "Html" : true,
       "Name" : "Label1",
-      "Outline" : 2,
-      "OutlineColorPersistent" : {
-        "$$ClassName" : "TCastleColorPersistent",
-        "Blue" : 2.6274511218070984E-001,
-        "Green" : 6.3921570777893066E-001,
-        "Red" : 5.8431375026702881E-001
-      },
       "Text" : [
         "Click <font color=\"#00FF00FF\">Button</font> to shake camera"
       ],

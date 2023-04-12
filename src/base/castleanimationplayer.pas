@@ -26,7 +26,7 @@ type
   TAnimationTrackMode = (amDiscrete, amContinuous);
   TLerpFunc = function(const ALerp: single): single;
 
-  TAnimationTrack = class
+  TAnimationTrack = class abstract
   public
   type
     TAnimationKeyframe = record
@@ -46,10 +46,6 @@ type
     FOnChange: TNotifyEvent;
     FKeyframes: TAnimationKeyframeList;
     FMode: TAnimationTrackMode;
-
-    FComponent: TPersistent;
-    FProperty: string;
-    FPropertyInfo: PPropInfo;
     procedure KeyframesNotify(ASender: TObject;
       {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe;
       AAction: TCollectionNotification);
@@ -57,10 +53,10 @@ type
       const Time: TFloatTime): variant;
     procedure SetOnChange(const AValue: TNotifyEvent);
   strict protected
-    procedure SetValue(const AValue: variant); virtual;
+    procedure SetValue(const AValue: variant); virtual;abstract;
     function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; virtual;
   public
-    constructor Create(AComponent: TPersistent; const AProperty: string);
+    constructor Create;overload;virtual;
     destructor Destroy; override;
     procedure AddKeyframe(const ATime: TFloatTime; const AValue: variant;
       const ALerpFunc: TLerpFunc = nil);
@@ -69,6 +65,18 @@ type
 
     property Mode: TAnimationTrackMode read FMode write FMode;
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
+  end;
+
+  TAnimationPropertyTrack = class(TAnimationTrack)
+  strict private
+    FComponent: TPersistent;
+    FProperty: string;
+    FPropertyInfo: PPropInfo;
+  strict protected
+    procedure SetValue(const AValue: variant); override;
+    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
+  public
+    constructor Create(AComponent: TPersistent; const AProperty: string);overload;
   end;
 
   TAnimationTrackList = class(
@@ -156,22 +164,6 @@ function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} 
   Right: TAnimationTrack.TAnimationKeyframe): integer;
 begin
   Result := CompareValue(Left.Time, Right.Time);
-end;
-
-constructor TAnimationTrack.Create(AComponent: TPersistent; const AProperty: string);
-type
-  TInternalKeyframeComparer = {$IFDEF FPC}specialize{$ENDIF} TComparer<TAnimationKeyframe>;
-begin
-  inherited Create;
-  FKeyframes := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
-    {$IFDEF FPC}@{$ENDIF}CompareKeyframe));
-  FKeyframes.OnNotify := {$IFDEF FPC}@{$ENDIF}KeyframesNotify;
-  FComponent := AComponent;
-  FProperty := AProperty;
-  FPropertyInfo := GetPropInfo(FComponent, FProperty);
-  if not Assigned(FPropertyInfo) then
-    raise Exception.CreateFmt('%s does not exist in %s',
-      [FProperty, FComponent.ClassName]);
 end;
 
 destructor TAnimationTrack.Destroy;
@@ -298,6 +290,7 @@ var
   Track: TAnimationTrack;
 begin
   if not FPlaying then  Exit;
+  if MaxTime <= 0 then Exit;
   //if CastleDesignMode then Exit;
 
   FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
@@ -305,7 +298,7 @@ begin
     FCurrentTime := FCurrentTime mod MaxTime
   else if FCurrentTime > MaxTime then
   begin
-    Stop;
+    Stop(False);
     if Assigned(FOnComplete) then FOnComplete(Self);
   end;
   for I := 0 to FTrackList.Count - 1 do
@@ -319,7 +312,7 @@ procedure TAnimation.Start(const ResetTime: boolean);
 begin
   if ResetTime then
     FCurrentTime := 0;
-  FPlaying := True;
+  if not FPlaying then FPlaying := True;
 end;
 
 procedure TAnimation.Changed;
@@ -364,39 +357,40 @@ begin
   if FOnChange <> AValue then FOnChange := AValue;
 end;
 
-procedure TAnimationTrack.SetValue(const AValue: variant);
-begin
-  SetPropValue(FComponent, FPropertyInfo, AValue);
-end;
-
 function TAnimationTrack.CalcValue(const Value1, Value2: variant;
   const ALerp: Single): variant;
 var
   V1_int, V2_int: int64;
   V1_float, V2_float: extended;
-  Tk: TTypeKind;
 begin
-  Tk := FPropertyInfo^.PropType^.Kind;
-  case Tk of
-    tkInteger, tkInt64, tkEnumeration,
-    tkSet, tkChar, tkWChar:
+    if VarIsOrdinal(Value1) and (VarIsOrdinal(Value2)) then
     begin
       V1_int := Value1;
       V2_int := Value2;
       Result := Round((1 - ALerp) * V1_int + ALerp * V2_int);
-    end;
-    tkFloat:
+    end
+    else if VarIsFloat(Value1) and (VarIsFloat(Value2)) then
     begin
       V1_float := Value1;
       V2_float := Value2;
       Result := (1 - ALerp) * V1_float + ALerp * V2_float;
-    end;
+    end
     else
       raise Exception.CreateFmt(
-        'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
-        [Tk, FProperty]);
-  end;
+        'TAnimationTrack.Interpolate: Unsupported variant type [%d][%d]',
+        [VarType(Value1), VarType(Value2)]);
 
+
+end;
+
+constructor TAnimationTrack.Create;
+type
+  TInternalKeyframeComparer = {$IFDEF FPC}specialize{$ENDIF} TComparer<TAnimationKeyframe>;
+begin
+  inherited Create;
+  FKeyframes := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
+    {$IFDEF FPC}@{$ENDIF}CompareKeyframe));
+  FKeyframes.OnNotify := {$IFDEF FPC}@{$ENDIF}KeyframesNotify;
 end;
 
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
@@ -430,6 +424,53 @@ begin
   end;
 end;
 
+procedure TAnimationPropertyTrack.SetValue(const AValue: variant);
+begin
+  SetPropValue(FComponent, FPropertyInfo, AValue);
+end;
+
+function TAnimationPropertyTrack.CalcValue(const Value1, Value2: variant;
+  const ALerp: Single): variant;
+var
+  V1_int, V2_int: int64;
+  V1_float, V2_float: extended;
+  Tk: TTypeKind;
+begin
+  Tk := FPropertyInfo^.PropType^.Kind;
+  case Tk of
+    tkInteger, tkInt64, tkEnumeration,
+    tkSet, tkChar, tkWChar:
+    begin
+      V1_int := Value1;
+      V2_int := Value2;
+      Result := Round((1 - ALerp) * V1_int + ALerp * V2_int);
+    end;
+    tkFloat:
+    begin
+      V1_float := Value1;
+      V2_float := Value2;
+      Result := (1 - ALerp) * V1_float + ALerp * V2_float;
+    end;
+    else
+      raise Exception.CreateFmt(
+        'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
+        [Tk, FProperty]);
+  end;
+
+end;
+
+constructor TAnimationPropertyTrack.Create(AComponent: TPersistent;
+  const AProperty: string);
+begin
+  Create;
+  FComponent := AComponent;
+  FProperty := AProperty;
+  FPropertyInfo := GetPropInfo(FComponent, FProperty);
+  if not Assigned(FPropertyInfo) then
+    raise Exception.CreateFmt('%s does not exist in %s',
+      [FProperty, FComponent.ClassName]);
+end;
+
 procedure TAnimation.Stop(const ResetTime: boolean);
 begin
   if ResetTime then
@@ -437,7 +478,7 @@ begin
     FCurrentTime := 0;
     Update(0.0);
   end;
-  FPlaying := False;
+  if FPlaying then FPlaying := False;
 end;
 
 procedure TAnimationPlayer.UpdateAnimation;
