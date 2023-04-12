@@ -76,11 +76,7 @@ var
   AIndex: SizeInt;
 begin
   inherited;
-  Button1.OnClick :=
-    {$IFDEF FPC}
-  @
-     {$ENDIF}
-    Button1Click;
+  Button1.OnClick := {$IFDEF FPC}@{$ENDIF}Button1Click;
   ;
   { Box }
   //1
@@ -89,11 +85,7 @@ begin
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'X');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, -4.0);
-  Track.AddKeyframe(2, 1.0,
-    {$IFDEF FPC}
-  @
-     {$ENDIF}
-    UniformDecelerationFunc);
+  Track.AddKeyframe(2, 1.0, {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
   Track.AddKeyframe(4, 3.5);
   Animation.AddTrack(Track);
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);
@@ -112,20 +104,12 @@ begin
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'Z');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, -3.0);
-  Track.AddKeyframe(2, 2.0,
-    {$IFDEF FPC}
-  @
-     {$ENDIF}
-    UniformDecelerationFunc);
+  Track.AddKeyframe(2, 2.0, {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
   Track.AddKeyframe(4, 4.0);
   Animation.AddTrack(Track);
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('3', Animation);
   //Play 1
-  AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete :=
-    {$IFDEF FPC}
-     @
-     {$ENDIF}
-    Box1AnimationComplete;
+  AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete := {$IFDEF FPC}@{$ENDIF}Box1AnimationComplete;
   AnimationPlayerBox1.AnimationPlayer.Animation := '1';
   AnimationPlayerBox1.AnimationPlayer.Playing := True;
 
