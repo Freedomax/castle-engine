@@ -1,6 +1,6 @@
 {%MainUnit castletransform.pas}
 {
-  Copyright 2017-2023 Michalis Kamburelis.
+  Copyright 2023 Michalis Kamburelis.
 
   This file is part of "Castle Game Engine".
 
@@ -16,7 +16,6 @@
 
 {$ifdef read_interface}
 
-  { Timer, running the @link(OnTimer) event periodically. }
   TCastleAnimationPlayerTransform = class(TCastleTransform)
   strict private
     FAnimationPlayer: TAnimationPlayer;

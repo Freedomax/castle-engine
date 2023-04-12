@@ -44,7 +44,6 @@ type
 
   strict private
     FOnChange: TNotifyEvent;
-  var
     FComponent: TPersistent;
     FProperty: string;
     FPropertyInfo: PPropInfo;
@@ -158,8 +157,8 @@ constructor TAnimationTrack.Create(AComponent: TPersistent; const AProperty: str
 type
   TInternalKeyframeComparer =
     {$ifdef FPC}
-    specialize
-     {$endif}
+specialize
+    {$endif}
     TComparer<TAnimationKeyframe>;
 begin
   inherited Create;
