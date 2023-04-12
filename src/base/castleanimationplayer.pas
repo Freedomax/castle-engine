@@ -41,7 +41,6 @@ type
       function SearchIndex(const AValue: TAnimationKeyframe): SizeInt;
 
     end;
-
   strict private
     FOnChange: TNotifyEvent;
     FKeyframes: TAnimationKeyframeList;
@@ -52,19 +51,30 @@ type
     function Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
       const Time: TFloatTime): variant;
     procedure SetOnChange(const AValue: TNotifyEvent);
+  private
+    { This notification is used by @link(TAnimation), please do not use it. }
+    property OnChange: TNotifyEvent read FOnChange write SetOnChange;
   strict protected
     procedure SetValue(const AValue: variant); virtual;abstract;
     function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; virtual;
   public
     constructor Create;overload;virtual;
     destructor Destroy; override;
+    { Add a keyframe. The time is calculated in seconds, with the time when the animation
+      starts running as the zero second. LerpFunc represents the equation for modifying the
+      original Lerp, if it's nil, it means that Lerp is not modified. Lerp always ranges from 0 to 1. }
     procedure AddKeyframe(const ATime: TFloatTime; const AValue: variant;
       const ALerpFunc: TLerpFunc = nil);
+    { Calculate the value corresponding to the time and execute it. }
     procedure Evaluate(const ATime: TFloatTime);
+    { The duration of this animation track is determined by the interval between
+      the first and last frames. }
     function Duration: TFloatTime;
-
+    { Interpolation mode, there are two types: discrete or continuous.
+      If it is continuous, you can define an interpolation calculation equation
+      for some keyframes by yourself (see @link(AddKeyframe)). If it is in the discrete mode,
+      this equation will be ignored. }
     property Mode: TAnimationTrackMode read FMode write FMode;
-    property OnChange: TNotifyEvent read FOnChange write SetOnChange;
   end;
 
   TAnimationPropertyTrack = class(TAnimationTrack)
@@ -138,7 +148,7 @@ type
     procedure ClearTracks;
     procedure Start(const ResetTime: boolean = True);
     procedure Stop(const ResetTime: boolean = True);
-
+    { The maximum duration among all tracks. }
     property MaxTime: TFloatTime read FMaxTime;
     property Loop: boolean read FLoop write SetLoop default False;
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
