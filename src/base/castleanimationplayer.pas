@@ -44,16 +44,21 @@ type
 
   strict private
     FOnChange: TNotifyEvent;
+    FKeyframes: TAnimationKeyframeList;
+    FMode: TAnimationTrackMode;
+
     FComponent: TPersistent;
     FProperty: string;
     FPropertyInfo: PPropInfo;
-    FKeyframes: TAnimationKeyframeList;
-    FMode: TAnimationTrackMode;
     procedure KeyframesNotify(ASender: TObject;
- {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
+      {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe;
+      AAction: TCollectionNotification);
     function Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
       const Time: TFloatTime): variant;
     procedure SetOnChange(const AValue: TNotifyEvent);
+  strict protected
+    procedure SetValue(const AValue: variant); virtual;
+    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; virtual;
   public
     constructor Create(AComponent: TPersistent; const AProperty: string);
     destructor Destroy; override;
@@ -147,7 +152,8 @@ implementation
 
 uses Math, Generics.Defaults, Generics.Strings;
 
-function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
+function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} Left,
+  Right: TAnimationTrack.TAnimationKeyframe): integer;
 begin
   Result := CompareValue(Left.Time, Right.Time);
 end;
@@ -186,12 +192,6 @@ begin
 end;
 
 procedure TAnimationTrack.Evaluate(const ATime: TFloatTime);
-
-  procedure SetProperty(const AValue: variant);
-  begin
-    SetPropValue(FComponent, FPropertyInfo, AValue);
-  end;
-
 var
   AValue: variant;
   Index: SizeInt;
@@ -211,13 +211,12 @@ begin
     else
       AValue := FKeyframes.Last.Value;
   end;
-  SetProperty(AValue);
+  SetValue(AValue);
 end;
 
 function TAnimationTrack.Duration: TFloatTime;
 begin
-  if FKeyframes.Count < 2 then
-    Exit(0);
+  if FKeyframes.Count < 2 then Exit(0);
   Result := FKeyframes.Last.Time - FKeyframes.First.Time;
 end;
 
@@ -231,7 +230,8 @@ begin
 end;
 
 procedure TAnimation.TrackListNotify(ASender: TObject;
-  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
+  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack;
+  AAction: TCollectionNotification);
 begin
   Changed;
 end;
@@ -342,10 +342,7 @@ end;
 function TAnimationTrack.Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
   const Time: TFloatTime): variant;
 var
-  Lerp: single;
-  V1_int, V2_int: int64;
-  V1_float, V2_float: extended;
-  Tk: TTypeKind;
+  ALerp: single;
 begin
   if VarType(Keyframe1.Value) <> VarType(Keyframe2.Value) then
     raise Exception.Create(
@@ -355,30 +352,9 @@ begin
     amDiscrete: Result := Keyframe1.Value;
     amContinuous:
     begin
-      Lerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
-      if Assigned(Keyframe1.LerpFunc) then Lerp := Keyframe1.LerpFunc(Lerp);
-
-      Tk := FPropertyInfo^.PropType^.Kind;
-      case Tk of
-        tkInteger, tkInt64, tkEnumeration,
-        tkSet, tkChar, tkWChar:
-        begin
-          V1_int := Keyframe1.Value;
-          V2_int := Keyframe2.Value;
-          Result := Round((1 - Lerp) * V1_int + Lerp * V2_int);
-        end;
-        tkFloat:
-        begin
-          V1_float := Keyframe1.Value;
-          V2_float := Keyframe2.Value;
-          Result := (1 - Lerp) * V1_float + Lerp * V2_float;
-        end;
-        else
-          raise Exception.CreateFmt(
-            'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
-
-            [Tk, FProperty]);
-      end;
+      ALerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
+      if Assigned(Keyframe1.LerpFunc) then ALerp := Keyframe1.LerpFunc(ALerp);
+      Result := CalcValue(Keyframe1.Value, Keyframe2.Value, ALerp);
     end;
   end;
 end;
@@ -388,8 +364,44 @@ begin
   if FOnChange <> AValue then FOnChange := AValue;
 end;
 
+procedure TAnimationTrack.SetValue(const AValue: variant);
+begin
+  SetPropValue(FComponent, FPropertyInfo, AValue);
+end;
+
+function TAnimationTrack.CalcValue(const Value1, Value2: variant;
+  const ALerp: Single): variant;
+var
+  V1_int, V2_int: int64;
+  V1_float, V2_float: extended;
+  Tk: TTypeKind;
+begin
+  Tk := FPropertyInfo^.PropType^.Kind;
+  case Tk of
+    tkInteger, tkInt64, tkEnumeration,
+    tkSet, tkChar, tkWChar:
+    begin
+      V1_int := Value1;
+      V2_int := Value2;
+      Result := Round((1 - ALerp) * V1_int + ALerp * V2_int);
+    end;
+    tkFloat:
+    begin
+      V1_float := Value1;
+      V2_float := Value2;
+      Result := (1 - ALerp) * V1_float + ALerp * V2_float;
+    end;
+    else
+      raise Exception.CreateFmt(
+        'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
+        [Tk, FProperty]);
+  end;
+
+end;
+
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
-  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
+  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe;
+  AAction: TCollectionNotification);
 begin
   if Assigned(FOnChange) then FOnChange(Self);
 end;
