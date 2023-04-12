@@ -162,6 +162,9 @@ begin
   FComponent := AComponent;
   FProperty := AProperty;
   FPropertyInfo := GetPropInfo(FComponent, FProperty);
+  if not Assigned(FPropertyInfo) then
+    raise Exception.CreateFmt('%s does not exist in %s',
+      [FProperty, FComponent.ClassName]);
 end;
 
 destructor TAnimationTrack.Destroy;
@@ -491,8 +494,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
