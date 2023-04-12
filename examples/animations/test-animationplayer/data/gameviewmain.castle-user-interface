@@ -55,20 +55,19 @@
             },
             "RotationPersistent" : {
               "$$ClassName" : "TCastleVector4RotationPersistent",
-              "W" : 5.0000000000000000E-001,
+              "W" : 1.2999999523162842E+000,
               "X" : -1.0000000000000000E+000
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "Y" : 3.6628997325897217E+000,
-              "Z" : 4.6584630012512207E+000
+              "Y" : 8.6513566970825195E+000,
+              "Z" : 2.1382083892822266E+000
             },
             "$Children" : [
               {
                 "$$ClassName" : "TCastleAnimationPlayerTransform",
                 "AnimationPlayer" : {
-                  "$$ClassName" : "TAnimationPlayer",
-                  "Speed" : 5.0000000000000000E+000
+                  "$$ClassName" : "TAnimationPlayer"
                 },
                 "Name" : "AnimationPlayerTransform1"
               }
@@ -99,14 +98,37 @@
           },
           {
             "$$ClassName" : "TCastleBox",
+            "ColorPersistent" : {
+              "$$ClassName" : "TCastleColorPersistent",
+              "Blue" : 1.7254902422428131E-001,
+              "Green" : 6.8235296010971069E-001,
+              "Red" : 2.0784313976764679E-001
+            },
             "Name" : "Box1",
             "RenderOptions" : {
               "$$ClassName" : "TCastleScene.TSceneRenderOptions"
             },
+            "SizePersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : 1.0000000000000000E+000,
+              "Y" : 5.0000000000000000E-001,
+              "Z" : 5.0000000000000000E-001
+            },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "Y" : 1.1095865964889526E+000
-            }
+              "X" : 3.0000000000000000E+000,
+              "Y" : 1.1095865964889526E+000,
+              "Z" : -3.0774335861206055E+000
+            },
+            "$Children" : [
+              {
+                "$$ClassName" : "TCastleAnimationPlayerTransform",
+                "AnimationPlayer" : {
+                  "$$ClassName" : "TAnimationPlayer"
+                },
+                "Name" : "AnimationPlayerBox1"
+              }
+            ]
           }
         ]
       },
@@ -136,13 +158,16 @@
         },
         "RotationPersistent" : {
           "$$ClassName" : "TCastleVector4RotationPersistent",
-          "W" : 4.9999997019767761E-001,
-          "X" : -1.0000000000000000E+000
+          "W" : 7.0692431926727295E-001,
+          "X" : -9.9850893020629883E-001,
+          "Y" : -5.1566299051046371E-002,
+          "Z" : -1.7909256741404533E-002
         },
         "TranslationPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "Y" : 3.6628997325897217E+000,
-          "Z" : 4.6584630012512207E+000
+          "X" : -8.3578360080718994E-001,
+          "Y" : 1.2787119865417480E+001,
+          "Z" : 1.2364817619323730E+001
         }
       },
       "InternalDesignNavigations[dnFly]" : {
@@ -188,6 +213,33 @@
       }
     },
     {
+      "$$ClassName" : "TCastleButton",
+      "Caption" : "Play animations one by one",
+      "CustomBackgroundDisabled" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "CustomBackgroundFocused" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "CustomBackgroundNormal" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "CustomBackgroundPressed" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "Image" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "Name" : "Button2",
+      "TranslationPersistent" : {
+        "$$ClassName" : "TCastleVector2Persistent",
+        "X" : 2.0000000000000000E+001,
+        "Y" : -6.4604919433593750E+001
+      },
+      "VerticalAnchorParent" : "vpTop",
+      "VerticalAnchorSelf" : "vpTop"
+    },
+    {
       "$$ClassName" : "TCastleLabel",
       "ColorPersistent" : {
         "$$ClassName" : "TCastleColorPersistent",
@@ -220,9 +272,7 @@
           "$$ClassName" : "TCastleAnimationPlayer",
           "AnimationPlayer" : {
             "$$ClassName" : "TAnimationPlayer",
-            "Loop" : true,
-            "Playing" : true,
-            "Speed" : 5.0000000000000000E-001
+            "Playing" : true
           },
           "Height" : 1.0000000000000000E+000,
           "Name" : "AnimationPlayer1",

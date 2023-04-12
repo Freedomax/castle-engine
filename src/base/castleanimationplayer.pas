@@ -24,6 +24,7 @@ uses
 
 type
   TAnimationTrackMode = (amDiscrete, amContinuous);
+  TLerpFunc = function(const ALerp: single): single;
 
   TAnimationTrack = class
   public
@@ -31,11 +32,12 @@ type
     TAnimationKeyframe = record
       Time: TFloatTime;
       Value: variant;
+      LerpFunc: TLerpFunc;
     end;
 
     TAnimationKeyframeList = class(
       {$IFDEF FPC}specialize{$ENDIF} TSortedList<TAnimationKeyframe>)
-    public
+    protected
       function SearchIndex(const AValue: TAnimationKeyframe): SizeInt;
 
     end;
@@ -56,7 +58,8 @@ type
   public
     constructor Create(AComponent: TPersistent; const AProperty: string);
     destructor Destroy; override;
-    procedure AddKeyframe(const ATime: TFloatTime; const AValue: variant);
+    procedure AddKeyframe(const ATime: TFloatTime; const AValue: variant;
+      const ALerpFunc: TLerpFunc = nil);
     procedure Evaluate(const ATime: TFloatTime);
     function Duration: TFloatTime;
 
@@ -76,7 +79,7 @@ type
     FPlaying: boolean;
     FLoop: boolean;
     FSpeed: single;
-    procedure FTrackListNotify(ASender: TObject;
+    procedure TrackListNotify(ASender: TObject;
  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
     procedure SetPlaying(const Value: boolean);
     procedure SetLoop(const Value: boolean);
@@ -173,12 +176,14 @@ begin
   inherited Destroy;
 end;
 
-procedure TAnimationTrack.AddKeyframe(const ATime: TFloatTime; const AValue: variant);
+procedure TAnimationTrack.AddKeyframe(const ATime: TFloatTime;
+  const AValue: variant; const ALerpFunc: TLerpFunc);
 var
   Keyframe: TAnimationKeyframe;
 begin
   Keyframe.Time := ATime;
   Keyframe.Value := AValue;
+  Keyframe.LerpFunc := ALerpFunc;
   FKeyframes.Add(Keyframe);
 end;
 
@@ -253,7 +258,7 @@ begin
   end;
 end;
 
-procedure TAnimation.FTrackListNotify(ASender: TObject;
+procedure TAnimation.TrackListNotify(ASender: TObject;
   {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
 begin
   Changed;
@@ -283,7 +288,7 @@ begin
     {$IFDEF FPC}
     @
      {$ENDIF}
-    FTrackListNotify;
+    TrackListNotify;
   FCurrentTime := 0;
   FMaxTime := 0;
   FPlaying := False;
@@ -378,6 +383,7 @@ begin
     amContinuous:
     begin
       Lerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
+      if Assigned(Keyframe1.LerpFunc) then Lerp := Keyframe1.LerpFunc(Lerp);
 
       Tk := FPropertyInfo^.PropType^.Kind;
       case Tk of
@@ -494,8 +500,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
