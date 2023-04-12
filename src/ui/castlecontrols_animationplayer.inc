@@ -15,6 +15,14 @@
 }
 
 {$ifdef read_interface}
+  TAnimationPositionTrack = class(TAnimationVector2Track)
+  strict private
+    FControl: TCastleUserInterface;
+  strict protected
+    procedure SetValue(const AValue: variant); override;
+  public
+    constructor Create(AControl: TCastleUserInterface);
+  end;
 
   TCastleAnimationPlayer = class(TCastleUserInterface)
   strict private
@@ -32,8 +40,19 @@
 {$endif read_interface}
 
 {$ifdef read_implementation}
+{ TAnimationPositionTrack --------------------------------------------------------------- }
+procedure TAnimationPositionTrack.SetValue(const AValue: variant);
+begin
+  FControl.Translation := VariantToVector2(AValue);
+end;
 
-{ TCastleTimer --------------------------------------------------------------- }
+constructor TAnimationPositionTrack.Create(AControl: TCastleUserInterface);
+begin
+  inherited Create;
+  FControl := AControl;
+end;
+
+{ TCastleAnimationPlayer --------------------------------------------------------------- }
 constructor TCastleAnimationPlayer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);

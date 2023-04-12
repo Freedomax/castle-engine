@@ -79,11 +79,27 @@ type
     constructor Create(AComponent: TPersistent; const AProperty: string);overload;
   end;
 
+  TAnimationVector2Track = class abstract(TAnimationTrack)
+  strict protected
+    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
+  public
+    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector2;
+      const ALerpFunc: TLerpFunc = nil);
+  end;
+
   TAnimationVector3Track = class abstract(TAnimationTrack)
   strict protected
     function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
   public
     procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector3;
+      const ALerpFunc: TLerpFunc = nil);
+  end;
+
+  TAnimationVector4Track = class abstract(TAnimationTrack)
+  strict protected
+    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
+  public
+    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector4;
       const ALerpFunc: TLerpFunc = nil);
   end;
 
@@ -516,6 +532,23 @@ begin
       [FProperty, FComponent.ClassName]);
 end;
 
+function TAnimationVector2Track.CalcValue(const Value1, Value2: variant;
+  const ALerp: Single): variant;
+var
+  V1, V2, V3: TVector2;
+begin
+  V1 := VariantToVector2(Value1);
+  V2 := VariantToVector2(Value2);
+  V3 := (1 - ALerp) * V1 + ALerp * V2;
+  Result := VariantFromVector2(V3);
+end;
+
+procedure TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc);
+begin
+  inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
+end;
+
 function TAnimationVector3Track.CalcValue(const Value1, Value2: variant;
   const ALerp: Single): variant;
 var
@@ -531,6 +564,23 @@ procedure TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
   const AValue: TVector3; const ALerpFunc: TLerpFunc);
 begin
   inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
+end;
+
+function TAnimationVector4Track.CalcValue(const Value1, Value2: variant;
+  const ALerp: Single): variant;
+var
+  V1, V2, V3: TVector4;
+begin
+  V1 := VariantToVector4(Value1);
+  V2 := VariantToVector4(Value2);
+  V3 := (1 - ALerp) * V1 + ALerp * V2;
+  Result := VariantFromVector4(V3);
+end;
+
+procedure TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc);
+begin
+  inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
 
 procedure TAnimation.Stop(const ResetTime: boolean);

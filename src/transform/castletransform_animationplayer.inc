@@ -39,8 +39,18 @@
 {$endif read_interface}
 
 {$ifdef read_implementation}
+{ TAnimationTranslationTrack --------------------------------------------------------------- }
+procedure TAnimationTranslationTrack.SetValue(const AValue: variant);
+begin
+  FTransform.Translation := VariantToVector3(AValue);
+end;
 
-{ TCastleTimer --------------------------------------------------------------- }
+constructor TAnimationTranslationTrack.Create(ATransform: TCastleTransform);
+begin
+  inherited Create;
+  FTransform := ATransform;
+end;
+{ TCastleAnimationPlayerTransform --------------------------------------------------------------- }
 constructor TCastleAnimationPlayerTransform.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);

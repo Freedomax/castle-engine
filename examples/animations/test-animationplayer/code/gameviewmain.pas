@@ -74,31 +74,21 @@ var
   Animation: TAnimation;
   Track: TAnimationTrack;
   TranslationTrack: TAnimationTranslationTrack;
+  PositionTrack: TAnimationPositionTrack;
   AIndex: SizeInt;
 begin
   inherited;
   Button1.OnClick := {$IFDEF FPC}@{$ENDIF}Button1Click;
   ;
-  { Box }
+  { Box animations }
   //1
-  {
-  Animation := TAnimation.Create;
-  Track := TAnimationPropertyTrack.Create(
-    (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'X');
-  Track.Mode := amContinuous;
-  Track.AddKeyframe(0, -4.0);
-  Track.AddKeyframe(2, 1.0, {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
-  Track.AddKeyframe(4, 3.5);
-  Animation.AddTrack(Track);
-  AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);  }
-  //x 1 -3
   Animation := TAnimation.Create;
   TranslationTrack := TAnimationTranslationTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox));
   TranslationTrack.Mode := amContinuous;
   TranslationTrack.AddKeyframe(0, Vector3(-4.0, 1, -3));
-  TranslationTrack.AddKeyframe(20, Vector3(1.0, 1, -3), {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
-  TranslationTrack.AddKeyframe(40, Vector3(3.5, 1, -3));
+  TranslationTrack.AddKeyframe(2, Vector3(1.0, 1, -3), {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
+  TranslationTrack.AddKeyframe(4, Vector3(3.5, 1, -3));
   Animation.AddTrack(TranslationTrack);
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);
   //2
@@ -125,8 +115,7 @@ begin
   AnimationPlayerBox1.AnimationPlayer.Animation := '1';
   AnimationPlayerBox1.AnimationPlayer.Playing := True;
 
-
-  { UI }
+  { Label animations }
   Animation := TAnimation.Create;
 
   Track := TAnimationPropertyTrack.Create(
@@ -137,7 +126,6 @@ begin
   Track.AddKeyframe(0, 1.0);
   Animation.AddTrack(Track);
 
-
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayer1.Parent as TCastleLabel).ColorPersistent, 'Red');
   Track.Mode := amContinuous;
@@ -146,28 +134,19 @@ begin
   Track.AddKeyframe(0.5, 1.0);
   Animation.AddTrack(Track);
 
-  Track := TAnimationPropertyTrack.Create(
-    (AnimationPlayer1.Parent as TCastleLabel).TranslationPersistent, 'X');
-  Track.Mode := amContinuous;
-  Track.AddKeyframe(0, 20);
-  Track.AddKeyframe(0.5, 27);
-  Track.AddKeyframe(1, 20);
-  Animation.AddTrack(Track);
-
-  Track := TAnimationPropertyTrack.Create(
-    (AnimationPlayer1.Parent as TCastleLabel).TranslationPersistent, 'Y');
-  Track.Mode := amContinuous;
-  Track.AddKeyframe(0, 60);
-  Track.AddKeyframe(0.5, 71);
-  Track.AddKeyframe(1, 60);
-  Animation.AddTrack(Track);
+  PositionTrack:= TAnimationPositionTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
+  PositionTrack.Mode := amContinuous;
+  PositionTrack.AddKeyframe(0, Vector2(20, 60));
+  PositionTrack.AddKeyframe(0.5, Vector2(27, 71));
+  PositionTrack.AddKeyframe(1, Vector2(20, 60));
+  Animation.AddTrack(PositionTrack);
 
   Track := TAnimationPropertyTrack.Create((AnimationPlayer1.Parent as TCastleLabel),
     'Caption');
   Track.Mode := amDiscrete;
   Track.AddKeyframe(0, 'Click <font color="#00FF00FF">Button</font> to shake camera');
   Track.AddKeyframe(0.5, 'Hello world');
-  Track.AddKeyframe(1, 'Click <font color="#00FF00FF">Button</font> to shake camera');
+  Track.AddKeyframe(1, '');
   Animation.AddTrack(Track);
 
   Animation.Loop := True;
