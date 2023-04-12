@@ -36,7 +36,7 @@ type
     end;
 
     TAnimationKeyframeList = class(
-      {$IFDEF FPC}specialize{$ENDIF} TSortedList<TAnimationKeyframe>)
+      {$IFDEF FPC}specialize{$ENDIF} TList<TAnimationKeyframe>)
     protected
       function SearchIndex(const AValue: TAnimationKeyframe): SizeInt;
 
@@ -199,7 +199,7 @@ type
 
 implementation
 
-uses Math, Generics.Defaults, Generics.Strings;
+uses Math, Generics.Defaults;
 
 function VariantToVector2(const V: Variant): TVector2;
 begin
@@ -295,8 +295,8 @@ end;
 
 procedure TAnimation.SetOnComplete(const AValue: TNotifyEvent);
 begin
-  if FOnComplete = AValue then Exit;
-  FOnComplete := AValue;
+  if not SameMethods(TMethod(FOnComplete), TMethod(AValue)) then
+    FOnComplete := AValue;
 end;
 
 procedure TAnimation.SetLoop(const Value: boolean);
@@ -360,7 +360,8 @@ begin
 
   FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
   if FLoop then
-    FCurrentTime := FCurrentTime mod MaxTime
+    //delphi not support: FCurrentTime := FCurrentTime mod MaxTime
+    FCurrentTime := FCurrentTime - MaxTime * Floor(FCurrentTime / MaxTime)
   else if FCurrentTime > MaxTime then
   begin
     Stop(False);
@@ -402,10 +403,6 @@ function TAnimationTrack.Interpolate(const Keyframe1, Keyframe2: TAnimationKeyfr
 var
   ALerp: single;
 begin
-  if VarType(Keyframe1.Value) <> VarType(Keyframe2.Value) then
-    raise Exception.Create(
-      'TAnimationTrack.Interpolate: Interpolation of different value types is not supported.');
-
   case self.Mode of
     amDiscrete: Result := Keyframe1.Value;
     amContinuous:
@@ -419,7 +416,8 @@ end;
 
 procedure TAnimationTrack.SetOnChange(const AValue: TNotifyEvent);
 begin
-  if FOnChange <> AValue then FOnChange := AValue;
+  if not SameMethods(TMethod(FOnChange), TMethod(AValue)) then
+    FOnChange := AValue;
 end;
 
 function TAnimationTrack.CalcValue(const Value1, Value2: variant;
@@ -468,21 +466,23 @@ procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
   {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe;
   AAction: TCollectionNotification);
 begin
+  FKeyframes.Sort;
   if Assigned(FOnChange) then FOnChange(Self);
 end;
 
 function TAnimationTrack.TAnimationKeyframeList.SearchIndex(
   const AValue: TAnimationKeyframe): SizeInt;
 var
+  {$IFDEF FPC}
   LSearchResult: TBinarySearchResult;
+  {$else}
+  AIndex: Integer;
+  {$ENDIF}
 begin
-  if {$IFDEF FPC}specialize{$ENDIF} TArrayHelper<TAnimationKeyframe>.BinarySearch(FItems, AValue,
+  {$IFDEF FPC}
+  if specialize TArrayHelper<TAnimationKeyframe>.BinarySearch(FItems, AValue,
     LSearchResult, FComparer, 0, Count) then
-    case FDuplicates of
-      dupAccept: Result := LSearchResult.FoundIndex;
-      dupIgnore: Exit(LSearchResult.FoundIndex);
-      dupError: raise EListError.Create(SCollectionDuplicate);
-    end
+    Exit(LSearchResult.FoundIndex)
   else
   begin
     if LSearchResult.CandidateIndex = -1 then
@@ -493,6 +493,10 @@ begin
     else
       Result := LSearchResult.CandidateIndex + 1;
   end;
+  {$else}
+  BinarySearch(AValue, AIndex);
+  Result := AIndex;
+  {$ENDIF}
 end;
 
 procedure TAnimationPropertyTrack.SetValue(const AValue: variant);
@@ -525,7 +529,7 @@ begin
     else
       raise Exception.CreateFmt(
         'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
-        [Tk, FProperty]);
+        [Ord(Tk), FProperty]);
   end;
 
 end;
@@ -613,7 +617,8 @@ end;
 
 procedure TAnimationPlayer.SetOnAnimationComplete(const AValue: TNotifyEvent);
 begin
-  if FOnAnimationComplete <> AValue then FOnAnimationComplete := AValue;
+  if not SameMethods(TMethod(FOnAnimationComplete), TMethod(AValue)) then
+    FOnAnimationComplete := AValue;
 end;
 
 procedure TAnimationPlayer.SetAnimation(const AValue: string);

@@ -56,7 +56,7 @@ var
   AniPlayer: TAnimationPlayer;
 begin
   AniPlayer := Sender as TAnimationPlayer;
-  LabelLog.Text.Add('Animation: "%s" completed', [AniPlayer.Animation]);
+  LabelLog.Text.Add(Format('Animation: "%s" completed', [AniPlayer.Animation]));
   if AniPlayer.Animation = '1' then AniPlayer.Animation := '2'
   else
   if AniPlayer.Animation = '2' then AniPlayer.Animation := '3';
@@ -96,9 +96,10 @@ begin
   TranslationTrack := TAnimationTranslationTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox));
   TranslationTrack.Mode := amContinuous;
+  TranslationTrack.AddKeyframe(4, Vector3(3.5, 1, -3));
   TranslationTrack.AddKeyframe(0, Vector3(-4.0, 1, -3));
   TranslationTrack.AddKeyframe(2, Vector3(1.0, 1, -3), {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
-  TranslationTrack.AddKeyframe(4, Vector3(3.5, 1, -3));
+
   Animation.AddTrack(TranslationTrack);
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);
   //2
@@ -130,10 +131,11 @@ begin
 
   LabelColorTrack:= TLabelColorTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
   LabelColorTrack.Mode := amContinuous;
+  LabelColorTrack.AddKeyframe(1, Vector4(1, 0.3, 0.2, 1));
   LabelColorTrack.AddKeyframe(0, Vector4(1, 0.3, 0.2, 1));
   LabelColorTrack.AddKeyframe(0.25, Vector4(0.2, 0.3, 0.2, 0.6));
   LabelColorTrack.AddKeyframe(0.5, Vector4(1, 0.3, 0.2, 0.2));
-  LabelColorTrack.AddKeyframe(1, Vector4(1, 0.3, 0.2, 1));
+
   Animation.AddTrack(LabelColorTrack);
 
   PositionTrack:= TAnimationPositionTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
