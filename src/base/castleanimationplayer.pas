@@ -74,11 +74,13 @@ type
   TAnimation = class
   strict private
     FMaxTime: TFloatTime;
+    FOnComplete: TNotifyEvent;
     FTrackList: TAnimationTrackList;
     FCurrentTime: TFloatTime;
     FPlaying: boolean;
     FLoop: boolean;
     FSpeed: single;
+    procedure SetOnComplete(const AValue: TNotifyEvent);
     procedure TrackListNotify(ASender: TObject;
  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
     procedure SetPlaying(const Value: boolean);
@@ -86,20 +88,23 @@ type
     procedure SetSpeed(const Value: single);
     procedure Changed;
     procedure TrackChange(Sender: TObject);
+  protected
+    procedure Update(const DeltaTime: TFloatTime);
+
+    property OnComplete: TNotifyEvent read FOnComplete write SetOnComplete;
+    property Playing: boolean read FPlaying write SetPlaying default False;
   public
     constructor Create;
     destructor Destroy; override;
     procedure AddTrack(const Track: TAnimationTrack);
     procedure RemoveTrack(const Track: TAnimationTrack);
     procedure ClearTracks;
-    procedure Update(const DeltaTime: TFloatTime);
     procedure Start(const ResetTime: boolean = True);
     procedure Stop(const ResetTime: boolean = True);
-    property MaxTime: TFloatTime read FMaxTime;
 
+    property MaxTime: TFloatTime read FMaxTime;
     property Loop: boolean read FLoop write SetLoop default False;
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
-    property Playing: boolean read FPlaying write SetPlaying default False;
   end;
 
   TAnimationList = {$IFDEF FPC}
@@ -112,10 +117,14 @@ type
     FAnimation: string;
     FCurrentAnimation: TAnimation;
     FAnimationList: TAnimationList;
+    FOnAnimationComplete: TNotifyEvent;
     FPlaying: boolean;
+    procedure SetOnAnimationComplete(const AValue: TNotifyEvent);
     procedure UpdateAnimation;
     procedure SetAnimation(const AValue: string);
     procedure SetPlaying(const AValue: boolean);
+
+    procedure InternalAnimationComplete(Sender: TObject);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -132,6 +141,8 @@ type
   published
 
     property Playing: boolean read FPlaying write SetPlaying default False;
+    property OnAnimationComplete: TNotifyEvent
+      read FOnAnimationComplete write SetOnAnimationComplete;
   end;
 
 implementation
@@ -264,6 +275,12 @@ begin
   Changed;
 end;
 
+procedure TAnimation.SetOnComplete(const AValue: TNotifyEvent);
+begin
+  if FOnComplete = AValue then Exit;
+  FOnComplete := AValue;
+end;
+
 procedure TAnimation.SetLoop(const Value: boolean);
 begin
   if FLoop <> Value then
@@ -334,7 +351,10 @@ begin
   if FLoop then
     FCurrentTime := FCurrentTime mod MaxTime
   else if FCurrentTime > MaxTime then
+  begin
     Stop;
+    if Assigned(FOnComplete) then FOnComplete(Self);
+  end;
   for I := 0 to FTrackList.Count - 1 do
   begin
     Track := TAnimationTrack(FTrackList[I]);
@@ -453,7 +473,10 @@ end;
 procedure TAnimation.Stop(const ResetTime: boolean);
 begin
   if ResetTime then
+  begin
     FCurrentTime := 0;
+    Update(0.0);
+  end;
   FPlaying := False;
 end;
 
@@ -463,6 +486,12 @@ begin
   if FPlaying then FCurrentAnimation.Start(True)
   else
     FCurrentAnimation.Stop(True);
+end;
+
+procedure TAnimationPlayer.SetOnAnimationComplete(const AValue: TNotifyEvent);
+begin
+  if FOnAnimationComplete = AValue then Exit;
+  FOnAnimationComplete := AValue;
 end;
 
 procedure TAnimationPlayer.SetAnimation(const AValue: string);
@@ -488,6 +517,12 @@ begin
   UpdateAnimation;
 end;
 
+procedure TAnimationPlayer.InternalAnimationComplete(Sender: TObject);
+begin
+  if Sender = FCurrentAnimation then if Assigned(FOnAnimationComplete) then
+      FOnAnimationComplete(Self);
+end;
+
 constructor TAnimationPlayer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -500,7 +535,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
@@ -528,6 +564,11 @@ begin
   if AnimationExists(AName) then
     raise Exception.CreateFmt('AnimationPlayer: Name "%s" already exists', [AName]);
 
+  AAnimation.OnComplete :=
+    {$IFDEF FPC}
+   @
+     {$ENDIF}
+    InternalAnimationComplete;
   FAnimationList.Add(AName, AAnimation);
 end;
 

@@ -10,18 +10,19 @@ interface
 uses Classes,
   CastleVectors, CastleComponentSerialize,
   CastleUIControls, CastleControls, CastleKeysMouse, CastleAnimationPlayer,
-  CastleTransform, CastleScene;
+  CastleTransform, CastleScene, CastleLog;
 
 type
   { Main view, where most of the application logic takes place. }
   TViewMain = class(TCastleView)
   private
+    procedure AnimationPlayerBox1AnimationPlayerAnimationComplete(Sender: TObject);
     procedure Button1Click(Sender: TObject);
   published
     { Components designed using CGE editor.
       These fields will be automatically initialized at Start. }
     LabelFps, LabelLog: TCastleLabel;
-    Button1, Button2: TCastleButton;
+    Button1: TCastleButton;
     Box1: TCastleBox;
     AnimationPlayer1: TCastleAnimationPlayer;
     AnimationPlayerTransform1, AnimationPlayerBox1: TCastleAnimationPlayerTransform;
@@ -40,6 +41,16 @@ implementation
 uses SysUtils;
 
 { TViewMain ----------------------------------------------------------------- }
+
+procedure TViewMain.AnimationPlayerBox1AnimationPlayerAnimationComplete(
+  Sender: TObject);
+var
+  AniPlayer: TAnimationPlayer;
+begin
+  AniPlayer := Sender as TAnimationPlayer;
+  WriteLnlog(AniPlayer.Animation);
+  if AniPlayer.Animation = '1' then AniPlayer.Animation := '2';
+end;
 
 procedure TViewMain.Button1Click(Sender: TObject);
 begin
@@ -72,7 +83,6 @@ begin
   ;
   { Box }
   Animation := TAnimation.Create;
-
   Track := TAnimationTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'X');
   Track.Mode := amContinuous;
@@ -84,10 +94,32 @@ begin
     UniformDecelerationFunc);
   Track.AddKeyframe(4, 3.5);
   Animation.AddTrack(Track);
-
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);
+
+  Animation := TAnimation.Create;
+  Track := TAnimationTrack.Create(
+    (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'Z');
+  Track.Mode := amContinuous;
+  Track.AddKeyframe(0, -3.0);
+  Track.AddKeyframe(2, 2.0,
+    {$IFDEF FPC}
+  @
+     {$ENDIF}
+    UniformDecelerationFunc);
+  Track.AddKeyframe(4, 4.0);
+  Animation.AddTrack(Track);
+  AnimationPlayerBox1.AnimationPlayer.AddAnimation('2', Animation);
+
+  //
+  AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete :=
+    {$IFDEF FPC}
+     @
+     {$ENDIF}
+    AnimationPlayerBox1AnimationPlayerAnimationComplete;
   AnimationPlayerBox1.AnimationPlayer.Animation := '1';
   AnimationPlayerBox1.AnimationPlayer.Playing := True;
+
+
   { UI }
   Animation := TAnimation.Create;
 
@@ -168,7 +200,6 @@ begin
   Animation.AddTrack(Track);
 
   Animation.Loop := False;
-  Animation.Playing := False;
   Animation.Speed := 5;
   AnimationPlayerTransform1.AnimationPlayer.Playing := False;
   AnimationPlayerTransform1.AnimationPlayer.AddAnimation('1', Animation);
