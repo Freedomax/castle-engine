@@ -121,7 +121,7 @@
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "X" : 1.6023726463317871E+000,
+              "X" : -3.7888646125793457E+000,
               "Y" : 1.0000000000000000E+000,
               "Z" : -3.0000000000000000E+000
             },
@@ -221,22 +221,15 @@
       "$$ClassName" : "TCastleLabel",
       "ColorPersistent" : {
         "$$ClassName" : "TCastleColorPersistent",
-        "Blue" : 2.0784313976764679E-001,
-        "Green" : 2.9803922772407532E-001,
-        "Red" : 5.2156865596771240E-001
+        "Blue" : 2.0000000298023224E-001,
+        "Green" : 3.0000001192092896E-001,
+        "Red" : 1.0000000000000000E+000
       },
       "FontSize" : 6.0000000000000000E+001,
       "HorizontalAnchorParent" : "hpMiddle",
       "HorizontalAnchorSelf" : "hpMiddle",
       "Html" : true,
       "Name" : "Label1",
-      "Outline" : 2,
-      "OutlineColorPersistent" : {
-        "$$ClassName" : "TCastleColorPersistent",
-        "Blue" : 2.6274511218070984E-001,
-        "Green" : 6.3921570777893066E-001,
-        "Red" : 5.8431375026702881E-001
-      },
       "Text" : [
         "Click <font color=\"#00FF00FF\">Button</font> to shake camera"
       ],

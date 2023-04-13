@@ -47,6 +47,7 @@ procedure TCastleCamera.SetGravityUpForPersistent(const AValue: TVector3);
 begin
   GravityUp := AValue;
 end;
+
 {$endif read_implementation_methods}
 
 {$ifdef read_implementation_constructor}
