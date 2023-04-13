@@ -181,6 +181,8 @@ type
     procedure UpdateAnimation;
     procedure SetAnimation(const AValue: string);
     procedure SetPlaying(const AValue: boolean);
+    procedure EnsureAnimationNameUnique(const AName: string);
+    procedure AddAnimationNoCheck(const AName: string; const AAnimation: TAnimation);
 
     procedure InternalAnimationComplete(Sender: TObject);
   public
@@ -189,6 +191,7 @@ type
     function PropertySections(const PropertyName: string): TPropertySections; override;
     procedure Update(const DeltaTime: TFloatTime);
     procedure AddAnimation(const AName: string; const AAnimation: TAnimation);
+    function NewAnimation(const AName: string): TAnimation;
     function AnimationExists(const AName: string): boolean;
     procedure RemoveAnimation(const AName: string);
     procedure ClearAnimations;
@@ -323,7 +326,8 @@ begin
   if FPlayStyle <> AValue then
   begin
     FPlayStyle := AValue;
-    if FPlayStyle in [apsPingPong, apsPingPongOnce] then FCurrentTime := GetPingPongEvalTime;
+    if FPlayStyle in [apsPingPong, apsPingPongOnce] then
+      FCurrentTime := GetPingPongEvalTime;
   end;
 
 end;
@@ -379,7 +383,7 @@ var
   I: integer;
   Track: TAnimationTrack;
   EvalTime: TFloatTime;
-  bCompleted: Boolean;
+  bCompleted: boolean;
 begin
   if not FPlaying then  Exit;
   if MaxTime <= 0 then Exit;
@@ -418,7 +422,7 @@ begin
   end;
 
   { Execute finally to ensure the last frame is completed. }
-  if bCompleted Then
+  if bCompleted then
   begin
     Stop(False);
     if Assigned(FOnComplete) then FOnComplete(Self);
@@ -504,19 +508,22 @@ begin
 
 end;
 
-function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
+function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif}
+  Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
 begin
   Result := CompareValue(Left.Time, Right.Time);
 end;
 
 constructor TAnimationTrack.Create;
 type
-  TInternalKeyframeComparer = {$IFDEF FPC}specialize{$ENDIF}TComparer<TAnimationKeyframe>;
+  TInternalKeyframeComparer =
+    {$IFDEF FPC}specialize{$ENDIF}TComparer<TAnimationKeyframe>;
 begin
   inherited Create;
   FKeyframes := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
     {$Ifdef fpc}@{$endif}CompareKeyframe));
-  FKeyframes.OnNotify := {$Ifdef fpc}@{$endif}KeyframesNotify;
+  FKeyframes.OnNotify :=
+    {$Ifdef fpc}@{$endif}KeyframesNotify;
 end;
 
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
@@ -716,6 +723,22 @@ begin
   end;
 end;
 
+procedure TAnimationPlayer.EnsureAnimationNameUnique(const AName: string);
+begin
+  if AName = '' then
+    raise Exception.Create('AnimationPlayer: Name must not be empty');
+
+  if AnimationExists(AName) then
+    raise Exception.CreateFmt('AnimationPlayer: Name "%s" already exists', [AName]);
+end;
+
+procedure TAnimationPlayer.AddAnimationNoCheck(const AName: string;
+  const AAnimation: TAnimation);
+begin
+  AAnimation.OnComplete := {$Ifdef fpc}@{$endif}InternalAnimationComplete;
+  FAnimationList.Add(AName, AAnimation);
+end;
+
 procedure TAnimationPlayer.InternalAnimationComplete(Sender: TObject);
 begin
   if Sender = FCurrentAnimation then if Assigned(FOnAnimationComplete) then
@@ -754,17 +777,18 @@ end;
 procedure TAnimationPlayer.AddAnimation(const AName: string;
   const AAnimation: TAnimation);
 begin
-  if AName = '' then
-    raise Exception.Create('AnimationPlayer: Name must not be empty');
-
+  EnsureAnimationNameUnique(AName);
   if not Assigned(AAnimation) then
     raise Exception.Create('AnimationPlayer: TAnimation is nil');
 
-  if AnimationExists(AName) then
-    raise Exception.CreateFmt('AnimationPlayer: Name "%s" already exists', [AName]);
+  AddAnimationNoCheck(AName, AAnimation);
+end;
 
-  AAnimation.OnComplete := {$Ifdef fpc}@{$endif}InternalAnimationComplete;
-  FAnimationList.Add(AName, AAnimation);
+function TAnimationPlayer.NewAnimation(const AName: string): TAnimation;
+begin
+  EnsureAnimationNameUnique(AName);
+  Result := TAnimation.Create;
+  AddAnimationNoCheck(AName, Result);
 end;
 
 function TAnimationPlayer.AnimationExists(const AName: string): boolean;

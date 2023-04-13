@@ -144,7 +144,6 @@
               "Green" : 3.8823530077934265E-001,
               "Red" : 2.7058824896812439E-001
             },
-            "Material" : "pmUnlit",
             "Name" : "Sphere1",
             "Radius" : 2.0000000298023224E-001,
             "RenderOptions" : {
@@ -223,21 +222,36 @@
       "$$ClassName" : "TCastleButton",
       "Caption" : "Shake Camera",
       "CustomBackgroundDisabled" : {
-        "$$ClassName" : "TCastleImagePersistent"
+        "$$ClassName" : "TCastleImagePersistent",
+        "RegionPersistent" : {
+          "$$ClassName" : "TFloatRectanglePersistent"
+        }
       },
       "CustomBackgroundFocused" : {
-        "$$ClassName" : "TCastleImagePersistent"
+        "$$ClassName" : "TCastleImagePersistent",
+        "RegionPersistent" : {
+          "$$ClassName" : "TFloatRectanglePersistent"
+        }
       },
       "CustomBackgroundNormal" : {
-        "$$ClassName" : "TCastleImagePersistent"
+        "$$ClassName" : "TCastleImagePersistent",
+        "RegionPersistent" : {
+          "$$ClassName" : "TFloatRectanglePersistent"
+        }
       },
       "CustomBackgroundPressed" : {
-        "$$ClassName" : "TCastleImagePersistent"
+        "$$ClassName" : "TCastleImagePersistent",
+        "RegionPersistent" : {
+          "$$ClassName" : "TFloatRectanglePersistent"
+        }
       },
       "HorizontalAnchorParent" : "hpMiddle",
       "HorizontalAnchorSelf" : "hpMiddle",
       "Image" : {
-        "$$ClassName" : "TCastleImagePersistent"
+        "$$ClassName" : "TCastleImagePersistent",
+        "RegionPersistent" : {
+          "$$ClassName" : "TFloatRectanglePersistent"
+        }
       },
       "Name" : "Button1",
       "TranslationPersistent" : {
