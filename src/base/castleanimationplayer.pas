@@ -122,7 +122,7 @@ type
     {$IFDEF FPC}specialize{$ENDIF} TObjectList<TAnimationTrack>)
   end;
 
-  TAnimationPlayStyle = (apsOnce, apsLoop, apsPingPong);
+  TAnimationPlayStyle = (apsOnce, apsLoop, apsPingPong, apsPingPongOnce);
 
   TAnimation = class
   strict private
@@ -160,7 +160,8 @@ type
     property MaxTime: TFloatTime read FMaxTime;
     { apsOnce: The animation plays only once and stops when it finishes.
       apsLoop: The animation plays in a loop, infinitely.
-      apsPingPong: The animation plays forward once, then plays backward once, and repeats in this way. }
+      apsPingPong: The animation plays forward once, then plays backward once, and repeats in this way.
+      apsPingPongOnce: The animation plays forward once, then plays backward once, then stops.}
     property PlayStyle: TAnimationPlayStyle
       read FPlayStyle write SetPlayStyle default apsOnce;
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
@@ -322,7 +323,7 @@ begin
   if FPlayStyle <> AValue then
   begin
     FPlayStyle := AValue;
-    if FPlayStyle = apsPingPong then FCurrentTime := GetPingPongEvalTime;
+    if FPlayStyle in [apsPingPong, apsPingPongOnce] then FCurrentTime := GetPingPongEvalTime;
   end;
 
 end;
@@ -378,11 +379,13 @@ var
   I: integer;
   Track: TAnimationTrack;
   EvalTime: TFloatTime;
+  bCompleted: Boolean;
 begin
   if not FPlaying then  Exit;
   if MaxTime <= 0 then Exit;
   //if CastleDesignMode then Exit;
 
+  bCompleted := False;
   FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
 
   //delphi not support: FCurrentTime := FCurrentTime mod MaxTime
@@ -396,14 +399,14 @@ begin
     begin
       EvalTime := GetPingPongEvalTime;
     end;
+    apsPingPongOnce:
+    begin
+      bCompleted := FCurrentTime >= 2 * MaxTime;
+      EvalTime := GetPingPongEvalTime;
+    end;
     apsOnce:
     begin
-      if FCurrentTime > MaxTime then
-      begin
-        Stop(False);
-        if Assigned(FOnComplete) then FOnComplete(Self);
-        Exit;
-      end;
+      bCompleted := FCurrentTime >= MaxTime;
       EvalTime := FCurrentTime;
     end;//no others
   end;
@@ -412,6 +415,13 @@ begin
   begin
     Track := TAnimationTrack(FTrackList[I]);
     Track.Evaluate(EvalTime);
+  end;
+
+  { Execute finally to ensure the last frame is completed. }
+  if bCompleted Then
+  begin
+    Stop(False);
+    if Assigned(FOnComplete) then FOnComplete(Self);
   end;
 end;
 

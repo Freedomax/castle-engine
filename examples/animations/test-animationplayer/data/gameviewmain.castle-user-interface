@@ -134,6 +134,31 @@
                 "Name" : "AnimationPlayerBox1"
               }
             ]
+          },
+          {
+            "$$ClassName" : "TCastleSphere",
+            "CollisionSphereRadius" : 2.0000000298023224E-001,
+            "ColorPersistent" : {
+              "$$ClassName" : "TCastleColorPersistent",
+              "Blue" : 8.0000001192092896E-001,
+              "Green" : 3.8823530077934265E-001,
+              "Red" : 2.7058824896812439E-001
+            },
+            "Material" : "pmUnlit",
+            "Name" : "Sphere1",
+            "Radius" : 2.0000000298023224E-001,
+            "RenderOptions" : {
+              "$$ClassName" : "TCastleScene.TSceneRenderOptions"
+            },
+            "$Children" : [
+              {
+                "$$ClassName" : "TCastleAnimationPlayerTransform",
+                "AnimationPlayer" : {
+                  "$$ClassName" : "TAnimationPlayer"
+                },
+                "Name" : "AnimationPlayerSphere1"
+              }
+            ]
           }
         ]
       },
@@ -163,16 +188,20 @@
         },
         "RotationPersistent" : {
           "$$ClassName" : "TCastleVector4RotationPersistent",
-          "W" : 9.6090400218963623E-001,
-          "X" : -9.9981796741485596E-001,
-          "Y" : -1.7443539574742317E-002,
-          "Z" : -7.7398531138896942E-003
+          "W" : 1.2872312068939209E+000,
+          "X" : -9.9988579750061035E-001,
+          "Y" : -1.2491125613451004E-002,
+          "Z" : -8.5178399458527565E-003
+        },
+        "ScalePersistent" : {
+          "$$ClassName" : "TCastleVector3Persistent",
+          "Z" : 1.0000001192092896E+000
         },
         "TranslationPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : -1.5438994765281677E-001,
-          "Y" : 1.2787119865417480E+001,
-          "Z" : 9.7977333068847656E+000
+          "X" : -9.3245700001716614E-002,
+          "Y" : 1.2257350921630859E+001,
+          "Z" : 4.0573105812072754E+000
         }
       },
       "InternalDesignNavigations[dnFly]" : {

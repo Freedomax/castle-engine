@@ -5,6 +5,10 @@
   is covered by BSD or LGPL (see https://castle-engine.io/license). }
 unit GameViewMain;
 
+{$IFDEF FPC}
+  {$mode delphi}
+{$ENDIF}
+
 interface
 
 uses Classes,
@@ -24,8 +28,10 @@ type
     LabelFps, LabelLog: TCastleLabel;
     Button1: TCastleButton;
     Box1: TCastleBox;
+    Sphere1: TCastleSphere;
     AnimationPlayer1: TCastleAnimationPlayer;
-    AnimationPlayerTransform1, AnimationPlayerBox1: TCastleAnimationPlayerTransform;
+    AnimationPlayerTransform1, AnimationPlayerBox1, AnimationPlayerSphere1:
+    TCastleAnimationPlayerTransform;
   public
     constructor Create(AOwner: TComponent); override;
     procedure Start; override;
@@ -78,6 +84,16 @@ begin
   Result := 2 * ALerp - ALerp * ALerp;
 end;
 
+function UniformCircularFunc_OneMiuCos(const ALerp: single): single;
+begin
+  Result := 1 - Cos(ALerp * Pi / 2);
+end;
+
+function UniformCircularFunc_Sin(const ALerp: single): single;
+begin
+  Result := Sin(ALerp * Pi / 2);
+end;
+
 procedure TViewMain.Start;
 var
   Animation: TAnimation;
@@ -88,13 +104,9 @@ var
   LabelColorTrack: TLabelColorTrack;
 begin
   inherited;
-  Button1.OnClick :=
-    {$IFDEF FPC}
-@
-     {$ENDIF}
-    Button1Click;
+  Button1.OnClick := Button1Click;
 
-  { Box animations }
+  { Box }
   //1
   Animation := TAnimation.Create;
   TranslationTrack := TAnimationTranslationTrack.Create(
@@ -125,25 +137,17 @@ begin
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'Z');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, -3.0);
-  Track.AddKeyframe(2, 2.0,
-    {$IFDEF FPC}
-@
-     {$ENDIF}
-    UniformDecelerationFunc);
+  Track.AddKeyframe(2, 2.0, UniformDecelerationFunc);
   Track.AddKeyframe(4, 4.0);
-  Animation.PlayStyle := apsPingPong;
+  Animation.PlayStyle := apsPingPongOnce;
   Animation.AddTrack(Track);
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('3', Animation);
   //Play 1
-  AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete :=
-    {$IFDEF FPC}
-@
-     {$ENDIF}
-    Box1AnimationComplete;
+  AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete := Box1AnimationComplete;
   AnimationPlayerBox1.AnimationPlayer.Animation := '1';
   AnimationPlayerBox1.AnimationPlayer.Playing := True;
 
-  { Label animations }
+  { Label }
   Animation := TAnimation.Create;
 
   LabelColorTrack := TLabelColorTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
@@ -177,6 +181,30 @@ begin
   AnimationPlayer1.AnimationPlayer.Animation := '1';
   AnimationPlayer1.AnimationPlayer.Playing := True;
 
+  { Sphere }
+  Animation := TAnimation.Create;
+
+  Track := TAnimationPropertyTrack.Create(
+    (AnimationPlayerSphere1.Parent as TCastleSphere).TranslationPersistent, 'X');
+  Track.Mode := amContinuous;
+  Track.AddKeyframe(0, -2.0, UniformCircularFunc_OneMiuCos);
+  Track.AddKeyframe(0.5, 0.0, UniformCircularFunc_Sin);
+  Track.AddKeyframe(1, 2.0);
+  Animation.AddTrack(Track);
+
+  Track := TAnimationPropertyTrack.Create(
+    (AnimationPlayerSphere1.Parent as TCastleSphere).TranslationPersistent, 'Z');
+  Track.Mode := amContinuous;
+  Track.AddKeyframe(0, -2.0, UniformCircularFunc_Sin);
+  Track.AddKeyframe(0.5, 0.0, UniformCircularFunc_OneMiuCos);
+  Track.AddKeyframe(1, -2.0);
+  Animation.AddTrack(Track);
+
+  Animation.PlayStyle := apsPingPong;
+  Animation.Speed := 0.5;
+  AnimationPlayerSphere1.AnimationPlayer.Start;
+  AnimationPlayerSphere1.AnimationPlayer.AddAnimation('1', Animation);
+  AnimationPlayerSphere1.AnimationPlayer.Animation := '1';
   { Camera }
   Animation := TAnimation.Create;
 
