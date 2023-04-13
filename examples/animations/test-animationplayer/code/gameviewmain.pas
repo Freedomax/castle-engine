@@ -88,7 +88,11 @@ var
   LabelColorTrack: TLabelColorTrack;
 begin
   inherited;
-  Button1.OnClick := {$IFDEF FPC}@{$ENDIF}Button1Click;
+  Button1.OnClick :=
+    {$IFDEF FPC}
+@
+     {$ENDIF}
+    Button1Click;
 
   { Box animations }
   //1
@@ -98,7 +102,11 @@ begin
   TranslationTrack.Mode := amContinuous;
   TranslationTrack.AddKeyframe(4, Vector3(3.5, 1, -3));
   TranslationTrack.AddKeyframe(0, Vector3(-4.0, 1, -3));
-  TranslationTrack.AddKeyframe(2, Vector3(1.0, 1, -3), {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
+  TranslationTrack.AddKeyframe(2, Vector3(1.0, 1, -3),
+    {$IFDEF FPC}
+@
+     {$ENDIF}
+    UniformDecelerationFunc);
 
   Animation.AddTrack(TranslationTrack);
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);
@@ -117,19 +125,28 @@ begin
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'Z');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, -3.0);
-  Track.AddKeyframe(2, 2.0, {$IFDEF FPC}@{$ENDIF}UniformDecelerationFunc);
+  Track.AddKeyframe(2, 2.0,
+    {$IFDEF FPC}
+@
+     {$ENDIF}
+    UniformDecelerationFunc);
   Track.AddKeyframe(4, 4.0);
+  Animation.PlayStyle := apsPingPong;
   Animation.AddTrack(Track);
   AnimationPlayerBox1.AnimationPlayer.AddAnimation('3', Animation);
   //Play 1
-  AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete := {$IFDEF FPC}@{$ENDIF}Box1AnimationComplete;
+  AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete :=
+    {$IFDEF FPC}
+@
+     {$ENDIF}
+    Box1AnimationComplete;
   AnimationPlayerBox1.AnimationPlayer.Animation := '1';
   AnimationPlayerBox1.AnimationPlayer.Playing := True;
 
   { Label animations }
   Animation := TAnimation.Create;
 
-  LabelColorTrack:= TLabelColorTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
+  LabelColorTrack := TLabelColorTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
   LabelColorTrack.Mode := amContinuous;
   LabelColorTrack.AddKeyframe(1, Vector4(1, 0.3, 0.2, 1));
   LabelColorTrack.AddKeyframe(0, Vector4(1, 0.3, 0.2, 1));
@@ -138,22 +155,23 @@ begin
 
   Animation.AddTrack(LabelColorTrack);
 
-  PositionTrack:= TAnimationPositionTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
+  PositionTrack := TAnimationPositionTrack.Create(AnimationPlayer1.Parent as
+    TCastleLabel);
   PositionTrack.Mode := amContinuous;
   PositionTrack.AddKeyframe(0, Vector2(20, 60));
   PositionTrack.AddKeyframe(0.5, Vector2(27, 71));
   PositionTrack.AddKeyframe(1, Vector2(20, 60));
   Animation.AddTrack(PositionTrack);
 
-  Track := TAnimationPropertyTrack.Create((AnimationPlayer1.Parent as TCastleLabel),
-    'Caption');
+  Track := TAnimationPropertyTrack.Create(
+    (AnimationPlayer1.Parent as TCastleLabel), 'Caption');
   Track.Mode := amDiscrete;
   Track.AddKeyframe(0, 'Click <font color="#00FF00FF">Button</font> to shake camera');
   Track.AddKeyframe(0.5, 'Hello world');
   Track.AddKeyframe(1, '');
   Animation.AddTrack(Track);
 
-  Animation.Loop := True;
+  Animation.PlayStyle := apsLoop;
   Animation.Speed := 0.5;
   AnimationPlayer1.AnimationPlayer.AddAnimation('1', Animation);
   AnimationPlayer1.AnimationPlayer.Animation := '1';
@@ -162,7 +180,8 @@ begin
   { Camera }
   Animation := TAnimation.Create;
 
-  RotationTrack:= TAnimationRotationTrack.Create(AnimationPlayerTransform1.Parent as TCastleCamera);
+  RotationTrack := TAnimationRotationTrack.Create(AnimationPlayerTransform1.Parent as
+    TCastleCamera);
   RotationTrack.Mode := amContinuous;
   RotationTrack.AddKeyframe(0, Vector4(-1, 0, 0, 1.3));
   RotationTrack.AddKeyframe(1 / 3, Vector4(-1, 0.05, 0.04, 1.25));
@@ -171,7 +190,7 @@ begin
   RotationTrack.AddKeyframe(1, Vector4(-1, 0, 0, 1.3));
   Animation.AddTrack(RotationTrack);
 
-  Animation.Loop := False;
+  Animation.PlayStyle := apsOnce;
   Animation.Speed := 5;
   AnimationPlayerTransform1.AnimationPlayer.Playing := False;
   AnimationPlayerTransform1.AnimationPlayer.AddAnimation('1', Animation);

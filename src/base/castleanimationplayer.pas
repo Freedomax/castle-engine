@@ -41,13 +41,13 @@ type
       function SearchIndex(const AValue: TAnimationKeyframe): SizeInt;
 
     end;
+
   strict private
     FOnChange: TNotifyEvent;
     FKeyframes: TAnimationKeyframeList;
     FMode: TAnimationTrackMode;
     procedure KeyframesNotify(ASender: TObject;
-      {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe;
-      AAction: TCollectionNotification);
+      {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
     function Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
       const Time: TFloatTime): variant;
     procedure SetOnChange(const AValue: TNotifyEvent);
@@ -55,10 +55,11 @@ type
     { This notification is used by @link(TAnimation), please do not use it. }
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
   strict protected
-    procedure SetValue(const AValue: variant); virtual;abstract;
-    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; virtual;
+    procedure SetValue(const AValue: variant); virtual; abstract;
+    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
+      virtual;
   public
-    constructor Create;overload;virtual;
+    constructor Create; overload; virtual;
     destructor Destroy; override;
     { Add a keyframe. The time is calculated in seconds, with the time when the animation
       starts running as the zero second. LerpFunc represents the equation for modifying the
@@ -84,14 +85,16 @@ type
     FPropertyInfo: PPropInfo;
   strict protected
     procedure SetValue(const AValue: variant); override;
-    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
+    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
+      override;
   public
-    constructor Create(AComponent: TPersistent; const AProperty: string);overload;
+    constructor Create(AComponent: TPersistent; const AProperty: string); overload;
   end;
 
   TAnimationVector2Track = class abstract(TAnimationTrack)
   strict protected
-    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
+    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
+      override;
   public
     procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector2;
       const ALerpFunc: TLerpFunc = nil);
@@ -99,7 +102,8 @@ type
 
   TAnimationVector3Track = class abstract(TAnimationTrack)
   strict protected
-    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
+    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
+      override;
   public
     procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector3;
       const ALerpFunc: TLerpFunc = nil);
@@ -107,7 +111,8 @@ type
 
   TAnimationVector4Track = class abstract(TAnimationTrack)
   strict protected
-    function CalcValue(const Value1, Value2: variant; const ALerp: Single): variant; override;
+    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
+      override;
   public
     procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector4;
       const ALerpFunc: TLerpFunc = nil);
@@ -117,24 +122,27 @@ type
     {$IFDEF FPC}specialize{$ENDIF} TObjectList<TAnimationTrack>)
   end;
 
+  TAnimationPlayStyle = (apsOnce, apsLoop, apsPingPong);
+
   TAnimation = class
   strict private
     FMaxTime: TFloatTime;
     FOnComplete: TNotifyEvent;
+    FPlayStyle: TAnimationPlayStyle;
     FTrackList: TAnimationTrackList;
     FCurrentTime: TFloatTime;
     FPlaying: boolean;
-    FLoop: boolean;
     FSpeed: single;
     procedure SetOnComplete(const AValue: TNotifyEvent);
+    procedure SetPlayStyle(const AValue: TAnimationPlayStyle);
     procedure TrackListNotify(ASender: TObject;
-      {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack;
-        AAction: TCollectionNotification);
+      {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
     procedure SetPlaying(const Value: boolean);
-    procedure SetLoop(const Value: boolean);
     procedure SetSpeed(const Value: single);
+    function Loop: boolean;
     procedure Changed;
     procedure TrackChange(Sender: TObject);
+    function GetPingPongEvalTime: TFloatTime;
   protected
     procedure Update(const DeltaTime: TFloatTime);
 
@@ -150,7 +158,11 @@ type
     procedure Stop(const ResetTime: boolean = True);
     { The maximum duration among all tracks. }
     property MaxTime: TFloatTime read FMaxTime;
-    property Loop: boolean read FLoop write SetLoop default False;
+    { apsOnce: The animation plays only once and stops when it finishes.
+      apsLoop: The animation plays in a loop, infinitely.
+      apsPingPong: The animation plays forward once, then plays backward once, and repeats in this way. }
+    property PlayStyle: TAnimationPlayStyle
+      read FPlayStyle write SetPlayStyle default apsOnce;
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
   end;
 
@@ -190,43 +202,50 @@ type
       read FOnAnimationComplete write SetOnAnimationComplete;
   end;
 
-  function VariantToVector2(const V: Variant): TVector2;
-  function VariantFromVector2(const V: TVector2): Variant;
-  function VariantToVector3(const V: Variant): TVector3;
-  function VariantFromVector3(const V: TVector3): Variant;
-  function VariantToVector4(const V: Variant): TVector4;
-  function VariantFromVector4(const V: TVector4): Variant;
+function FloatMod(a, b: TFloatTime): TFloatTime;
+
+function VariantToVector2(const V: variant): TVector2;
+function VariantFromVector2(const V: TVector2): variant;
+function VariantToVector3(const V: variant): TVector3;
+function VariantFromVector3(const V: TVector3): variant;
+function VariantToVector4(const V: variant): TVector4;
+function VariantFromVector4(const V: TVector4): variant;
 
 implementation
 
 uses Math, Generics.Defaults;
 
-function VariantToVector2(const V: Variant): TVector2;
+function FloatMod(a, b: TFloatTime): TFloatTime;
+begin
+  Result := a - b * Floor(a / b);
+end;
+
+function VariantToVector2(const V: variant): TVector2;
 begin
   Result := Vector2(V[0], V[1]);
 end;
 
-function VariantFromVector2(const V: TVector2): Variant;
+function VariantFromVector2(const V: TVector2): variant;
 begin
   Result := VarArrayOf([V.X, V.Y]);
 end;
 
-function VariantToVector3(const V: Variant): TVector3;
+function VariantToVector3(const V: variant): TVector3;
 begin
   Result := Vector3(V[0], V[1], V[2]);
 end;
 
-function VariantFromVector3(const V: TVector3): Variant;
+function VariantFromVector3(const V: TVector3): variant;
 begin
   Result := VarArrayOf([V.X, V.Y, V.Z]);
 end;
 
-function VariantToVector4(const V: Variant): TVector4;
+function VariantToVector4(const V: variant): TVector4;
 begin
   Result := Vector4(V[0], V[1], V[2], V[3]);
 end;
 
-function VariantFromVector4(const V: TVector4): Variant;
+function VariantFromVector4(const V: TVector4): variant;
 begin
   Result := VarArrayOf([V.X, V.Y, V.Z, V.W]);
 end;
@@ -287,8 +306,7 @@ begin
 end;
 
 procedure TAnimation.TrackListNotify(ASender: TObject;
-  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack;
-  AAction: TCollectionNotification);
+  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
 begin
   Changed;
 end;
@@ -299,12 +317,14 @@ begin
     FOnComplete := AValue;
 end;
 
-procedure TAnimation.SetLoop(const Value: boolean);
+procedure TAnimation.SetPlayStyle(const AValue: TAnimationPlayStyle);
 begin
-  if FLoop <> Value then
+  if FPlayStyle <> AValue then
   begin
-    FLoop := Value;
+    FPlayStyle := AValue;
+    if FPlayStyle = apsPingPong then FCurrentTime := GetPingPongEvalTime;
   end;
+
 end;
 
 procedure TAnimation.SetSpeed(const Value: single);
@@ -315,15 +335,19 @@ begin
   end;
 end;
 
+function TAnimation.Loop: boolean;
+begin
+  Result := FPlayStyle in [apsLoop, apsPingPong];
+end;
+
 constructor TAnimation.Create;
 begin
   inherited;
   FTrackList := TAnimationTrackList.Create(True);
-  FTrackList.OnNotify := {$IFDEF FPC}@{$ENDIF}TrackListNotify;
+  FTrackList.OnNotify := {$Ifdef fpc}@{$endif}TrackListNotify;
   FCurrentTime := 0;
   FMaxTime := 0;
   FPlaying := False;
-  FLoop := False;
   FSpeed := 1;
 end;
 
@@ -336,7 +360,7 @@ end;
 procedure TAnimation.AddTrack(const Track: TAnimationTrack);
 begin
   FTrackList.Add(Track);
-  Track.OnChange := {$IFDEF FPC}@{$ENDIF}TrackChange;
+  Track.OnChange := {$Ifdef fpc}@{$endif}TrackChange;
 end;
 
 procedure TAnimation.RemoveTrack(const Track: TAnimationTrack);
@@ -353,24 +377,41 @@ procedure TAnimation.Update(const DeltaTime: TFloatTime);
 var
   I: integer;
   Track: TAnimationTrack;
+  EvalTime: TFloatTime;
 begin
   if not FPlaying then  Exit;
   if MaxTime <= 0 then Exit;
   //if CastleDesignMode then Exit;
 
   FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
-  if FLoop then
-    //delphi not support: FCurrentTime := FCurrentTime mod MaxTime
-    FCurrentTime := FCurrentTime - MaxTime * Floor(FCurrentTime / MaxTime)
-  else if FCurrentTime > MaxTime then
-  begin
-    Stop(False);
-    if Assigned(FOnComplete) then FOnComplete(Self);
+
+  //delphi not support: FCurrentTime := FCurrentTime mod MaxTime
+  case FPlayStyle of
+    apsLoop:
+    begin
+      FCurrentTime := FloatMod(FCurrentTime, MaxTime);
+      EvalTime := FCurrentTime;
+    end;
+    apsPingPong:
+    begin
+      EvalTime := GetPingPongEvalTime;
+    end;
+    apsOnce:
+    begin
+      if FCurrentTime > MaxTime then
+      begin
+        Stop(False);
+        if Assigned(FOnComplete) then FOnComplete(Self);
+        Exit;
+      end;
+      EvalTime := FCurrentTime;
+    end;//no others
   end;
+
   for I := 0 to FTrackList.Count - 1 do
   begin
     Track := TAnimationTrack(FTrackList[I]);
-    Track.Evaluate(FCurrentTime);
+    Track.Evaluate(EvalTime);
   end;
 end;
 
@@ -398,6 +439,14 @@ begin
   Changed;
 end;
 
+function TAnimation.GetPingPongEvalTime: TFloatTime;
+begin
+  FCurrentTime := FloatMod(FCurrentTime, 2 * MaxTime);
+  Result := FCurrentTime;
+  if Result >= MaxTime then
+    Result := 2 * MaxTime - Result;
+end;
+
 function TAnimationTrack.Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
   const Time: TFloatTime): variant;
 var
@@ -421,50 +470,47 @@ begin
 end;
 
 function TAnimationTrack.CalcValue(const Value1, Value2: variant;
-  const ALerp: Single): variant;
+  const ALerp: single): variant;
 var
   V1_int, V2_int: int64;
   V1_float, V2_float: extended;
 begin
-    if VarIsOrdinal(Value1) and (VarIsOrdinal(Value2)) then
-    begin
-      V1_int := Value1;
-      V2_int := Value2;
-      Result := Round((1 - ALerp) * V1_int + ALerp * V2_int);
-    end
-    else if VarIsFloat(Value1) and (VarIsFloat(Value2)) then
-    begin
-      V1_float := Value1;
-      V2_float := Value2;
-      Result := (1 - ALerp) * V1_float + ALerp * V2_float;
-    end
-    else
-      raise Exception.CreateFmt(
-        'TAnimationTrack.Interpolate: Unsupported variant type [%d][%d]',
-        [VarType(Value1), VarType(Value2)]);
-
+  if VarIsOrdinal(Value1) and (VarIsOrdinal(Value2)) then
+  begin
+    V1_int := Value1;
+    V2_int := Value2;
+    Result := Round((1 - ALerp) * V1_int + ALerp * V2_int);
+  end
+  else if VarIsFloat(Value1) and (VarIsFloat(Value2)) then
+  begin
+    V1_float := Value1;
+    V2_float := Value2;
+    Result := (1 - ALerp) * V1_float + ALerp * V2_float;
+  end
+  else
+    raise Exception.CreateFmt(
+      'TAnimationTrack.Interpolate: Unsupported variant type [%d][%d]',
+      [VarType(Value1), VarType(Value2)]);
 
 end;
 
-function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} Left,
-  Right: TAnimationTrack.TAnimationKeyframe): integer;
+function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
 begin
   Result := CompareValue(Left.Time, Right.Time);
 end;
 
 constructor TAnimationTrack.Create;
 type
-  TInternalKeyframeComparer = {$IFDEF FPC}specialize{$ENDIF} TComparer<TAnimationKeyframe>;
+  TInternalKeyframeComparer = {$IFDEF FPC}specialize{$ENDIF}TComparer<TAnimationKeyframe>;
 begin
   inherited Create;
   FKeyframes := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
-    {$IFDEF FPC}@{$ENDIF}CompareKeyframe));
-  FKeyframes.OnNotify := {$IFDEF FPC}@{$ENDIF}KeyframesNotify;
+    {$Ifdef fpc}@{$endif}CompareKeyframe));
+  FKeyframes.OnNotify := {$Ifdef fpc}@{$endif}KeyframesNotify;
 end;
 
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
-  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe;
-  AAction: TCollectionNotification);
+  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
 begin
   FKeyframes.Sort;
   if Assigned(FOnChange) then FOnChange(Self);
@@ -519,7 +565,7 @@ begin
 end;
 
 function TAnimationPropertyTrack.CalcValue(const Value1, Value2: variant;
-  const ALerp: Single): variant;
+  const ALerp: single): variant;
 var
   V1_int, V2_int: int64;
   V1_float, V2_float: extended;
@@ -561,7 +607,7 @@ begin
 end;
 
 function TAnimationVector2Track.CalcValue(const Value1, Value2: variant;
-  const ALerp: Single): variant;
+  const ALerp: single): variant;
 var
   V1, V2, V3: TVector2;
 begin
@@ -578,7 +624,7 @@ begin
 end;
 
 function TAnimationVector3Track.CalcValue(const Value1, Value2: variant;
-  const ALerp: Single): variant;
+  const ALerp: single): variant;
 var
   V1, V2, V3: TVector3;
 begin
@@ -595,7 +641,7 @@ begin
 end;
 
 function TAnimationVector4Track.CalcValue(const Value1, Value2: variant;
-  const ALerp: Single): variant;
+  const ALerp: single): variant;
 var
   V1, V2, V3: TVector4;
 begin
@@ -707,7 +753,7 @@ begin
   if AnimationExists(AName) then
     raise Exception.CreateFmt('AnimationPlayer: Name "%s" already exists', [AName]);
 
-  AAnimation.OnComplete := {$IFDEF FPC}@{$ENDIF}InternalAnimationComplete;
+  AAnimation.OnComplete := {$Ifdef fpc}@{$endif}InternalAnimationComplete;
   FAnimationList.Add(AName, AAnimation);
 end;
 
