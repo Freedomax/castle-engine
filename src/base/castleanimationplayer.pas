@@ -473,30 +473,44 @@ end;
 function TAnimationTrack.TAnimationKeyframeList.SearchIndex(
   const AValue: TAnimationKeyframe): SizeInt;
 var
-  {$IFDEF FPC}
-  LSearchResult: TBinarySearchResult;
-  {$else}
-  AIndex: Integer;
-  {$ENDIF}
+  {$IFDEF fpc}
+  L, H: Integer;
+  mid, cmp: Integer;
+   {$ELSE}
+  Index: integer;
+  {$endif}
 begin
-  {$IFDEF FPC}
-  if specialize TArrayHelper<TAnimationKeyframe>.BinarySearch(FItems, AValue,
-    LSearchResult, FComparer, 0, Count) then
-    Exit(LSearchResult.FoundIndex)
-  else
+  {$IFDEF fpc}
+  //from delphi
+  if Count = 0 then
   begin
-    if LSearchResult.CandidateIndex = -1 then
-      Result := 0
-    else
-    if LSearchResult.CompareResult > 0 then
-      Result := LSearchResult.CandidateIndex
-    else
-      Result := LSearchResult.CandidateIndex + 1;
+    Exit(0);
   end;
-  {$else}
-  BinarySearch(AValue, AIndex);
-  Result := AIndex;
-  {$ENDIF}
+
+  L := 0;
+  H := Count - 1;
+  while L <= H do
+  begin
+    mid := L + (H - L) shr 1;
+    cmp := FComparer.Compare(FItems[mid], AValue);
+    if cmp < 0 then
+      L := mid + 1
+    else if cmp > 0 then
+      H := mid - 1
+    else
+    begin
+      repeat
+        Dec(mid);
+      until (mid < 0) or (FComparer.Compare(FItems[mid], AValue) <> 0);
+      Result := mid + 1;
+      Exit;
+    end;
+  end;
+  Result := L;
+   {$ELSE}
+  BinarySearch(AValue, Index);
+  Result := Index;
+  {$endif}
 end;
 
 procedure TAnimationPropertyTrack.SetValue(const AValue: variant);
