@@ -108,31 +108,26 @@ begin
 
   { Box }
   //1
-  Animation := TAnimation.Create;
+  Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('1');
   TranslationTrack := TAnimationTranslationTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox));
   TranslationTrack.Mode := amContinuous;
   TranslationTrack.AddKeyframe(4, Vector3(3.5, 1, -3));
   TranslationTrack.AddKeyframe(0, Vector3(-4.0, 1, -3));
   TranslationTrack.AddKeyframe(2, Vector3(1.0, 1, -3),
-    {$IFDEF FPC}
-@
-     {$ENDIF}
-    UniformDecelerationFunc);
+ {$Ifdef fpc}@{$endif}UniformDecelerationFunc);
 
   Animation.AddTrack(TranslationTrack);
-  AnimationPlayerBox1.AnimationPlayer.AddAnimation('1', Animation);
   //2
-  Animation := TAnimation.Create;
+  Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('2');
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).RotationPersistent, 'W');
   Track.Mode := amContinuous;
   Track.AddKeyframe(0, 0.0);
   Track.AddKeyframe(1, -Pi / 2);
   Animation.AddTrack(Track);
-  AnimationPlayerBox1.AnimationPlayer.AddAnimation('2', Animation);
   //3
-  Animation := TAnimation.Create;
+  Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('3');
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'Z');
   Track.Mode := amContinuous;
@@ -141,7 +136,6 @@ begin
   Track.AddKeyframe(4, 4.0);
   Animation.PlayStyle := apsPingPongOnce;
   Animation.AddTrack(Track);
-  AnimationPlayerBox1.AnimationPlayer.AddAnimation('3', Animation);
   //Play 1
   AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete := Box1AnimationComplete;
   AnimationPlayerBox1.AnimationPlayer.Animation := '1';
@@ -182,7 +176,7 @@ begin
   AnimationPlayer1.AnimationPlayer.Playing := True;
 
   { Sphere }
-  Animation := TAnimation.Create;
+  Animation := AnimationPlayerSphere1.AnimationPlayer.NewAnimation('1');
 
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerSphere1.Parent as TCastleSphere).TranslationPersistent, 'X');
@@ -203,10 +197,9 @@ begin
   Animation.PlayStyle := apsPingPong;
   Animation.Speed := 0.5;
   AnimationPlayerSphere1.AnimationPlayer.Start;
-  AnimationPlayerSphere1.AnimationPlayer.AddAnimation('1', Animation);
   AnimationPlayerSphere1.AnimationPlayer.Animation := '1';
   { Camera }
-  Animation := TAnimation.Create;
+  Animation := AnimationPlayerTransform1.AnimationPlayer.NewAnimation('1');
 
   RotationTrack := TAnimationRotationTrack.Create(AnimationPlayerTransform1.Parent as
     TCastleCamera);
@@ -221,7 +214,6 @@ begin
   Animation.PlayStyle := apsOnce;
   Animation.Speed := 5;
   AnimationPlayerTransform1.AnimationPlayer.Playing := False;
-  AnimationPlayerTransform1.AnimationPlayer.AddAnimation('1', Animation);
   AnimationPlayerTransform1.AnimationPlayer.Animation := '1';
 
 end;
