@@ -175,6 +175,11 @@ end;
 
 procedure TAnimationPlayerView.AddTrack(const ATrack: TAnimationTrack);
 begin
+  if not Assigned(FAnimationPlayer.CurrentAnimation) then
+  begin
+    ShowMessage('Please select an animation first.');
+    Exit;
+  end;
   FAnimationPlayer.CurrentAnimation.AddTrack(ATrack);
   ReloadTracks;
 end;
@@ -210,6 +215,7 @@ var
   Form: TPropertySelectForm;
   comp: TComponent;
   ARoot: TCastleUserInterface;
+  Track: TAnimationPropertyTrack;
 begin
   Form := TPropertySelectForm.Create(nil);
   try
@@ -228,12 +234,18 @@ begin
 
     if Form.ShowModal = mrOk then
     begin
-
+      if Assigned(Form.SelectedObject) and (Form.SelectedProperty <> '') then
+      begin
+        Track := TAnimationPropertyTrack.Create(Form.SelectedObject,
+          Form.SelectedProperty);
+        FView.AddTrack(Track);
+      end
+      else
+        ShowMessage('Did not complete the selection.');
     end;
   finally
     FreeAndNil(Form);
   end;
-  //TPropInfoList.Create();
 end;
 
 procedure TAnimationPlayerDialog.ButtonNewTrackClick(Sender: TObject);

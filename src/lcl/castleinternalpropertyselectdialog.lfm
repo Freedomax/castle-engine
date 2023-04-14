@@ -6,6 +6,7 @@ object PropertySelectForm: TPropertySelectForm
   Caption = 'Select Property'
   ClientHeight = 550
   ClientWidth = 772
+  OnClose = FormClose
   Position = poDesktopCenter
   object ButtonPanel1: TButtonPanel
     Left = 7
@@ -29,7 +30,7 @@ object PropertySelectForm: TPropertySelectForm
     Left = 0
     Height = 501
     Top = 0
-    Width = 448
+    Width = 408
     Align = alLeft
     ReadOnly = True
     ShowSeparators = False
@@ -38,14 +39,20 @@ object PropertySelectForm: TPropertySelectForm
     Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
   end
   object TreeViewProperties: TTreeView
-    Left = 448
+    Left = 413
     Height = 501
     Top = 0
-    Width = 324
+    Width = 359
     Align = alClient
     ReadOnly = True
     ShowSeparators = False
     TabOrder = 2
     Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
+  end
+  object Splitter1: TSplitter
+    Left = 408
+    Height = 501
+    Top = 0
+    Width = 5
   end
 end

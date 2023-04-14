@@ -5,18 +5,26 @@ unit castleinternalpropertyselectdialog;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ButtonPanel,
-  ComCtrls, CastleControls, CastleUIControls, CastleTransform, CastleViewport, RttiUtils;
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ButtonPanel, ComCtrls,
+  ExtCtrls, CastleControls, CastleUIControls, CastleTransform, CastleViewport,
+  RttiUtils;
 
 type
   TPropertySelectForm = class(TForm)
+    ButtonPanel1: TButtonPanel;
+    Splitter1: TSplitter;
     TreeViewControls: TTreeView;
     TreeViewProperties: TTreeView;
     ButtonPanel: TButtonPanel;
+    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure TreeViewControlsSelectionChanged(Sender: TObject);
   private
-
+    FSelectedObject: TPersistent;
+    FSelectedProperty: string;
+    procedure UpdateSelectedResult;
   public
+    property SelectedProperty: string read FSelectedProperty;
+    property SelectedObject: TPersistent read FSelectedObject;
     procedure Load(const AControl: TCastleUserInterface);
   end;
 
@@ -31,7 +39,8 @@ uses TypInfo;
 
 procedure TPropertySelectForm.TreeViewControlsSelectionChanged(Sender: TObject);
 
-  procedure FillTreeView(Persistent: TPersistent; TreeNode: TTreeNode);
+  procedure FillTreeView(Persistent: TPersistent; TreeNode: TTreeNode;
+    TreeView: TTreeView);
   var
     PropList: TPropInfoList;
     i: integer;
@@ -45,18 +54,26 @@ procedure TPropertySelectForm.TreeViewControlsSelectionChanged(Sender: TObject);
         if PropList[i]^.PropType^.Kind = tkClass then
         begin
           PropValue := GetObjectProp(Persistent, PropList[i]);
-
-          SubNode := TreeNode.Owner.AddChildObject(TreeNode,
-            PropList[i]^.Name, PropValue);
           if PropValue is TPersistent then
-            FillTreeView(TPersistent(PropValue), SubNode);
+          begin
+            if Assigned(TreeNode) then
+              SubNode := TreeNode.Owner.AddChildObject(TreeNode,
+                PropList[i]^.Name, PropValue)
+            else
+              SubNode := TreeView.Items.AddObject(nil,
+                PropList[i]^.Name, PropValue);
 
+            FillTreeView(TPersistent(PropValue), SubNode, TreeView);
+          end;
         end
         else
         begin
           //TreeNode.Owner.AddChild(TreeNode, PropList[i]^.Name +
           //  ' = ' + GetPropValue(Persistent, PropList[i]));
-          TreeNode.Owner.AddChild(TreeNode, PropList[i]^.Name);
+          if Assigned(TreeNode) then
+            TreeNode.Owner.AddChild(TreeNode, PropList[i]^.Name)
+          else
+            TreeView.Items.Add(nil, PropList[i]^.Name);
         end;
       end;
     finally
@@ -74,11 +91,43 @@ begin
     if not Assigned(Node) then Exit;
     if not Assigned(Node.Data) then Exit;
 
-    FillTreeView(TPersistent(Node.Data),
-      TreeViewProperties.Items.Add(nil, 'MyPersistentObject'));
+    FillTreeView(TPersistent(Node.Data), nil, TreeViewProperties);
   finally
     TreeViewProperties.Items.EndUpdate;
   end;
+end;
+
+procedure TPropertySelectForm.UpdateSelectedResult;
+begin
+  if Assigned(TreeViewControls.Selected) then
+    FSelectedObject := TPersistent(TreeViewControls.Selected.Data)
+  else
+    FSelectedObject := nil;
+
+  if Assigned(TreeViewProperties.Selected) then
+  begin
+    if Assigned(TreeViewProperties.Selected.Data) then
+    begin
+      //child object, update FSelectedObject
+      FSelectedObject := TPersistent(TreeViewProperties.Selected.Data);
+      FSelectedProperty := '';
+    end
+    else
+    begin
+      //child object, update FSelectedObject
+      if Assigned(TreeViewProperties.Selected.Parent) then
+        FSelectedObject := TPersistent(TreeViewProperties.Selected.Parent.Data);
+      FSelectedProperty := TreeViewProperties.Selected.Text;
+    end;
+  end
+  else
+    FSelectedProperty := '';
+
+end;
+
+procedure TPropertySelectForm.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+begin
+  UpdateSelectedResult;
 end;
 
 procedure TPropertySelectForm.Load(const AControl: TCastleUserInterface);
