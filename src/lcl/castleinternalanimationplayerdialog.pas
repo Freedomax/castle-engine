@@ -35,10 +35,8 @@ type
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
   protected
     AddKeyFrameButton: TCastleButton;
-    procedure ReloadAnimationPlayer;
     procedure ReloadTracks;
   public
-    ComboBoxAnimation: TComboBox;
     procedure Start; override;
     procedure Update(const SecondsPassed: single; var HandleInput: boolean); override;
     function Press(const Event: TInputPressRelease): boolean; override;
@@ -61,13 +59,22 @@ type
     MenuItem1: TMenuItem;
     Panel1: TPanel;
     PopupMenuAddTrack: TPopupMenu;
+    procedure ButtonNewAnimationClick(Sender: TObject);
     procedure ButtonNewTrackClick(Sender: TObject);
+    procedure ComboBoxAnimationChange(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure MenuItem1Click(Sender: TObject);
   private
     FView: TAnimationPlayerView;
+    FDisableAnimationSelect: boolean;
+
+    function GetAnimationPlayer: TAnimationPlayer;
 
     procedure InitView;
+    procedure UpdateUI;
+    procedure EnableAnimationSelect(AEnable: boolean);
+
+    property AnimationPlayer: TAnimationPlayer read GetAnimationPlayer;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -87,22 +94,6 @@ begin
 
   FAnimationPlayer := AValue;
 
-end;
-
-procedure TAnimationPlayerView.ReloadAnimationPlayer;
-begin
-  FTrackRoot.ClearControls;
-  AddKeyFrameButton.Exists := False;
-  ComboBoxAnimation.Clear;
-  ComboBoxAnimation.Items.Add('');
-  if not Assigned(FAnimationPlayer) then Exit;
-  if not Assigned(FAnimationPlayer.CurrentAnimation) then
-  begin
-    ComboBoxAnimation.ItemIndex := 0;
-    Exit;
-  end;
-
-  ReloadTracks;
 end;
 
 procedure TAnimationPlayerView.ReloadTracks;
@@ -248,6 +239,11 @@ begin
   end;
 end;
 
+function TAnimationPlayerDialog.GetAnimationPlayer: TAnimationPlayer;
+begin
+  Result := FView.AnimationPlayer;
+end;
+
 procedure TAnimationPlayerDialog.ButtonNewTrackClick(Sender: TObject);
 var
   pt: TPoint;
@@ -257,15 +253,67 @@ begin
   PopupMenuAddTrack.Popup(pt.x, pt.y);
 end;
 
+procedure TAnimationPlayerDialog.ComboBoxAnimationChange(Sender: TObject);
+begin
+  if not Assigned(AnimationPlayer) then Exit;
+  if FDisableAnimationSelect then Exit;
+
+  AnimationPlayer.Animation := ComboBoxAnimation.Text;
+  FView.ReloadTracks;
+  ShowMessage('changed to '+ ComboBoxAnimation.Text);
+end;
+
+procedure TAnimationPlayerDialog.ButtonNewAnimationClick(Sender: TObject);
+var
+  AName: string;
+begin
+  if InputQuery('NewAnimation', 'Input name:', AName) then
+  begin
+    AnimationPlayer.NewAnimation(AName);
+    UpdateUI;
+    FView.ReloadTracks;
+  end;
+end;
+
 procedure TAnimationPlayerDialog.InitView;
 begin
   if not Assigned(FView) then
   begin
     FView := TAnimationPlayerView.Create(CastleControl1);
-    FView.ComboBoxAnimation := ComboBoxAnimation;
     CastleControl1.Container.View := FView;
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
   end;
+end;
+
+procedure TAnimationPlayerDialog.UpdateUI;
+var
+  AName, OldSelectedName: string;
+  Animation: TAnimation;
+  AIndex: integer;
+begin
+  AIndex := 0;
+  EnableAnimationSelect(False);
+  OldSelectedName := ComboBoxAnimation.Text;
+  ComboBoxAnimation.Items.BeginUpdate;
+  try
+    ComboBoxAnimation.Clear;
+    ComboBoxAnimation.Items.Add('');
+    for AName in AnimationPlayer.AnimationList.Keys do
+    begin
+      ComboBoxAnimation.Items.Add(AName);
+      if AName = OldSelectedName then AIndex := ComboBoxAnimation.Items.Count - 1;
+    end;
+    ComboBoxAnimation.ItemIndex := AIndex;
+  finally
+    EnableAnimationSelect(True);
+    ComboBoxAnimation.Items.EndUpdate;
+
+  end;
+end;
+
+procedure TAnimationPlayerDialog.EnableAnimationSelect(AEnable: boolean);
+begin
+  FDisableAnimationSelect := not AEnable;
 end;
 
 end.

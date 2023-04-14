@@ -50,6 +50,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Top = 8
       Width = 105
       Caption = 'New Animation'
+      OnClick = ButtonNewAnimationClick
       TabOrder = 0
     end
     object ComboBoxAnimation: TComboBox
@@ -58,6 +59,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Top = 10
       Width = 99
       ItemHeight = 17
+      OnChange = ComboBoxAnimationChange
       ReadOnly = True
       Style = csDropDownList
       TabOrder = 1

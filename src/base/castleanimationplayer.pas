@@ -200,6 +200,7 @@ type
     procedure Stop(const ResetTime: boolean = True);
 
     property Animation: string read FAnimation write SetAnimation;
+    property AnimationList: TAnimationList read FAnimationList;
     property CurrentAnimation: TAnimation read FCurrentAnimation;
   published
     property Playing: boolean read FPlaying write SetPlaying default False;
@@ -758,8 +759,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
