@@ -8,7 +8,6 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
   ClientWidth = 803
   OnCloseQuery = FormCloseQuery
   Position = poMainFormCenter
-  LCLVersion = '2.3.0.0'
   object CastleControl1: TCastleControl
     Left = 0
     Height = 386
@@ -76,7 +75,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Style = csDropDownList
       TabOrder = 4
     end
-    object ButtonPlayStop: TButton
+    object ButtonPlayStop: TSpeedButton
       Left = 742
       Height = 27
       Top = 8
@@ -84,7 +83,6 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Anchors = [akTop, akRight]
       Caption = 'Start'
       OnClick = ButtonPlayStopClick
-      TabOrder = 5
     end
   end
   object PopupMenuAddTrack: TPopupMenu

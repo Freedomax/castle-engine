@@ -21,7 +21,7 @@ interface
 
 uses
   Generics.Collections, Contnrs, Classes, SysUtils, Forms, Controls, Graphics,
-  Dialogs, ButtonPanel, StdCtrls, ExtCtrls, Menus, ComCtrls,
+  Dialogs, ButtonPanel, StdCtrls, ExtCtrls, Menus, ComCtrls, Buttons,
   CastleAnimationPlayer, CastleControl, CastleControls, CastleUIControls,
   CastleVectors, CastleColors, CastleKeysMouse, RttiUtils, CastleTransform,
   CastleViewport, CastleTimeUtils, Variants, CastleRectangles;
@@ -87,9 +87,9 @@ type
 
   TAnimationPlayerDialog = class(TForm)
     ButtonNewAnimation: TButton;
+    ButtonPlayStop: TSpeedButton;
     ButtonRemoveAnimation: TButton;
     ButtonNewTrack: TButton;
-    ButtonPlayStop: TButton;
     CastleControl1: TCastleControl;
     ComboBoxAnimation: TComboBox;
     ComboBoxPlayStyle: TComboBox;
