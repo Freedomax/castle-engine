@@ -111,7 +111,7 @@ begin
   Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('1');
   TranslationTrack := TAnimationTranslationTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox));
-  TranslationTrack.Mode := amContinuous;
+  TranslationTrack.Mode := tmContinuous;
   TranslationTrack.AddKeyframe(4, Vector3(3.5, 1, -3));
   TranslationTrack.AddKeyframe(0, Vector3(-4.0, 1, -3));
   TranslationTrack.AddKeyframe(2, Vector3(1.0, 1, -3),
@@ -122,7 +122,7 @@ begin
   Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('2');
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).RotationPersistent, 'W');
-  Track.Mode := amContinuous;
+  Track.Mode := tmContinuous;
   Track.AddKeyframe(0, 0.0);
   Track.AddKeyframe(1, -Pi / 2);
   Animation.AddTrack(Track);
@@ -130,7 +130,7 @@ begin
   Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('3');
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'Z');
-  Track.Mode := amContinuous;
+  Track.Mode := tmContinuous;
   Track.AddKeyframe(0, -3.0);
   Track.AddKeyframe(2, 2.0, UniformDecelerationFunc);
   Track.AddKeyframe(4, 4.0);
@@ -145,7 +145,7 @@ begin
   Animation := TAnimation.Create;
 
   LabelColorTrack := TLabelColorTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
-  LabelColorTrack.Mode := amContinuous;
+  LabelColorTrack.Mode := tmContinuous;
   LabelColorTrack.AddKeyframe(1, Vector4(1, 0.3, 0.2, 1));
   LabelColorTrack.AddKeyframe(0, Vector4(1, 0.3, 0.2, 1));
   LabelColorTrack.AddKeyframe(0.25, Vector4(0.2, 0.3, 0.2, 0.6));
@@ -155,7 +155,7 @@ begin
 
   PositionTrack := TAnimationPositionTrack.Create(AnimationPlayer1.Parent as
     TCastleLabel);
-  PositionTrack.Mode := amContinuous;
+  PositionTrack.Mode := tmContinuous;
   PositionTrack.AddKeyframe(0, Vector2(20, 60));
   PositionTrack.AddKeyframe(0.5, Vector2(27, 71));
   PositionTrack.AddKeyframe(1, Vector2(20, 60));
@@ -163,7 +163,7 @@ begin
 
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayer1.Parent as TCastleLabel), 'Caption');
-  Track.Mode := amDiscrete;
+  Track.Mode := tmDiscrete;
   Track.AddKeyframe(0, 'Click <font color="#00FF00FF">Button</font> to shake camera');
   Track.AddKeyframe(0.5, 'Hello world');
   Track.AddKeyframe(1, '');
@@ -180,7 +180,7 @@ begin
 
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerSphere1.Parent as TCastleSphere).TranslationPersistent, 'X');
-  Track.Mode := amContinuous;
+  Track.Mode := tmContinuous;
   Track.AddKeyframe(0, -2.0, UniformCircularFunc_OneMiuCos);
   Track.AddKeyframe(0.5, 0.0, UniformCircularFunc_Sin);
   Track.AddKeyframe(1, 2.0);
@@ -188,7 +188,7 @@ begin
 
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerSphere1.Parent as TCastleSphere).TranslationPersistent, 'Z');
-  Track.Mode := amContinuous;
+  Track.Mode := tmContinuous;
   Track.AddKeyframe(0, -2.0, UniformCircularFunc_Sin);
   Track.AddKeyframe(0.5, 0.0, UniformCircularFunc_OneMiuCos);
   Track.AddKeyframe(1, -2.0);
@@ -203,7 +203,7 @@ begin
 
   RotationTrack := TAnimationRotationTrack.Create(AnimationPlayerTransform1.Parent as
     TCastleCamera);
-  RotationTrack.Mode := amContinuous;
+  RotationTrack.Mode := tmContinuous;
   RotationTrack.AddKeyframe(0, Vector4(-1, 0, 0, 1.3));
   RotationTrack.AddKeyframe(1 / 3, Vector4(-1, 0.05, 0.04, 1.25));
   RotationTrack.AddKeyframe(0.5, Vector4(-1, 0, 0, 1.2));
