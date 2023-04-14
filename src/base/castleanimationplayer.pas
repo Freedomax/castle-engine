@@ -140,6 +140,8 @@ type
     procedure SetPlaying(const Value: boolean);
     procedure SetSpeed(const Value: single);
     function Loop: boolean;
+    { Whenever KeyFrameList or TrackList changes, this function will be triggered.
+      Then we update the value of FMaxTime.}
     procedure Changed;
     procedure TrackChange(Sender: TObject);
     function GetPingPongEvalTime: TFloatTime;
@@ -759,7 +761,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

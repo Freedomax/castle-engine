@@ -71,7 +71,8 @@ type
     function GetAnimationPlayer: TAnimationPlayer;
 
     procedure InitView;
-    procedure UpdateUI;
+    procedure AnimationListChanged;
+    procedure UpdateUIControls;
     procedure EnableAnimationSelect(AEnable: boolean);
 
     property AnimationPlayer: TAnimationPlayer read GetAnimationPlayer;
@@ -191,6 +192,7 @@ end;
 procedure TAnimationPlayerDialog.Load(const AAnimationPlayer: TAnimationPlayer);
 begin
   FView.AnimationPlayer := AAnimationPlayer;
+  AnimationListChanged;
 end;
 
 procedure TAnimationPlayerDialog.FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -259,8 +261,9 @@ begin
   if FDisableAnimationSelect then Exit;
 
   AnimationPlayer.Animation := ComboBoxAnimation.Text;
+  UpdateUIControls;
   FView.ReloadTracks;
-  ShowMessage('changed to '+ ComboBoxAnimation.Text);
+  ShowMessage('changed to ' + ComboBoxAnimation.Text);
 end;
 
 procedure TAnimationPlayerDialog.ButtonNewAnimationClick(Sender: TObject);
@@ -270,8 +273,7 @@ begin
   if InputQuery('NewAnimation', 'Input name:', AName) then
   begin
     AnimationPlayer.NewAnimation(AName);
-    UpdateUI;
-    FView.ReloadTracks;
+    AnimationListChanged;
   end;
 end;
 
@@ -285,10 +287,9 @@ begin
   end;
 end;
 
-procedure TAnimationPlayerDialog.UpdateUI;
+procedure TAnimationPlayerDialog.AnimationListChanged;
 var
   AName, OldSelectedName: string;
-  Animation: TAnimation;
   AIndex: integer;
 begin
   AIndex := 0;
@@ -307,8 +308,22 @@ begin
   finally
     EnableAnimationSelect(True);
     ComboBoxAnimation.Items.EndUpdate;
-
+    UpdateUIControls;
+    FView.ReloadTracks;
   end;
+
+end;
+
+procedure TAnimationPlayerDialog.UpdateUIControls;
+begin
+  ButtonNewAnimation.Enabled :=
+    Assigned(AnimationPlayer);
+  ButtonDeleteAnimation.Enabled :=
+    Assigned(AnimationPlayer) and Assigned(AnimationPlayer.CurrentAnimation);
+  ButtonNewTrack.Enabled := Assigned(AnimationPlayer) and
+    Assigned(AnimationPlayer.CurrentAnimation);
+  ButtonDeleteTrack.Enabled :=
+    Assigned(AnimationPlayer) and Assigned(AnimationPlayer.CurrentAnimation);
 end;
 
 procedure TAnimationPlayerDialog.EnableAnimationSelect(AEnable: boolean);
