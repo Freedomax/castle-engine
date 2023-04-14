@@ -27,26 +27,35 @@ uses
   CastleViewport, CastleTimeUtils, Variants, CastleRectangles;
 
 type
-  TCastleTrackView = class(TCastleRectangleControl)
+  TTrackView = class(TCastleRectangleControl)
   private
-  const
-    PixelsEachSceond: single = 200;
   var
     FTrack: TAnimationTrack;
     procedure SetTrack(const AValue: TAnimationTrack);
     function TimePosition(const ATime: TFloatTime): single;
   public
-
+  const
+    PixelsEachSceond: single = 200;
     procedure Render; override;
     property Track: TAnimationTrack read FTrack write SetTrack;
   end;
 
   TAnimationPlayerView = class(TCastleView)
   private
+  type
+    TTrackViewList = {$Ifdef fpc}specialize{$endif}TObjectList<TTrackView>;
+  const
+    TrackHeight = 100;
+    TrackViewMinWidth = 300;
+  var
     FAnimationPlayer: TAnimationPlayer;
     FRoot: TCastleUserInterface;
     FTrackListView: TCastleVerticalGroup;
+    FTrackViewList: TTrackViewList;
+    procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);
+    { Track index, "-1" means all changed. }
+    procedure KeyFrameListChanged(const Index: integer);
     function GetCurrentAnimation: TAnimation;
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
   protected
@@ -54,12 +63,14 @@ type
     procedure ReloadTracks;
   public
     procedure Start; override;
+    procedure Stop; override;
     procedure Update(const SecondsPassed: single; var HandleInput: boolean); override;
     function Press(const Event: TInputPressRelease): boolean; override;
     function Motion(const Event: TInputMotion): boolean; override;
 
     procedure AddTrack(const ATrack: TAnimationTrack);
 
+    // property CurrentTrack:TAnimationTrack;
     property AnimationPlayer: TAnimationPlayer
       read FAnimationPlayer write SetAnimationPlayer;
     property CurrentAnimation: TAnimation read GetCurrentAnimation;
@@ -113,11 +124,11 @@ implementation
 
 uses Math,
   CastleLclUtils, castleinternalpropertyselectdialog, CastleGLUtils,
-  CastleRenderOptions, TypInfo, CastleStringUtils;
+  CastleRenderOptions, TypInfo, CastleStringUtils, CastleUtils;
 
 {$R *.lfm}
 
-procedure TCastleTrackView.SetTrack(const AValue: TAnimationTrack);
+procedure TTrackView.SetTrack(const AValue: TAnimationTrack);
 begin
   if FTrack <> AValue then
   begin
@@ -125,12 +136,12 @@ begin
   end;
 end;
 
-function TCastleTrackView.TimePosition(const ATime: TFloatTime): single;
+function TTrackView.TimePosition(const ATime: TFloatTime): single;
 begin
   Result := RenderRect.Left + ATime * PixelsEachSceond * UIScale;
 end;
 
-procedure TCastleTrackView.Render;
+procedure TTrackView.Render;
 var
   KeyFrame: TAnimationTrack.TAnimationKeyframe;
   FramePos: single;
@@ -190,13 +201,53 @@ begin
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
+var
+  Index: integer;
 begin
   if not Assigned(CurrentAnimation) then Exit;
   if CurrentAnimation.TrackList.Count = 0 then Exit;
 
-  CurrentAnimation.TrackList.Items[Random(
-    CurrentAnimation.TrackList.Count)].AddKeyframe(
+  Index := Random(CurrentAnimation.TrackList.Count);
+  CurrentAnimation.TrackList.Items[Index].AddKeyframe(
     Random(100) / 50, Random(100) / 50);
+
+  KeyFrameListChanged(Index);
+end;
+
+procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
+
+  procedure FixSize(const AIndex: integer);
+  begin
+    FTrackViewList.Items[AIndex].Width :=
+      Clamped(FTrackViewList.Items[AIndex].Width, TrackViewMinWidth,
+      TTrackView.PixelsEachSceond * CurrentAnimation.TrackList.Items[AIndex].Duration);
+  end;
+
+var
+  I: integer;
+begin
+  if Index < 0 then
+  begin
+    for I := 0 to FTrackViewList.Count - 1 do FixSize(I);
+  end
+  else
+  begin
+    if not Between(Index, 0, FTrackViewList.Count - 1) then
+      raise Exception.Create('TAnimationPlayerView.KeyFrameListChanged out of range.');
+    FixSize(Index);
+  end;
+
+end;
+
+procedure TAnimationPlayerView.ACheckBoxChange(Sender: TObject);
+var
+  AIndex: integer;
+begin
+  AIndex := (Sender as TCastleCheckbox).Tag;
+  if (Sender as TCastleCheckbox).Checked then
+    CurrentAnimation.TrackList.Items[AIndex].Mode := tmContinuous
+  else
+    CurrentAnimation.TrackList.Items[AIndex].Mode := tmDiscrete;
 end;
 
 function TAnimationPlayerView.GetCurrentAnimation: TAnimation;
@@ -208,25 +259,87 @@ begin
 end;
 
 procedure TAnimationPlayerView.ReloadTracks;
+
+  function ColorByIndex(const AIndex: integer): TCastleColor;
+  begin
+    { Always darker than white. }
+    Result.X := ((AIndex + 1) * 30 mod 200) / 255;
+    Result.Y := ((AIndex + 2) * 30 mod 200) / 255;
+    Result.Z := ((AIndex + 3) * 30 mod 200) / 255;
+    Result.W := 1;
+  end;
+
 var
+  I: integer;
+  ATrackList: TAnimationTrackList;
   ATrack: TAnimationTrack;
-  ATrackView: TCastleTrackView;
+  ATrackContainer: TCastleHorizontalGroup;
+  ATrackView: TTrackView;
+  ATrackHeadView: TCastleRectangleControl;
+  { HeadView items. }
+  AHeadItemContainer: TCastleVerticalGroup;
+  ACheckBox: TCastleCheckbox;
+  ALabelPropName: TCastleLabel;
+  ALabelObjectName: TCastleLabel;
 begin
   FTrackListView.ClearControls;
   ButtonAddKeyFrame.Exists := False;
   if not Assigned(CurrentAnimation) then
     Exit;
 
-  ButtonAddKeyFrame.Exists := FAnimationPlayer.CurrentAnimation.TrackList.Count > 0;
-  for ATrack in FAnimationPlayer.CurrentAnimation.TrackList do
+  ATrackList := CurrentAnimation.TrackList;
+  ButtonAddKeyFrame.Exists := ATrackList.Count > 0;
+  FTrackViewList.Clear;
+  for  I := 0 to ATrackList.Count - 1 do
   begin
-    ATrackView := TCastleTrackView.Create(self);
-    ATrackView.Color := Vector4(Random(256) / 255, Random(256) / 255,
-      Random(256) / 255, 1);
+    ATrack := CurrentAnimation.TrackList.Items[I];
+    ATrackContainer := TCastleHorizontalGroup.Create(self);
+    ATrackContainer.Spacing := 2;
+    FTrackListView.InsertFront(ATrackContainer);
+
+    ATrackHeadView := TCastleRectangleControl.Create(Self);
+    ATrackHeadView.Height := TrackHeight;
+    ATrackHeadView.Color := Vector4(0, 0, 0, 0.4);
+    ATrackHeadView.Tag := I;
+    ATrackHeadView.Width := 180;
+    ATrackContainer.InsertFront(ATrackHeadView);
+    { HeadView items. }
+    AHeadItemContainer := TCastleVerticalGroup.Create(self);
+    AHeadItemContainer.FullSize := True;
+    ATrackHeadView.InsertFront(AHeadItemContainer);
+
+    ALabelObjectName := TCastleLabel.Create(self);
+    ALabelObjectName.FontSize := 15;
+    ALabelObjectName.Color := CastleColors.White;
+    ALabelObjectName.Caption := ATrack.ObjectName;
+    AHeadItemContainer.InsertFront(ALabelObjectName);
+
+    ALabelPropName := TCastleLabel.Create(self);
+    ALabelPropName.FontSize := 15;
+    ALabelPropName.Color := CastleColors.White;
+    ALabelPropName.Caption := ATrack.PropName;
+    AHeadItemContainer.InsertFront(ALabelPropName);
+
+    ACheckBox := TCastleCheckbox.Create(self);
+    ACheckBox.Translation := Vector2(2, 2);
+    ACheckBox.Caption := 'Continuous';
+    ACheckBox.Checked := ATrack.Mode = tmContinuous;
+    ACheckBox.Tag := I;
+    ACheckBox.OnChange := @ACheckBoxChange;
+    ACheckBox.TextColor := CastleColors.White;
+    ACheckBox.FontSize := 15;
+    AHeadItemContainer.InsertFront(ACheckBox);
+    { TrackView. }
+    ATrackView := TTrackView.Create(self);
+    ATrackView.Color := ColorByIndex(I);
     ATrackView.Track := ATrack;
-    ATrackView.Height := 24;
-    FTrackListView.InsertFront(ATrackView);
+    ATrackView.Height := TrackHeight;
+    ATrackView.Width := TrackViewMinWidth;
+    ATrackView.Tag := I;
+    ATrackContainer.InsertFront(ATrackView);
+    FTrackViewList.Add(ATrackView);
   end;
+  KeyFrameListChanged(-1);
 end;
 
 { TAnimationPlayerView ---------------------------------------------------- }
@@ -235,6 +348,8 @@ var
   AScrollView: TCastleScrollView;
 begin
   inherited Start;
+  FTrackViewList := TTrackViewList.Create(False);
+
   FRoot := TCastleUserInterface.Create(self);
   FRoot.FullSize := True;
   self.InsertFront(FRoot);
@@ -246,6 +361,7 @@ begin
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
+  FTrackListView.Spacing := 2;
   AScrollView.ScrollArea.InsertFront(FTrackListView);
 
   ButtonAddKeyFrame := TCastleButton.Create(self);
@@ -257,6 +373,12 @@ begin
   ButtonAddKeyFrame.Height := 20;
   ButtonAddKeyFrame.Width := 20;
   FRoot.InsertFront(ButtonAddKeyFrame);
+end;
+
+procedure TAnimationPlayerView.Stop;
+begin
+  FreeAndNil(FTrackViewList);
+  inherited stop;
 end;
 
 procedure TAnimationPlayerView.Update(const SecondsPassed: single;

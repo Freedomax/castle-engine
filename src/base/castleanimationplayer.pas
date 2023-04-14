@@ -61,6 +61,8 @@ type
   public
     constructor Create; overload; virtual;
     destructor Destroy; override;
+    function ObjectName: string; virtual;
+    function PropName: string; virtual;
     { Add a keyframe. The time is calculated in seconds, with the time when the animation
       starts running as the zero second. LerpFunc represents the equation for modifying the
       original Lerp, if it's nil, it means that Lerp is not modified. Lerp always ranges from 0 to 1. }
@@ -90,6 +92,8 @@ type
       override;
   public
     constructor Create(AComponent: TPersistent; const AProperty: string); overload;
+    function ObjectName: string; override;
+    function PropName: string; override;
   end;
 
   TAnimationVector2Track = class abstract(TAnimationTrack)
@@ -263,6 +267,16 @@ destructor TAnimationTrack.Destroy;
 begin
   FKeyframeList.Free;
   inherited Destroy;
+end;
+
+function TAnimationTrack.ObjectName: string;
+begin
+  Result := '';
+end;
+
+function TAnimationTrack.PropName: string;
+begin
+  Result := '';
 end;
 
 procedure TAnimationTrack.AddKeyframe(const ATime: TFloatTime;
@@ -628,6 +642,22 @@ begin
       [FProperty, FComponent.ClassName]);
 end;
 
+function TAnimationPropertyTrack.ObjectName: string;
+begin
+  Result := inherited;
+  if not Assigned(FComponent) then exit;
+  if FComponent is TComponent then
+    Result := (FComponent as TComponent).Name
+  else
+    Result := '(' + FComponent.ClassName + ')';
+
+end;
+
+function TAnimationPropertyTrack.PropName: string;
+begin
+  Result := FProperty;
+end;
+
 function TAnimationVector2Track.CalcValue(const Value1, Value2: variant;
   const ALerp: single): variant;
 var
@@ -763,8 +793,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

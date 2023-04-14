@@ -22,6 +22,8 @@
     procedure SetValue(const AValue: variant); override;
   public
     constructor Create(AControl: TCastleUserInterface);
+    function ObjectName: string; override;
+    function PropName: string; override;
   end;
 
   TCastleAnimationPlayer = class(TCastleUserInterface)
@@ -49,6 +51,17 @@ constructor TAnimationPositionTrack.Create(AControl: TCastleUserInterface);
 begin
   inherited Create;
   FControl := AControl;
+end;
+
+function TAnimationPositionTrack.ObjectName: string;
+begin
+  if Assigned(FControl) then Result := FControl.Name
+  else Result := inherited;
+end;
+
+function TAnimationPositionTrack.PropName: string;
+begin
+  Result := 'Translation';
 end;
 
 { TCastleAnimationPlayer --------------------------------------------------------------- }

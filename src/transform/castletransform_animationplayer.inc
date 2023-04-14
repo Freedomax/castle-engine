@@ -22,6 +22,8 @@
     procedure SetValue(const AValue: variant); override;
   public
     constructor Create(ATransform: TCastleTransform);
+    function ObjectName: string; override;
+    function PropName: string; override;
   end;
 
   TAnimationRotationTrack = class(TAnimationVector4Track)
@@ -31,6 +33,8 @@
     procedure SetValue(const AValue: variant); override;
   public
     constructor Create(ATransform: TCastleTransform);
+    function ObjectName: string; override;
+    function PropName: string; override;
   end;
 
   TAnimationScaleTrack = class(TAnimationVector3Track)
@@ -40,6 +44,8 @@
     procedure SetValue(const AValue: variant); override;
   public
     constructor Create(ATransform: TCastleTransform);
+    function ObjectName: string; override;
+    function PropName: string; override;
   end;
 
   TCastleAnimationPlayerTransform = class(TCastleTransform)
@@ -69,6 +75,18 @@ begin
   FTransform := ATransform;
 end;
 
+function TAnimationTranslationTrack.ObjectName: string;
+begin
+  if Assigned(FTransform) then Result := FTransform.Name
+  else
+    Result := inherited;
+end;
+
+function TAnimationTranslationTrack.PropName: string;
+begin
+  Result := 'Translation';
+end;
+
 { TAnimationRotationTrack --------------------------------------------------------------- }
 procedure TAnimationRotationTrack.SetValue(const AValue: variant);
 begin
@@ -81,6 +99,17 @@ begin
   FTransform := ATransform;
 end;
 
+function TAnimationRotationTrack.ObjectName: string;
+begin
+  if Assigned(FTransform) then Result := FTransform.Name
+  else Result := inherited;
+end;
+
+function TAnimationRotationTrack.PropName: string;
+begin
+  Result := 'Rotation';
+end;
+
 { TAnimationScaleTrack --------------------------------------------------------------- }
 procedure TAnimationScaleTrack.SetValue(const AValue: variant);
 begin
@@ -91,6 +120,17 @@ constructor TAnimationScaleTrack.Create(ATransform: TCastleTransform);
 begin
   inherited Create;
   FTransform := ATransform;
+end;
+
+function TAnimationScaleTrack.ObjectName: string;
+begin
+  if Assigned(FTransform) then Result := FTransform.Name
+  else Result := inherited;
+end;
+
+function TAnimationScaleTrack.PropName: string;
+begin
+  Result := 'Scale';
 end;
 
 { TCastleAnimationPlayerTransform --------------------------------------------------------------- }
