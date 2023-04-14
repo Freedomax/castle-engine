@@ -167,10 +167,10 @@ type
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
   end;
 
-  TAnimationList = {$IFDEF FPC}specialize{$ENDIF} TObjectDictionary<string, TAnimation>;
-
-
   TAnimationPlayer = class(TCastleComponent)
+  public
+  type
+    TAnimationList = {$IFDEF FPC}specialize{$ENDIF} TObjectDictionary<string, TAnimation>;
   private
     FAnimation: string;
     FCurrentAnimation: TAnimation;
@@ -200,7 +200,6 @@ type
 
     property Animation: string read FAnimation write SetAnimation;
   published
-
     property Playing: boolean read FPlaying write SetPlaying default False;
     property OnAnimationComplete: TNotifyEvent
       read FOnAnimationComplete write SetOnAnimationComplete;
