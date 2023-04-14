@@ -1,24 +1,23 @@
 object AnimationPlayerDialog: TAnimationPlayerDialog
   Left = 713
-  Height = 347
+  Height = 428
   Top = 316
-  Width = 477
-  Caption = 'Edit Tiled Layers To Show'
-  ClientHeight = 347
-  ClientWidth = 477
+  Width = 803
+  Caption = 'AnimationPlayer'
+  ClientHeight = 428
+  ClientWidth = 803
   OnCloseQuery = FormCloseQuery
   Position = poMainFormCenter
   object ButtonPanel1: TButtonPanel
     Left = 7
     Height = 35
-    Top = 305
-    Width = 463
+    Top = 386
+    Width = 789
     BorderSpacing.Around = 7
     OKButton.Name = 'OKButton'
     OKButton.DefaultCaption = True
     HelpButton.Name = 'HelpButton'
     HelpButton.Caption = '&Select All'
-    HelpButton.OnClick = SelectAllButtonClick
     CloseButton.Name = 'CloseButton'
     CloseButton.DefaultCaption = True
     CancelButton.Name = 'CancelButton'
@@ -27,38 +26,74 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     ShowButtons = [pbOK, pbCancel, pbHelp]
     ShowGlyphs = [pbOK, pbCancel, pbClose]
   end
-  object Label1: TLabel
-    Left = 7
-    Height = 17
-    Top = 7
-    Width = 460
-    Anchors = [akTop, akLeft, akRight]
-    Caption = 'Select layers to show.'
-    ParentColor = False
-    WordWrap = True
-  end
-  object CheckLayers: TScrollBox
-    AnchorSideTop.Control = Label1
-    AnchorSideTop.Side = asrBottom
-    AnchorSideBottom.Control = ButtonPanel1
-    Left = 7
-    Height = 267
-    Top = 31
-    Width = 462
-    HorzScrollBar.Page = 1
-    VertScrollBar.Page = 1
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    BorderSpacing.Top = 7
-    BorderSpacing.Bottom = 7
-    ChildSizing.LeftRightSpacing = 6
-    ChildSizing.TopBottomSpacing = 6
-    ChildSizing.ShrinkHorizontal = crsScaleChilds
-    ChildSizing.ShrinkVertical = crsScaleChilds
-    ChildSizing.Layout = cclLeftToRightThenTopToBottom
-    ChildSizing.ControlsPerLine = 1
-    Color = clWindow
-    ParentBackground = False
-    ParentColor = False
+  object CastleControl1: TCastleControl
+    Left = 0
+    Height = 329
+    Top = 50
+    Width = 803
+    Align = alClient
+    Options = []
     TabOrder = 1
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 50
+    Top = 0
+    Width = 803
+    Align = alTop
+    ClientHeight = 50
+    ClientWidth = 803
+    TabOrder = 2
+    object ButtonNewAnimation: TButton
+      Left = 120
+      Height = 27
+      Top = 8
+      Width = 105
+      Caption = 'New Animation'
+      TabOrder = 0
+    end
+    object ComboBoxAnimation: TComboBox
+      Left = 13
+      Height = 25
+      Top = 10
+      Width = 99
+      ItemHeight = 17
+      ReadOnly = True
+      Style = csDropDownList
+      TabOrder = 1
+    end
+    object ButtonDeleteAnimation: TButton
+      Left = 228
+      Height = 27
+      Top = 8
+      Width = 113
+      Caption = 'Delete Animation'
+      TabOrder = 2
+    end
+    object ButtonNewTrack: TButton
+      Left = 368
+      Height = 27
+      Top = 8
+      Width = 105
+      Caption = 'New Track'
+      OnClick = ButtonNewTrackClick
+      TabOrder = 3
+    end
+    object ButtonDeleteTrack: TButton
+      Left = 477
+      Height = 27
+      Top = 8
+      Width = 105
+      Caption = 'Delete Track'
+      TabOrder = 4
+    end
+  end
+  object PopupMenuAddTrack: TPopupMenu
+    Left = 332
+    Top = 100
+    object MenuItem1: TMenuItem
+      Caption = 'PropertyTrack'
+      OnClick = MenuItem1Click
+    end
   end
 end

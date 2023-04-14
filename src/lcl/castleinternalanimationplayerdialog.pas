@@ -1,5 +1,5 @@
 {
-  Copyright 2023-2023 Michalis Kamburelis.
+  Copyright 2023-2023 Michalis Kamburelis, Freedomax.
 
   This file is part of "Castle Game Engine".
 
@@ -13,7 +13,6 @@
   ----------------------------------------------------------------------------
 }
 
-{ Dialog for selecting Tiled layers to show, used by CastlePropEdits. }
 unit CastleInternalAnimationPlayerDialog;
 
 {$I castleconf.inc}
@@ -21,24 +20,58 @@ unit CastleInternalAnimationPlayerDialog;
 interface
 
 uses
-  Generics.Collections, Contnrs,
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs,
-  ButtonPanel, StdCtrls, ExtCtrls, CastleAnimationPlayer;
+  Generics.Collections, Contnrs, Classes, SysUtils, Forms, Controls, Graphics,
+  Dialogs, ButtonPanel, StdCtrls, ExtCtrls, Menus, ComCtrls,
+  CastleAnimationPlayer, CastleControl, CastleControls, CastleUIControls,
+  CastleVectors, CastleColors, CastleKeysMouse, RttiUtils, CastleTransform,
+  CastleViewport;
 
 type
-  TAnimationPlayerDialog = class(TForm)
-    ButtonPanel1: TButtonPanel;
-    CheckLayers: TScrollBox;
-    Label1: TLabel;
-    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
-    procedure SelectAllButtonClick(Sender: TObject);
+  TAnimationPlayerView = class(TCastleView)
   private
-    Checkboxes: TObjectList;
+    FAnimationPlayer: TAnimationPlayer;
+    FRoot: TCastleUserInterface;
+    FTrackRoot: TCastleVerticalGroup;
+    procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
+  protected
+    AddKeyFrameButton: TCastleButton;
+    procedure ReloadAnimationPlayer;
+    procedure ReloadTracks;
+  public
+    ComboBoxAnimation: TComboBox;
+    procedure Start; override;
+    procedure Update(const SecondsPassed: single; var HandleInput: boolean); override;
+    function Press(const Event: TInputPressRelease): boolean; override;
+    function Motion(const Event: TInputMotion): boolean; override;
+
+    procedure AddTrack(const ATrack: TAnimationTrack);
+
+    property AnimationPlayer: TAnimationPlayer
+      read FAnimationPlayer write SetAnimationPlayer;
+  end;
+
+  TAnimationPlayerDialog = class(TForm)
+    ButtonNewAnimation: TButton;
+    ButtonDeleteAnimation: TButton;
+    ButtonNewTrack: TButton;
+    ButtonDeleteTrack: TButton;
+    ButtonPanel1: TButtonPanel;
+    CastleControl1: TCastleControl;
+    ComboBoxAnimation: TComboBox;
+    MenuItem1: TMenuItem;
+    Panel1: TPanel;
+    PopupMenuAddTrack: TPopupMenu;
+    procedure ButtonNewTrackClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
+    procedure MenuItem1Click(Sender: TObject);
+  private
+    FView: TAnimationPlayerView;
+
+    procedure InitView;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Load(const AAnimationPlayer: TAnimationPlayer);
-    procedure UpdateSelectionUi;
   end;
 
 implementation
@@ -48,28 +81,123 @@ uses Math,
 
 {$R *.lfm}
 
+procedure TAnimationPlayerView.SetAnimationPlayer(const AValue: TAnimationPlayer);
+begin
+  if FAnimationPlayer = AValue then Exit;
+
+  FAnimationPlayer := AValue;
+
+end;
+
+procedure TAnimationPlayerView.ReloadAnimationPlayer;
+begin
+  FTrackRoot.ClearControls;
+  AddKeyFrameButton.Exists := False;
+  ComboBoxAnimation.Clear;
+  ComboBoxAnimation.Items.Add('');
+  if not Assigned(FAnimationPlayer) then Exit;
+  if not Assigned(FAnimationPlayer.CurrentAnimation) then
+  begin
+    ComboBoxAnimation.ItemIndex := 0;
+    Exit;
+  end;
+
+  ReloadTracks;
+end;
+
+procedure TAnimationPlayerView.ReloadTracks;
+var
+  Track: TAnimationTrack;
+  R: TCastleRectangleControl;
+  TrackLabel: TCastleLabel;
+begin
+  FTrackRoot.ClearControls;
+  AddKeyFrameButton.Exists := False;
+  if not Assigned(FAnimationPlayer) then Exit;
+  if not Assigned(FAnimationPlayer.CurrentAnimation) then
+    Exit;
+
+  AddKeyFrameButton.Exists := FAnimationPlayer.CurrentAnimation.TrackList.Count > 0;
+  for Track in FAnimationPlayer.CurrentAnimation.TrackList do
+  begin
+    R := TCastleRectangleControl.Create(self);
+    R.Color := CastleColors.Black;
+    R.Height := 24;
+    FTrackRoot.InsertFront(R);
+
+    TrackLabel := TCastleLabel.Create(self);
+    TrackLabel.Caption := Track.ClassName;
+    TrackLabel.Anchor(vpTop, vpTop);
+    TrackLabel.Anchor(hpLeft, hpLeft);
+    TrackLabel.Color := CastleColors.White;
+    R.InsertFront(TrackLabel);
+  end;
+end;
+
+{ TAnimationPlayerView ---------------------------------------------------- }
+procedure TAnimationPlayerView.Start;
+begin
+  inherited Start;
+  FRoot := TCastleUserInterface.Create(self);
+  FRoot.FullSize := True;
+  self.InsertFront(FRoot);
+  FTrackRoot := TCastleVerticalGroup.Create(self);
+  FTrackRoot.FullSize := True;
+  FRoot.InsertFront(FTrackRoot);
+  AddKeyFrameButton := TCastleButton.Create(self);
+  AddKeyFrameButton.Caption := '+';
+  AddKeyFrameButton.Anchor(vpTop, vpTop);
+  AddKeyFrameButton.Anchor(hpLeft, hpLeft);
+  AddKeyFrameButton.AutoSize := False;
+  AddKeyFrameButton.Height := 20;
+  AddKeyFrameButton.Width := 20;
+  FRoot.InsertFront(AddKeyFrameButton);
+end;
+
+procedure TAnimationPlayerView.Update(const SecondsPassed: single;
+  var HandleInput: boolean);
+begin
+  inherited Update(SecondsPassed, HandleInput);
+
+end;
+
+function TAnimationPlayerView.Press(const Event: TInputPressRelease): boolean;
+begin
+  Result := inherited Press(Event);
+end;
+
+function TAnimationPlayerView.Motion(const Event: TInputMotion): boolean;
+begin
+  Result := inherited Motion(Event);
+  AddKeyFrameButton.Translation :=
+    Vector2(Event.Position.X - AddKeyFrameButton.Width / 2, 0);
+end;
+
+procedure TAnimationPlayerView.AddTrack(const ATrack: TAnimationTrack);
+begin
+  FAnimationPlayer.CurrentAnimation.AddTrack(ATrack);
+  ReloadTracks;
+end;
+
 { TAnimationPlayerDialog ---------------------------------------------------- }
 
 constructor TAnimationPlayerDialog.Create(AOwner: TComponent);
 begin
   inherited;
-  Checkboxes := TObjectList.Create(False);
+  InitView;
 end;
 
 destructor TAnimationPlayerDialog.Destroy;
 begin
-  FreeAndNil(Checkboxes);
   inherited;
 end;
 
 procedure TAnimationPlayerDialog.Load(const AAnimationPlayer: TAnimationPlayer);
 begin
-
+  FView.AnimationPlayer := AAnimationPlayer;
 end;
 
 procedure TAnimationPlayerDialog.FormCloseQuery(Sender: TObject; var CanClose: boolean);
-var
-  I: integer;
 begin
   if ModalResult = mrOk then
   begin
@@ -77,22 +205,120 @@ begin
   end;
 end;
 
-procedure TAnimationPlayerDialog.SelectAllButtonClick(Sender: TObject);
+procedure TAnimationPlayerDialog.MenuItem1Click(Sender: TObject);
 var
-  I: integer;
+  Form: TForm;
+  //ComponentList:
+  ComponentList: TTreeView;
+  ButtonPanel: TButtonPanel;
+  comp: TComponent;
+  ARoot: TCastleUserInterface;
+
+  procedure TraverseTransforms(ATransform: TCastleTransform; Node: TTreeNode);
+  var
+    T: TCastleTransform;
+    ChildNode: TTreeNode;
+  begin
+    for T in ATransform do
+    begin
+      if T.Name = '' then Continue;
+      ChildNode := Node.Owner.AddChildObject(Node, T.Name, T);
+      TraverseTransforms(T, ChildNode);
+    end;
+  end;
+
+  procedure TraverseUIControls(Control: TCastleUserInterface; Node: TTreeNode);
+  var
+    Child: TCastleUserInterface;
+    ChildNode: TTreeNode;
+    I: integer;
+  begin
+    for i := 0 to Control.ControlsCount - 1 do
+    begin
+      Child := Control.Controls[I];
+      if Child.Name = '' then Continue;
+      ChildNode := Node.Owner.AddChildObject(Node, Child.Name, Child);
+      TraverseUIControls(Child, ChildNode);
+    end;
+
+    if Control is TCastleViewport then
+    begin
+      ChildNode := Node.Owner.AddChildObject(Node,
+        (Control as TCastleViewport).Items.Name, (Control as TCastleViewport).Items);
+      TraverseTransforms((Control as TCastleViewport).Items, ChildNode);
+    end;
+
+  end;
+
+  procedure PopulateTreeView(UI: TCastleUserInterface; TreeView: TTreeView);
+  var
+    RootNode: TTreeNode;
+  begin
+    TreeView.Items.Clear;
+    RootNode := TreeView.Items.Add(nil, UI.Name);
+    TraverseUIControls(UI, RootNode);
+    RootNode.Expand(True);
+  end;
+
 begin
-  for I := 0 to Checkboxes.Count - 1 do
-    TCheckBox(Checkboxes[I]).Checked := True;
+  Form := TForm.Create(nil);
+  try
+    Form.Position := TPosition.poDesktopCenter;
+    Form.Height := 400;
+    Form.Width := 500;
+    Form.Caption := 'Select Property';
+
+    ComponentList := TTreeView.Create(Form);
+    ComponentList.Parent := Form;
+    ComponentList.Align := alLeft;
+    ComponentList.ReadOnly := True;
+    ComponentList.Width := 500;
+
+    comp := FView.AnimationPlayer.Owner;
+    if comp is TCastleUserInterface then
+      ARoot := (comp as TCastleUserInterface)
+    else
+    if comp is TCastleTransform then
+      ARoot := ((comp as TCastleTransform).World.Owner as TCastleUserInterface)
+    else
+      raise Exception.Create('Cannot find root TCastleUserInterface');
+
+    while Assigned(ARoot.Parent) do ARoot := ARoot.Parent;
+
+    PopulateTreeView(ARoot, ComponentList);
+
+    ButtonPanel := TButtonPanel.Create(Form);
+    ButtonPanel.Align := alBottom;
+    ButtonPanel.Parent := Form;
+
+    if Form.ShowModal = mrOk then
+    begin
+
+    end;
+  finally
+    FreeAndNil(Form);
+  end;
+  //TPropInfoList.Create();
 end;
 
-procedure TAnimationPlayerDialog.UpdateSelectionUi;
+procedure TAnimationPlayerDialog.ButtonNewTrackClick(Sender: TObject);
 var
-  S: string;
-  Checkbox: TCheckBox;
-  I: integer;
+  pt: TPoint;
 begin
-  Checkboxes.Clear;
+  PopupMenuAddTrack.PopupComponent := ButtonNewTrack;
+  pt := ButtonNewTrack.ClientToScreen(Point(0, ButtonNewTrack.Height));
+  PopupMenuAddTrack.Popup(pt.x, pt.y);
+end;
 
+procedure TAnimationPlayerDialog.InitView;
+begin
+  if not Assigned(FView) then
+  begin
+    FView := TAnimationPlayerView.Create(CastleControl1);
+    FView.ComboBoxAnimation := ComboBoxAnimation;
+    CastleControl1.Container.View := FView;
+    CastleControl1.Container.BackgroundColor := CastleColors.Gray;
+  end;
 end;
 
 end.

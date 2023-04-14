@@ -165,6 +165,7 @@ type
     property PlayStyle: TAnimationPlayStyle
       read FPlayStyle write SetPlayStyle default apsOnce;
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
+    property TrackList: TAnimationTrackList read FTrackList;
   end;
 
   TAnimationPlayer = class(TCastleComponent)
@@ -199,6 +200,7 @@ type
     procedure Stop(const ResetTime: boolean = True);
 
     property Animation: string read FAnimation write SetAnimation;
+    property CurrentAnimation: TAnimation read FCurrentAnimation;
   published
     property Playing: boolean read FPlaying write SetPlaying default False;
     property OnAnimationComplete: TNotifyEvent
@@ -756,8 +758,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
