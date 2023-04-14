@@ -71,6 +71,7 @@ type
   public
     procedure Start; override;
     procedure Stop; override;
+    procedure RenderOverChildren; override;
     procedure Update(const SecondsPassed: single; var HandleInput: boolean); override;
     function Press(const Event: TInputPressRelease): boolean; override;
     function Motion(const Event: TInputMotion): boolean; override;
@@ -163,25 +164,10 @@ var
       LineColor, bsSrcAlpha, bdOneMinusSrcAlpha, False, LineWidth);
   end;
 
-  procedure RenderDetail;
-  var
-    v: variant;
-  begin
-    v := KeyFrame.Value;
-    if VarIsArray(v) then
-    begin
-    end
-    else
-    begin
-      UIFont.Print(FramePos, R.Bottom + 2 * UIScale, CastleColors.White, v);
-    end;
-
-  end;
-
   procedure RenderKeyFrame;
   begin
     RenderLine(FramePos, CastleColors.White, 1 * UIScale);
-    RenderDetail;
+    //RenderDetail;
   end;
 
 begin
@@ -429,6 +415,33 @@ procedure TAnimationPlayerView.Stop;
 begin
   FreeAndNil(FTrackViewList);
   inherited stop;
+end;
+
+procedure TAnimationPlayerView.RenderOverChildren;
+var
+  RTrack, R: TFloatRectangle;
+
+  procedure RenderLine(const X: single; const LineColor: TCastleColor;
+  const LineWidth: single);
+  var
+    arr: array[0..1] of TVector2;
+  begin
+    arr[0] := Vector2(X, R.Bottom);
+    arr[1] := Vector2(X, R.Top);
+    DrawPrimitive2D(pmLines,
+      arr,
+      LineColor, bsSrcAlpha, bdOneMinusSrcAlpha, False, LineWidth);
+  end;
+
+begin
+  inherited RenderOverChildren;
+  if FTrackViewList.Count = 0 then Exit;
+  if not Playing then Exit;
+
+  RTrack := FTrackViewList.First.RenderRect;
+  R := RenderRect;
+  RenderLine(RTrack.Left + TTrackView.PixelsEachSceond *
+    CurrentAnimation.ActualCurrentTime * UIScale, CastleColors.Green, 2);
 end;
 
 procedure TAnimationPlayerView.Update(const SecondsPassed: single;

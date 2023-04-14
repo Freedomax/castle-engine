@@ -161,6 +161,9 @@ type
     procedure ClearTracks;
     procedure Start(const ResetTime: boolean = True);
     procedure Stop(const ResetTime: boolean = True);
+
+    { FCurrentTime in PingPong mode needs to be corrected. }
+    function ActualCurrentTime: TFloatTime;
     { The maximum duration among all tracks. }
     property MaxTime: TFloatTime read FMaxTime;
     { apsOnce: The animation plays only once and stops when it finishes.
@@ -718,6 +721,14 @@ begin
   if FPlaying then FPlaying := False;
 end;
 
+function TAnimation.ActualCurrentTime: TFloatTime;
+begin
+  if FPlayStyle in [apsPingPong, apsPingPongOnce] then
+    Result := GetPingPongEvalTime
+  else
+    Result := FCurrentTime;
+end;
+
 procedure TAnimationPlayer.UpdateAnimation;
 begin
   if not Assigned(FCurrentAnimation) then exit;
@@ -792,8 +803,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
