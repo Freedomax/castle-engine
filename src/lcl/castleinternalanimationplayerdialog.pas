@@ -47,6 +47,7 @@ type
     FRoot: TCastleUserInterface;
     FTrackListView: TCastleVerticalGroup;
     procedure AddKeyFrameButtonClick(Sender: TObject);
+    function GetCurrentAnimation: TAnimation;
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
   protected
     ButtonAddKeyFrame: TCastleButton;
@@ -61,23 +62,31 @@ type
 
     property AnimationPlayer: TAnimationPlayer
       read FAnimationPlayer write SetAnimationPlayer;
+    property CurrentAnimation: TAnimation read GetCurrentAnimation;
   end;
 
   TAnimationPlayerDialog = class(TForm)
     ButtonNewAnimation: TButton;
-    ButtonDeleteAnimation: TButton;
+    ButtonRemoveAnimation: TButton;
     ButtonNewTrack: TButton;
-    ButtonDeleteTrack: TButton;
+    ButtonStart: TButton;
+    ButtonStop: TButton;
+    ButtonRemoveTrack: TButton;
     ButtonPanel1: TButtonPanel;
     CastleControl1: TCastleControl;
     CheckBoxContinuous: TCheckBox;
     ComboBoxAnimation: TComboBox;
+    ComboBoxPlayStyle: TComboBox;
     MenuItem1: TMenuItem;
     Panel1: TPanel;
     PopupMenuAddTrack: TPopupMenu;
+    procedure ButtonRemoveAnimationClick(Sender: TObject);
     procedure ButtonNewAnimationClick(Sender: TObject);
     procedure ButtonNewTrackClick(Sender: TObject);
+    procedure ButtonStartClick(Sender: TObject);
+    procedure ButtonStopClick(Sender: TObject);
     procedure ComboBoxAnimationChange(Sender: TObject);
+    procedure ComboBoxPlayStyleChange(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure MenuItem1Click(Sender: TObject);
   private
@@ -86,10 +95,14 @@ type
     function GetAnimationPlayer: TAnimationPlayer;
 
     procedure InitView;
+    procedure InitControls;
     procedure AnimationListChanged;
+    procedure CurrentAnimationChanged;
     procedure UpdateUIControls;
+    function GetCurrentAnimation: TAnimation;
 
     property AnimationPlayer: TAnimationPlayer read GetAnimationPlayer;
+    property CurrentAnimation: TAnimation read GetCurrentAnimation;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -99,7 +112,8 @@ type
 implementation
 
 uses Math,
-  CastleLclUtils, castleinternalpropertyselectdialog, CastleGLUtils, CastleRenderOptions;
+  CastleLclUtils, castleinternalpropertyselectdialog, CastleGLUtils,
+  CastleRenderOptions, TypInfo, CastleStringUtils;
 
 {$R *.lfm}
 
@@ -177,13 +191,20 @@ end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
 begin
-  if not Assigned(AnimationPlayer) then Exit;
-  if not Assigned(AnimationPlayer.CurrentAnimation) then Exit;
-  if AnimationPlayer.CurrentAnimation.TrackList.Count = 0 then Exit;
+  if not Assigned(CurrentAnimation) then Exit;
+  if CurrentAnimation.TrackList.Count = 0 then Exit;
 
-  AnimationPlayer.CurrentAnimation.TrackList.Items[Random(
-    AnimationPlayer.CurrentAnimation.TrackList.Count)].AddKeyframe(
-    Random(100) / 50, Random(2));
+  CurrentAnimation.TrackList.Items[Random(
+    CurrentAnimation.TrackList.Count)].AddKeyframe(
+    Random(100) / 50, Random(100) / 50);
+end;
+
+function TAnimationPlayerView.GetCurrentAnimation: TAnimation;
+begin
+  if Assigned(AnimationPlayer) then
+    Result := AnimationPlayer.CurrentAnimation
+  else
+    Result := nil;
 end;
 
 procedure TAnimationPlayerView.ReloadTracks;
@@ -193,8 +214,7 @@ var
 begin
   FTrackListView.ClearControls;
   ButtonAddKeyFrame.Exists := False;
-  if not Assigned(FAnimationPlayer) then Exit;
-  if not Assigned(FAnimationPlayer.CurrentAnimation) then
+  if not Assigned(CurrentAnimation) then
     Exit;
 
   ButtonAddKeyFrame.Exists := FAnimationPlayer.CurrentAnimation.TrackList.Count > 0;
@@ -260,12 +280,12 @@ end;
 
 procedure TAnimationPlayerView.AddTrack(const ATrack: TAnimationTrack);
 begin
-  if not Assigned(FAnimationPlayer.CurrentAnimation) then
+  if not Assigned(CurrentAnimation) then
   begin
     ShowMessage('Please select an animation first.');
     Exit;
   end;
-  FAnimationPlayer.CurrentAnimation.AddTrack(ATrack);
+  CurrentAnimation.AddTrack(ATrack);
   ReloadTracks;
 end;
 
@@ -274,6 +294,7 @@ end;
 constructor TAnimationPlayerDialog.Create(AOwner: TComponent);
 begin
   inherited;
+  InitControls;
   InitView;
 end;
 
@@ -338,6 +359,11 @@ begin
   end;
 end;
 
+function TAnimationPlayerDialog.GetCurrentAnimation: TAnimation;
+begin
+  Result := FView.CurrentAnimation;
+end;
+
 function TAnimationPlayerDialog.GetAnimationPlayer: TAnimationPlayer;
 begin
   Result := FView.AnimationPlayer;
@@ -352,13 +378,31 @@ begin
   PopupMenuAddTrack.Popup(pt.x, pt.y);
 end;
 
+procedure TAnimationPlayerDialog.ButtonStartClick(Sender: TObject);
+begin
+  if Assigned(CurrentAnimation) then
+    AnimationPlayer.Start;
+end;
+
+procedure TAnimationPlayerDialog.ButtonStopClick(Sender: TObject);
+begin
+  if Assigned(CurrentAnimation) then
+    AnimationPlayer.Stop;
+end;
+
 procedure TAnimationPlayerDialog.ComboBoxAnimationChange(Sender: TObject);
 begin
   if not Assigned(AnimationPlayer) then Exit;
 
   AnimationPlayer.Animation := ComboBoxAnimation.Text;
-  UpdateUIControls;
-  FView.ReloadTracks;
+  CurrentAnimationChanged;
+end;
+
+procedure TAnimationPlayerDialog.ComboBoxPlayStyleChange(Sender: TObject);
+begin
+  if Assigned(CurrentAnimation) then
+    AnimationPlayer.CurrentAnimation.PlayStyle :=
+      TAnimationPlayStyle(ComboBoxPlayStyle.ItemIndex);
 end;
 
 procedure TAnimationPlayerDialog.ButtonNewAnimationClick(Sender: TObject);
@@ -373,6 +417,16 @@ begin
   end;
 end;
 
+procedure TAnimationPlayerDialog.ButtonRemoveAnimationClick(Sender: TObject);
+begin
+  if MessageDlg('Confirm', Format('Are you sure you want to delete "%s"?',
+    [AnimationPlayer.Animation]), TMsgDlgType.mtConfirmation, [mbOK, mbCancel], '') =
+    mrCancel then
+    Exit;
+  AnimationPlayer.RemoveAnimation(AnimationPlayer.Animation);
+  AnimationListChanged;
+end;
+
 procedure TAnimationPlayerDialog.InitView;
 begin
   if not Assigned(FView) then
@@ -381,6 +435,27 @@ begin
     CastleControl1.Container.View := FView;
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
   end;
+end;
+
+procedure TAnimationPlayerDialog.InitControls;
+var
+  PlayStyle: TAnimationPlayStyle;
+  EnumName: string;
+begin
+  ComboBoxPlayStyle.Items.BeginUpdate;
+  try
+    ComboBoxPlayStyle.Items.Clear;
+    for PlayStyle := Low(TAnimationPlayStyle) to High(TAnimationPlayStyle) do
+    begin
+      EnumName := GetEnumName(TypeInfo(TAnimationPlayStyle), Ord(PlayStyle));
+      EnumName := PrefixRemove('aps', EnumName, True);
+      ComboBoxPlayStyle.Items.Add(EnumName);
+    end;
+
+  finally
+    ComboBoxPlayStyle.Items.EndUpdate;
+  end;
+
 end;
 
 procedure TAnimationPlayerDialog.AnimationListChanged;
@@ -398,22 +473,29 @@ begin
       ComboBoxAnimation.Items.IndexOf(AnimationPlayer.Animation);
   finally
     ComboBoxAnimation.Items.EndUpdate;
-    UpdateUIControls;
-    FView.ReloadTracks;
   end;
+  CurrentAnimationChanged;
 
+end;
+
+procedure TAnimationPlayerDialog.CurrentAnimationChanged;
+begin
+  if Assigned(CurrentAnimation) then
+    ComboBoxPlayStyle.ItemIndex := Ord(AnimationPlayer.CurrentAnimation.PlayStyle);
+  //TODO: CheckBoxContinuous.Check:=;
+  UpdateUIControls;
+  FView.ReloadTracks;
 end;
 
 procedure TAnimationPlayerDialog.UpdateUIControls;
 begin
-  ButtonNewAnimation.Enabled :=
-    Assigned(AnimationPlayer);
-  ButtonDeleteAnimation.Enabled :=
-    Assigned(AnimationPlayer) and Assigned(AnimationPlayer.CurrentAnimation);
-  ButtonNewTrack.Enabled := Assigned(AnimationPlayer) and
-    Assigned(AnimationPlayer.CurrentAnimation);
-  ButtonDeleteTrack.Enabled :=
-    Assigned(AnimationPlayer) and Assigned(AnimationPlayer.CurrentAnimation);
+  ButtonStart.Enabled := Assigned(CurrentAnimation);
+  ButtonStop.Enabled := Assigned(CurrentAnimation);
+  ButtonNewAnimation.Enabled := Assigned(AnimationPlayer);
+  ButtonRemoveAnimation.Enabled := Assigned(CurrentAnimation);
+  ButtonNewTrack.Enabled := Assigned(CurrentAnimation);
+  ButtonRemoveTrack.Enabled := Assigned(CurrentAnimation);
+  ComboBoxPlayStyle.Enabled := Assigned(CurrentAnimation);
 end;
 
 end.

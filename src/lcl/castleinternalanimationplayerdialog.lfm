@@ -28,8 +28,8 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
   end
   object CastleControl1: TCastleControl
     Left = 0
-    Height = 329
-    Top = 50
+    Height = 305
+    Top = 74
     Width = 803
     Align = alClient
     Options = []
@@ -37,15 +37,15 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
   end
   object Panel1: TPanel
     Left = 0
-    Height = 50
+    Height = 74
     Top = 0
     Width = 803
     Align = alTop
-    ClientHeight = 50
+    ClientHeight = 74
     ClientWidth = 803
     TabOrder = 2
     object ButtonNewAnimation: TButton
-      Left = 120
+      Left = 115
       Height = 27
       Top = 8
       Width = 105
@@ -54,48 +54,80 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       TabOrder = 0
     end
     object ComboBoxAnimation: TComboBox
-      Left = 13
+      Left = 6
       Height = 25
       Top = 10
-      Width = 99
+      Width = 105
       ItemHeight = 17
       OnChange = ComboBoxAnimationChange
       ReadOnly = True
       Style = csDropDownList
       TabOrder = 1
     end
-    object ButtonDeleteAnimation: TButton
-      Left = 228
+    object ButtonRemoveAnimation: TButton
+      Left = 223
       Height = 27
       Top = 8
       Width = 113
-      Caption = 'Delete Animation'
+      Caption = 'Remove Animation'
+      OnClick = ButtonRemoveAnimationClick
       TabOrder = 2
     end
     object ButtonNewTrack: TButton
-      Left = 368
+      Left = 6
       Height = 27
-      Top = 8
+      Top = 40
       Width = 105
       Caption = 'New Track'
       OnClick = ButtonNewTrackClick
       TabOrder = 3
     end
-    object ButtonDeleteTrack: TButton
-      Left = 477
+    object ButtonRemoveTrack: TButton
+      Left = 115
       Height = 27
-      Top = 8
+      Top = 40
       Width = 105
-      Caption = 'Delete Track'
+      Caption = 'Remove Track'
       TabOrder = 4
     end
     object CheckBoxContinuous: TCheckBox
-      Left = 600
+      Left = 225
       Height = 21
-      Top = 13
+      Top = 43
       Width = 83
       Caption = 'Continuous'
       TabOrder = 5
+    end
+    object ComboBoxPlayStyle: TComboBox
+      Left = 340
+      Height = 25
+      Top = 8
+      Width = 118
+      ItemHeight = 17
+      OnChange = ComboBoxPlayStyleChange
+      ReadOnly = True
+      Style = csDropDownList
+      TabOrder = 6
+    end
+    object ButtonStart: TButton
+      Left = 696
+      Height = 27
+      Top = 8
+      Width = 49
+      Anchors = [akTop, akRight]
+      Caption = 'Start'
+      OnClick = ButtonStartClick
+      TabOrder = 7
+    end
+    object ButtonStop: TButton
+      Left = 747
+      Height = 27
+      Top = 8
+      Width = 49
+      Anchors = [akTop, akRight]
+      Caption = 'Stop'
+      OnClick = ButtonStopClick
+      TabOrder = 8
     end
   end
   object PopupMenuAddTrack: TPopupMenu

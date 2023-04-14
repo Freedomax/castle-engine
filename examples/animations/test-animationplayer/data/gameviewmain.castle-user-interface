@@ -129,7 +129,8 @@
               {
                 "$$ClassName" : "TCastleAnimationPlayerTransform",
                 "AnimationPlayer" : {
-                  "$$ClassName" : "TAnimationPlayer"
+                  "$$ClassName" : "TAnimationPlayer",
+                  "Playing" : true
                 },
                 "Name" : "AnimationPlayerBox1"
               }
@@ -222,36 +223,21 @@
       "$$ClassName" : "TCastleButton",
       "Caption" : "Shake Camera",
       "CustomBackgroundDisabled" : {
-        "$$ClassName" : "TCastleImagePersistent",
-        "RegionPersistent" : {
-          "$$ClassName" : "TFloatRectanglePersistent"
-        }
+        "$$ClassName" : "TCastleImagePersistent"
       },
       "CustomBackgroundFocused" : {
-        "$$ClassName" : "TCastleImagePersistent",
-        "RegionPersistent" : {
-          "$$ClassName" : "TFloatRectanglePersistent"
-        }
+        "$$ClassName" : "TCastleImagePersistent"
       },
       "CustomBackgroundNormal" : {
-        "$$ClassName" : "TCastleImagePersistent",
-        "RegionPersistent" : {
-          "$$ClassName" : "TFloatRectanglePersistent"
-        }
+        "$$ClassName" : "TCastleImagePersistent"
       },
       "CustomBackgroundPressed" : {
-        "$$ClassName" : "TCastleImagePersistent",
-        "RegionPersistent" : {
-          "$$ClassName" : "TFloatRectanglePersistent"
-        }
+        "$$ClassName" : "TCastleImagePersistent"
       },
       "HorizontalAnchorParent" : "hpMiddle",
       "HorizontalAnchorSelf" : "hpMiddle",
       "Image" : {
-        "$$ClassName" : "TCastleImagePersistent",
-        "RegionPersistent" : {
-          "$$ClassName" : "TFloatRectanglePersistent"
-        }
+        "$$ClassName" : "TCastleImagePersistent"
       },
       "Name" : "Button1",
       "TranslationPersistent" : {
