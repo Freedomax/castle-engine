@@ -48,7 +48,7 @@ This is the same license as used by Lazarus LCL and FPC RTL.
 See https://castle-engine.io/license for details.
 "/>
     <Version Major="6" Minor="92"/>
-    <Files Count="31">
+    <Files Count="32">
       <Item1>
         <Filename Value="../src/lcl/castlecontrol.pas"/>
         <HasRegisterProc Value="True"/>
@@ -177,6 +177,10 @@ See https://castle-engine.io/license for details.
         <Filename Value="../src/lcl/castleinternalanimationplayerdialog.pas"/>
         <UnitName Value="CastleInternalAnimationPlayerDialog"/>
       </Item31>
+	  <Item32>
+        <Filename Value="../src/lcl/castleinternalpropertyselectdialog.pas"/>
+        <UnitName Value="CastleInternalPropertySelectDialog"/>
+      </Item32>
     </Files>
     <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="4">

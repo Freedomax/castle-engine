@@ -77,7 +77,7 @@ type
 implementation
 
 uses Math,
-  CastleLclUtils;
+  CastleLclUtils, castleinternalpropertyselectdialog;
 
 {$R *.lfm}
 
@@ -207,73 +207,12 @@ end;
 
 procedure TAnimationPlayerDialog.MenuItem1Click(Sender: TObject);
 var
-  Form: TForm;
-  //ComponentList:
-  ComponentList: TTreeView;
-  ButtonPanel: TButtonPanel;
+  Form: TPropertySelectForm;
   comp: TComponent;
   ARoot: TCastleUserInterface;
-
-  procedure TraverseTransforms(ATransform: TCastleTransform; Node: TTreeNode);
-  var
-    T: TCastleTransform;
-    ChildNode: TTreeNode;
-  begin
-    for T in ATransform do
-    begin
-      if T.Name = '' then Continue;
-      ChildNode := Node.Owner.AddChildObject(Node, T.Name, T);
-      TraverseTransforms(T, ChildNode);
-    end;
-  end;
-
-  procedure TraverseUIControls(Control: TCastleUserInterface; Node: TTreeNode);
-  var
-    Child: TCastleUserInterface;
-    ChildNode: TTreeNode;
-    I: integer;
-  begin
-    for i := 0 to Control.ControlsCount - 1 do
-    begin
-      Child := Control.Controls[I];
-      if Child.Name = '' then Continue;
-      ChildNode := Node.Owner.AddChildObject(Node, Child.Name, Child);
-      TraverseUIControls(Child, ChildNode);
-    end;
-
-    if Control is TCastleViewport then
-    begin
-      ChildNode := Node.Owner.AddChildObject(Node,
-        (Control as TCastleViewport).Items.Name, (Control as TCastleViewport).Items);
-      TraverseTransforms((Control as TCastleViewport).Items, ChildNode);
-    end;
-
-  end;
-
-  procedure PopulateTreeView(UI: TCastleUserInterface; TreeView: TTreeView);
-  var
-    RootNode: TTreeNode;
-  begin
-    TreeView.Items.Clear;
-    RootNode := TreeView.Items.Add(nil, UI.Name);
-    TraverseUIControls(UI, RootNode);
-    RootNode.Expand(True);
-  end;
-
 begin
-  Form := TForm.Create(nil);
+  Form := TPropertySelectForm.Create(nil);
   try
-    Form.Position := TPosition.poDesktopCenter;
-    Form.Height := 400;
-    Form.Width := 500;
-    Form.Caption := 'Select Property';
-
-    ComponentList := TTreeView.Create(Form);
-    ComponentList.Parent := Form;
-    ComponentList.Align := alLeft;
-    ComponentList.ReadOnly := True;
-    ComponentList.Width := 500;
-
     comp := FView.AnimationPlayer.Owner;
     if comp is TCastleUserInterface then
       ARoot := (comp as TCastleUserInterface)
@@ -285,11 +224,7 @@ begin
 
     while Assigned(ARoot.Parent) do ARoot := ARoot.Parent;
 
-    PopulateTreeView(ARoot, ComponentList);
-
-    ButtonPanel := TButtonPanel.Create(Form);
-    ButtonPanel.Align := alBottom;
-    ButtonPanel.Parent := Form;
+    Form.Load(ARoot);
 
     if Form.ShowModal = mrOk then
     begin
