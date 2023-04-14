@@ -70,8 +70,7 @@ type
       const ALerpFunc: TLerpFunc = nil);
     { Calculate the value corresponding to the time and execute it. }
     procedure Evaluate(const ATime: TFloatTime);
-    { The duration of this animation track is determined by the interval between
-      the first and last frames. }
+    { The duration of this animation track is determined by the sorted last frame. }
     function Duration: TFloatTime;
     { Interpolation mode, there are two types: discrete or continuous.
       If it is continuous, you can define an interpolation calculation equation
@@ -315,8 +314,8 @@ end;
 
 function TAnimationTrack.Duration: TFloatTime;
 begin
-  if FKeyframeList.Count < 2 then Exit(0);
-  Result := FKeyframeList.Last.Time - FKeyframeList.First.Time;
+  if FKeyframeList.Count = 0 then Exit(0);
+  Result := FKeyframeList.Last.Time;
 end;
 
 procedure TAnimation.SetPlaying(const Value: boolean);

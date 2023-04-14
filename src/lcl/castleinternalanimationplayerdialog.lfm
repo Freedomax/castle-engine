@@ -28,8 +28,8 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
   end
   object CastleControl1: TCastleControl
     Left = 0
-    Height = 305
-    Top = 74
+    Height = 337
+    Top = 42
     Width = 803
     Align = alClient
     Options = []
@@ -37,11 +37,11 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
   end
   object Panel1: TPanel
     Left = 0
-    Height = 74
+    Height = 42
     Top = 0
     Width = 803
     Align = alTop
-    ClientHeight = 74
+    ClientHeight = 42
     ClientWidth = 803
     TabOrder = 2
     object ButtonNewAnimation: TButton
@@ -74,29 +74,13 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       TabOrder = 2
     end
     object ButtonNewTrack: TButton
-      Left = 6
+      Left = 472
       Height = 27
-      Top = 40
+      Top = 8
       Width = 105
       Caption = 'New Track'
       OnClick = ButtonNewTrackClick
       TabOrder = 3
-    end
-    object ButtonRemoveTrack: TButton
-      Left = 115
-      Height = 27
-      Top = 40
-      Width = 105
-      Caption = 'Remove Track'
-      TabOrder = 4
-    end
-    object CheckBoxContinuous: TCheckBox
-      Left = 225
-      Height = 21
-      Top = 43
-      Width = 83
-      Caption = 'Continuous'
-      TabOrder = 5
     end
     object ComboBoxPlayStyle: TComboBox
       Left = 340
@@ -107,7 +91,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       OnChange = ComboBoxPlayStyleChange
       ReadOnly = True
       Style = csDropDownList
-      TabOrder = 6
+      TabOrder = 4
     end
     object ButtonStart: TButton
       Left = 696
@@ -117,7 +101,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Anchors = [akTop, akRight]
       Caption = 'Start'
       OnClick = ButtonStartClick
-      TabOrder = 7
+      TabOrder = 5
     end
     object ButtonStop: TButton
       Left = 747
@@ -127,7 +111,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Anchors = [akTop, akRight]
       Caption = 'Stop'
       OnClick = ButtonStopClick
-      TabOrder = 8
+      TabOrder = 6
     end
   end
   object PopupMenuAddTrack: TPopupMenu

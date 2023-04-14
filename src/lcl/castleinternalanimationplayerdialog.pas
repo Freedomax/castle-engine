@@ -32,7 +32,7 @@ type
   var
     FTrack: TAnimationTrack;
     procedure SetTrack(const AValue: TAnimationTrack);
-    function TimePosition(const ATime: TFloatTime): single;
+    function TimeRenderPosition(const ATime: TFloatTime): single;
   public
   const
     PixelsEachSceond: single = 200;
@@ -46,12 +46,12 @@ type
     TTrackViewList = {$Ifdef fpc}specialize{$endif}TObjectList<TTrackView>;
   const
     TrackHeight = 100;
-    TrackViewMinWidth = 300;
   var
     FAnimationPlayer: TAnimationPlayer;
     FRoot: TCastleUserInterface;
     FTrackListView: TCastleVerticalGroup;
     FTrackViewList: TTrackViewList;
+    procedure AButtonDeleteClick(Sender: TObject);
     procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);
     { Track index, "-1" means all changed. }
@@ -70,7 +70,6 @@ type
 
     procedure AddTrack(const ATrack: TAnimationTrack);
 
-    // property CurrentTrack:TAnimationTrack;
     property AnimationPlayer: TAnimationPlayer
       read FAnimationPlayer write SetAnimationPlayer;
     property CurrentAnimation: TAnimation read GetCurrentAnimation;
@@ -82,10 +81,8 @@ type
     ButtonNewTrack: TButton;
     ButtonStart: TButton;
     ButtonStop: TButton;
-    ButtonRemoveTrack: TButton;
     ButtonPanel1: TButtonPanel;
     CastleControl1: TCastleControl;
-    CheckBoxContinuous: TCheckBox;
     ComboBoxAnimation: TComboBox;
     ComboBoxPlayStyle: TComboBox;
     MenuItem1: TMenuItem;
@@ -136,7 +133,7 @@ begin
   end;
 end;
 
-function TTrackView.TimePosition(const ATime: TFloatTime): single;
+function TTrackView.TimeRenderPosition(const ATime: TFloatTime): single;
 begin
   Result := RenderRect.Left + ATime * PixelsEachSceond * UIScale;
 end;
@@ -187,7 +184,7 @@ begin
   R := RenderRect;
   for KeyFrame in FTrack.KeyframeList do
   begin
-    FramePos := TimePosition(KeyFrame.Time);
+    FramePos := TimeRenderPosition(KeyFrame.Time);
     RenderKeyFrame;
   end;
 end;
@@ -219,8 +216,7 @@ procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
   procedure FixSize(const AIndex: integer);
   begin
     FTrackViewList.Items[AIndex].Width :=
-      Clamped(FTrackViewList.Items[AIndex].Width, TrackViewMinWidth,
-      TTrackView.PixelsEachSceond * CurrentAnimation.TrackList.Items[AIndex].Duration);
+      TTrackView.PixelsEachSceond * CurrentAnimation.TrackList.Items[AIndex].Duration;
   end;
 
 var
@@ -248,6 +244,15 @@ begin
     CurrentAnimation.TrackList.Items[AIndex].Mode := tmContinuous
   else
     CurrentAnimation.TrackList.Items[AIndex].Mode := tmDiscrete;
+end;
+
+procedure TAnimationPlayerView.AButtonDeleteClick(Sender: TObject);
+var
+  AIndex: integer;
+begin
+  AIndex := (Sender as TCastleButton).Tag;
+  CurrentAnimation.RemoveTrack(CurrentAnimation.TrackList.Items[AIndex]);
+  ReloadTracks;
 end;
 
 function TAnimationPlayerView.GetCurrentAnimation: TAnimation;
@@ -281,6 +286,7 @@ var
   ACheckBox: TCastleCheckbox;
   ALabelPropName: TCastleLabel;
   ALabelObjectName: TCastleLabel;
+  AButtonDelete: TCastleButton;
 begin
   FTrackListView.ClearControls;
   ButtonAddKeyFrame.Exists := False;
@@ -321,7 +327,6 @@ begin
     AHeadItemContainer.InsertFront(ALabelPropName);
 
     ACheckBox := TCastleCheckbox.Create(self);
-    ACheckBox.Translation := Vector2(2, 2);
     ACheckBox.Caption := 'Continuous';
     ACheckBox.Checked := ATrack.Mode = tmContinuous;
     ACheckBox.Tag := I;
@@ -329,12 +334,19 @@ begin
     ACheckBox.TextColor := CastleColors.White;
     ACheckBox.FontSize := 15;
     AHeadItemContainer.InsertFront(ACheckBox);
+
+    AButtonDelete := TCastleButton.Create(Self);
+    AButtonDelete.Caption := 'Remove';
+    AButtonDelete.OnClick := @AButtonDeleteClick;
+    AButtonDelete.FontSize := 15;
+    AButtonDelete.Tag := I;
+    AHeadItemContainer.InsertFront(AButtonDelete);
     { TrackView. }
     ATrackView := TTrackView.Create(self);
     ATrackView.Color := ColorByIndex(I);
     ATrackView.Track := ATrack;
     ATrackView.Height := TrackHeight;
-    ATrackView.Width := TrackViewMinWidth;
+    ATrackView.Width := 1;
     ATrackView.Tag := I;
     ATrackContainer.InsertFront(ATrackView);
     FTrackViewList.Add(ATrackView);
@@ -362,6 +374,7 @@ begin
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
   FTrackListView.Spacing := 2;
+  FTrackListView.AutoSizeToChildren := True;
   AScrollView.ScrollArea.InsertFront(FTrackListView);
 
   ButtonAddKeyFrame := TCastleButton.Create(self);
@@ -467,10 +480,6 @@ begin
       begin
         Track := TAnimationPropertyTrack.Create(Form.SelectedObject,
           Form.SelectedProperty);
-        if CheckBoxContinuous.Checked then
-          Track.Mode := tmContinuous
-        else
-          Track.Mode := tmDiscrete;
         FView.AddTrack(Track);
       end
       else
@@ -604,7 +613,6 @@ procedure TAnimationPlayerDialog.CurrentAnimationChanged;
 begin
   if Assigned(CurrentAnimation) then
     ComboBoxPlayStyle.ItemIndex := Ord(AnimationPlayer.CurrentAnimation.PlayStyle);
-  //TODO: CheckBoxContinuous.Check:=;
   UpdateUIControls;
   FView.ReloadTracks;
 end;
@@ -616,7 +624,6 @@ begin
   ButtonNewAnimation.Enabled := Assigned(AnimationPlayer);
   ButtonRemoveAnimation.Enabled := Assigned(CurrentAnimation);
   ButtonNewTrack.Enabled := Assigned(CurrentAnimation);
-  ButtonRemoveTrack.Enabled := Assigned(CurrentAnimation);
   ComboBoxPlayStyle.Enabled := Assigned(CurrentAnimation);
 end;
 
