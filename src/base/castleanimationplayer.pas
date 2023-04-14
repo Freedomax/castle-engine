@@ -23,7 +23,7 @@ uses
   Generics.Collections, CastleTimeUtils, CastleLog, TypInfo, Variants, CastleVectors;
 
 type
-  TAnimationTrackMode = (amDiscrete, amContinuous);
+  TAnimationTrackMode = (tmDiscrete, tmContinuous);
   TLerpFunc = function(const ALerp: single): single;
 
   TAnimationTrack = class abstract
@@ -44,7 +44,7 @@ type
 
   strict private
     FOnChange: TNotifyEvent;
-    FKeyframes: TAnimationKeyframeList;
+    FKeyframeList: TAnimationKeyframeList;
     FMode: TAnimationTrackMode;
     procedure KeyframesNotify(ASender: TObject;
       {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
@@ -76,6 +76,7 @@ type
       for some keyframes by yourself (see @link(AddKeyframe)). If it is in the discrete mode,
       this equation will be ignored. }
     property Mode: TAnimationTrackMode read FMode write FMode;
+    property KeyframeList: TAnimationKeyframeList read FKeyframeList;
   end;
 
   TAnimationPropertyTrack = class(TAnimationTrack)
@@ -260,7 +261,7 @@ end;
 
 destructor TAnimationTrack.Destroy;
 begin
-  FKeyframes.Free;
+  FKeyframeList.Free;
   inherited Destroy;
 end;
 
@@ -272,7 +273,7 @@ begin
   Keyframe.Time := ATime;
   Keyframe.Value := AValue;
   Keyframe.LerpFunc := ALerpFunc;
-  FKeyframes.Add(Keyframe);
+  FKeyframeList.Add(Keyframe);
 end;
 
 procedure TAnimationTrack.Evaluate(const ATime: TFloatTime);
@@ -281,27 +282,27 @@ var
   Index: SizeInt;
   Keyframe: TAnimationKeyframe;
 begin
-  if FKeyframes.Count = 0 then
+  if FKeyframeList.Count = 0 then
     Exit;
 
-  if ATime < FKeyframes.First.Time then
-    AValue := FKeyframes.First.Value
+  if ATime < FKeyframeList.First.Time then
+    AValue := FKeyframeList.First.Value
   else
   begin
     Keyframe.Time := ATime;
-    Index := FKeyframes.SearchIndex(Keyframe) - 1;
-    if Between(Index, 0, FKeyframes.Count - 2) then
-      AValue := Interpolate(FKeyframes[Index], FKeyframes[Index + 1], ATime)
+    Index := FKeyframeList.SearchIndex(Keyframe) - 1;
+    if Between(Index, 0, FKeyframeList.Count - 2) then
+      AValue := Interpolate(FKeyframeList[Index], FKeyframeList[Index + 1], ATime)
     else
-      AValue := FKeyframes.Last.Value;
+      AValue := FKeyframeList.Last.Value;
   end;
   SetValue(AValue);
 end;
 
 function TAnimationTrack.Duration: TFloatTime;
 begin
-  if FKeyframes.Count < 2 then Exit(0);
-  Result := FKeyframes.Last.Time - FKeyframes.First.Time;
+  if FKeyframeList.Count < 2 then Exit(0);
+  Result := FKeyframeList.Last.Time - FKeyframeList.First.Time;
 end;
 
 procedure TAnimation.SetPlaying(const Value: boolean);
@@ -471,8 +472,8 @@ var
   ALerp: single;
 begin
   case self.Mode of
-    amDiscrete: Result := Keyframe1.Value;
-    amContinuous:
+    tmDiscrete: Result := Keyframe1.Value;
+    tmContinuous:
     begin
       ALerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
       if Assigned(Keyframe1.LerpFunc) then ALerp := Keyframe1.LerpFunc(ALerp);
@@ -524,16 +525,16 @@ type
     {$IFDEF FPC}specialize{$ENDIF}TComparer<TAnimationKeyframe>;
 begin
   inherited Create;
-  FKeyframes := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
+  FKeyframeList := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
     {$Ifdef fpc}@{$endif}CompareKeyframe));
-  FKeyframes.OnNotify :=
+  FKeyframeList.OnNotify :=
     {$Ifdef fpc}@{$endif}KeyframesNotify;
 end;
 
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
   {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
 begin
-  FKeyframes.Sort;
+  FKeyframeList.Sort;
   if Assigned(FOnChange) then FOnChange(Self);
 end;
 
@@ -708,7 +709,8 @@ begin
   begin
     FAnimation := AValue;
     FCurrentAnimation := nil;
-    if not FAnimationList.TryGetValue(FAnimation, FCurrentAnimation) then
+    if (FAnimation <> '') and not FAnimationList.TryGetValue(FAnimation,
+      FCurrentAnimation) then
     begin
       FAnimation := '';
       WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
@@ -761,8 +763,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

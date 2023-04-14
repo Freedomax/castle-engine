@@ -89,6 +89,14 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Caption = 'Delete Track'
       TabOrder = 4
     end
+    object CheckBoxContinuous: TCheckBox
+      Left = 600
+      Height = 21
+      Top = 13
+      Width = 83
+      Caption = 'Continuous'
+      TabOrder = 5
+    end
   end
   object PopupMenuAddTrack: TPopupMenu
     Left = 332

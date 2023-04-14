@@ -24,17 +24,32 @@ uses
   Dialogs, ButtonPanel, StdCtrls, ExtCtrls, Menus, ComCtrls,
   CastleAnimationPlayer, CastleControl, CastleControls, CastleUIControls,
   CastleVectors, CastleColors, CastleKeysMouse, RttiUtils, CastleTransform,
-  CastleViewport;
+  CastleViewport, CastleTimeUtils, Variants, CastleRectangles;
 
 type
+  TCastleTrackView = class(TCastleRectangleControl)
+  private
+  const
+    PixelsEachSceond: single = 200;
+  var
+    FTrack: TAnimationTrack;
+    procedure SetTrack(const AValue: TAnimationTrack);
+    function TimePosition(const ATime: TFloatTime): single;
+  public
+
+    procedure Render; override;
+    property Track: TAnimationTrack read FTrack write SetTrack;
+  end;
+
   TAnimationPlayerView = class(TCastleView)
   private
     FAnimationPlayer: TAnimationPlayer;
     FRoot: TCastleUserInterface;
-    FTrackRoot: TCastleVerticalGroup;
+    FTrackListView: TCastleVerticalGroup;
+    procedure AddKeyFrameButtonClick(Sender: TObject);
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
   protected
-    AddKeyFrameButton: TCastleButton;
+    ButtonAddKeyFrame: TCastleButton;
     procedure ReloadTracks;
   public
     procedure Start; override;
@@ -55,6 +70,7 @@ type
     ButtonDeleteTrack: TButton;
     ButtonPanel1: TButtonPanel;
     CastleControl1: TCastleControl;
+    CheckBoxContinuous: TCheckBox;
     ComboBoxAnimation: TComboBox;
     MenuItem1: TMenuItem;
     Panel1: TPanel;
@@ -66,14 +82,12 @@ type
     procedure MenuItem1Click(Sender: TObject);
   private
     FView: TAnimationPlayerView;
-    FDisableAnimationSelect: boolean;
 
     function GetAnimationPlayer: TAnimationPlayer;
 
     procedure InitView;
     procedure AnimationListChanged;
     procedure UpdateUIControls;
-    procedure EnableAnimationSelect(AEnable: boolean);
 
     property AnimationPlayer: TAnimationPlayer read GetAnimationPlayer;
   public
@@ -85,9 +99,73 @@ type
 implementation
 
 uses Math,
-  CastleLclUtils, castleinternalpropertyselectdialog;
+  CastleLclUtils, castleinternalpropertyselectdialog, CastleGLUtils, CastleRenderOptions;
 
 {$R *.lfm}
+
+procedure TCastleTrackView.SetTrack(const AValue: TAnimationTrack);
+begin
+  if FTrack <> AValue then
+  begin
+    FTrack := AValue;
+  end;
+end;
+
+function TCastleTrackView.TimePosition(const ATime: TFloatTime): single;
+begin
+  Result := RenderRect.Left + ATime * PixelsEachSceond * UIScale;
+end;
+
+procedure TCastleTrackView.Render;
+var
+  KeyFrame: TAnimationTrack.TAnimationKeyframe;
+  FramePos: single;
+  R: TFloatRectangle;
+
+  procedure RenderLine(const X: single; const LineColor: TCastleColor;
+  const LineWidth: single);
+  var
+    arr: array[0..1] of TVector2;
+  begin
+    arr[0] := Vector2(X, R.Bottom + 2 * UIScale);
+    arr[1] := Vector2(X, R.Top - 2 * UIScale);
+    DrawPrimitive2D(pmLines,
+      arr,
+      LineColor, bsSrcAlpha, bdOneMinusSrcAlpha, False, LineWidth);
+  end;
+
+  procedure RenderDetail;
+  var
+    v: variant;
+  begin
+    v := KeyFrame.Value;
+    if VarIsArray(v) then
+    begin
+    end
+    else
+    begin
+      UIFont.Print(FramePos, R.Bottom + 2 * UIScale, CastleColors.White, v);
+    end;
+
+  end;
+
+  procedure RenderKeyFrame;
+  begin
+    RenderLine(FramePos, CastleColors.White, 1 * UIScale);
+    RenderDetail;
+  end;
+
+begin
+  inherited Render;
+  if not Assigned(FTrack) then Exit;
+
+  R := RenderRect;
+  for KeyFrame in FTrack.KeyframeList do
+  begin
+    FramePos := TimePosition(KeyFrame.Time);
+    RenderKeyFrame;
+  end;
+end;
 
 procedure TAnimationPlayerView.SetAnimationPlayer(const AValue: TAnimationPlayer);
 begin
@@ -97,53 +175,68 @@ begin
 
 end;
 
+procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
+begin
+  if not Assigned(AnimationPlayer) then Exit;
+  if not Assigned(AnimationPlayer.CurrentAnimation) then Exit;
+  if AnimationPlayer.CurrentAnimation.TrackList.Count = 0 then Exit;
+
+  AnimationPlayer.CurrentAnimation.TrackList.Items[Random(
+    AnimationPlayer.CurrentAnimation.TrackList.Count)].AddKeyframe(
+    Random(100) / 50, Random(2));
+end;
+
 procedure TAnimationPlayerView.ReloadTracks;
 var
-  Track: TAnimationTrack;
-  R: TCastleRectangleControl;
-  TrackLabel: TCastleLabel;
+  ATrack: TAnimationTrack;
+  ATrackView: TCastleTrackView;
 begin
-  FTrackRoot.ClearControls;
-  AddKeyFrameButton.Exists := False;
+  FTrackListView.ClearControls;
+  ButtonAddKeyFrame.Exists := False;
   if not Assigned(FAnimationPlayer) then Exit;
   if not Assigned(FAnimationPlayer.CurrentAnimation) then
     Exit;
 
-  AddKeyFrameButton.Exists := FAnimationPlayer.CurrentAnimation.TrackList.Count > 0;
-  for Track in FAnimationPlayer.CurrentAnimation.TrackList do
+  ButtonAddKeyFrame.Exists := FAnimationPlayer.CurrentAnimation.TrackList.Count > 0;
+  for ATrack in FAnimationPlayer.CurrentAnimation.TrackList do
   begin
-    R := TCastleRectangleControl.Create(self);
-    R.Color := CastleColors.Black;
-    R.Height := 24;
-    FTrackRoot.InsertFront(R);
-
-    TrackLabel := TCastleLabel.Create(self);
-    TrackLabel.Caption := Track.ClassName;
-    TrackLabel.Anchor(vpTop, vpTop);
-    TrackLabel.Anchor(hpLeft, hpLeft);
-    TrackLabel.Color := CastleColors.White;
-    R.InsertFront(TrackLabel);
+    ATrackView := TCastleTrackView.Create(self);
+    ATrackView.Color := Vector4(Random(256) / 255, Random(256) / 255,
+      Random(256) / 255, 1);
+    ATrackView.Track := ATrack;
+    ATrackView.Height := 24;
+    FTrackListView.InsertFront(ATrackView);
   end;
 end;
 
 { TAnimationPlayerView ---------------------------------------------------- }
 procedure TAnimationPlayerView.Start;
+var
+  AScrollView: TCastleScrollView;
 begin
   inherited Start;
   FRoot := TCastleUserInterface.Create(self);
   FRoot.FullSize := True;
   self.InsertFront(FRoot);
-  FTrackRoot := TCastleVerticalGroup.Create(self);
-  FTrackRoot.FullSize := True;
-  FRoot.InsertFront(FTrackRoot);
-  AddKeyFrameButton := TCastleButton.Create(self);
-  AddKeyFrameButton.Caption := '+';
-  AddKeyFrameButton.Anchor(vpTop, vpTop);
-  AddKeyFrameButton.Anchor(hpLeft, hpLeft);
-  AddKeyFrameButton.AutoSize := False;
-  AddKeyFrameButton.Height := 20;
-  AddKeyFrameButton.Width := 20;
-  FRoot.InsertFront(AddKeyFrameButton);
+
+  AScrollView := TCastleScrollView.Create(Self);
+  FRoot.InsertFront(AScrollView);
+  AScrollView.FullSize := True;
+  AScrollView.EnableDragging := True;
+
+  FTrackListView := TCastleVerticalGroup.Create(self);
+  FTrackListView.FullSize := False;
+  AScrollView.ScrollArea.InsertFront(FTrackListView);
+
+  ButtonAddKeyFrame := TCastleButton.Create(self);
+  ButtonAddKeyFrame.OnClick :={$IFDEF FPC}@{$ENDIF}AddKeyFrameButtonClick;
+  ButtonAddKeyFrame.Caption := '+';
+  ButtonAddKeyFrame.Anchor(vpTop, vpTop);
+  ButtonAddKeyFrame.Anchor(hpLeft, hpLeft);
+  ButtonAddKeyFrame.AutoSize := False;
+  ButtonAddKeyFrame.Height := 20;
+  ButtonAddKeyFrame.Width := 20;
+  FRoot.InsertFront(ButtonAddKeyFrame);
 end;
 
 procedure TAnimationPlayerView.Update(const SecondsPassed: single;
@@ -161,8 +254,8 @@ end;
 function TAnimationPlayerView.Motion(const Event: TInputMotion): boolean;
 begin
   Result := inherited Motion(Event);
-  AddKeyFrameButton.Translation :=
-    Vector2(Event.Position.X - AddKeyFrameButton.Width / 2, 0);
+  ButtonAddKeyFrame.Translation :=
+    Vector2(Event.Position.X - ButtonAddKeyFrame.Width / 2, 0);
 end;
 
 procedure TAnimationPlayerView.AddTrack(const ATrack: TAnimationTrack);
@@ -231,10 +324,14 @@ begin
       begin
         Track := TAnimationPropertyTrack.Create(Form.SelectedObject,
           Form.SelectedProperty);
+        if CheckBoxContinuous.Checked then
+          Track.Mode := tmContinuous
+        else
+          Track.Mode := tmDiscrete;
         FView.AddTrack(Track);
       end
       else
-        ShowMessage('Did not complete the selection.');
+        ShowMessage('Didnot complete the selection.');
     end;
   finally
     FreeAndNil(Form);
@@ -258,12 +355,10 @@ end;
 procedure TAnimationPlayerDialog.ComboBoxAnimationChange(Sender: TObject);
 begin
   if not Assigned(AnimationPlayer) then Exit;
-  if FDisableAnimationSelect then Exit;
 
   AnimationPlayer.Animation := ComboBoxAnimation.Text;
   UpdateUIControls;
   FView.ReloadTracks;
-  ShowMessage('changed to ' + ComboBoxAnimation.Text);
 end;
 
 procedure TAnimationPlayerDialog.ButtonNewAnimationClick(Sender: TObject);
@@ -273,6 +368,7 @@ begin
   if InputQuery('NewAnimation', 'Input name:', AName) then
   begin
     AnimationPlayer.NewAnimation(AName);
+    AnimationPlayer.Animation := AName;
     AnimationListChanged;
   end;
 end;
@@ -289,24 +385,18 @@ end;
 
 procedure TAnimationPlayerDialog.AnimationListChanged;
 var
-  AName, OldSelectedName: string;
-  AIndex: integer;
+  AName: string;
 begin
-  AIndex := 0;
-  EnableAnimationSelect(False);
-  OldSelectedName := ComboBoxAnimation.Text;
   ComboBoxAnimation.Items.BeginUpdate;
   try
     ComboBoxAnimation.Clear;
     ComboBoxAnimation.Items.Add('');
     for AName in AnimationPlayer.AnimationList.Keys do
-    begin
       ComboBoxAnimation.Items.Add(AName);
-      if AName = OldSelectedName then AIndex := ComboBoxAnimation.Items.Count - 1;
-    end;
-    ComboBoxAnimation.ItemIndex := AIndex;
+
+    ComboBoxAnimation.ItemIndex :=
+      ComboBoxAnimation.Items.IndexOf(AnimationPlayer.Animation);
   finally
-    EnableAnimationSelect(True);
     ComboBoxAnimation.Items.EndUpdate;
     UpdateUIControls;
     FView.ReloadTracks;
@@ -324,11 +414,6 @@ begin
     Assigned(AnimationPlayer.CurrentAnimation);
   ButtonDeleteTrack.Enabled :=
     Assigned(AnimationPlayer) and Assigned(AnimationPlayer.CurrentAnimation);
-end;
-
-procedure TAnimationPlayerDialog.EnableAnimationSelect(AEnable: boolean);
-begin
-  FDisableAnimationSelect := not AEnable;
 end;
 
 end.
