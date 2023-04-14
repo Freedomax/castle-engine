@@ -29,7 +29,36 @@ begin
 end;
 
 procedure TAnimationPlayerEditor.Edit;
+var
+  D: TAnimationPlayerDialog;
+  comp: TPersistent;
+  AnimationPlayer: TAnimationPlayer;
+  vClassName: string;
 begin
-  inherited Edit;
+  comp := GetComponent(0);
+  if (comp is TCastleAnimationPlayer) then
+    AnimationPlayer := (comp as TCastleAnimationPlayer).AnimationPlayer
+  else
+  if (comp is TCastleAnimationPlayerTransform) then
+    AnimationPlayer := (comp as TCastleAnimationPlayerTransform).AnimationPlayer
+  else
+  begin
+    raise Exception.Create(
+      'Only support TCastleAnimationPlayer, TCastleAnimationPlayerTransform');
+    Exit;
+  end;
+
+  D := TAnimationPlayerDialog.Create(nil);
+  try
+    D.Load(AnimationPlayer);
+    if D.ShowModal = mrOk then
+    begin
+
+      self.Modified('');
+    end;
+
+  finally
+    FreeAndNil(D);
+  end;
 end;
 

@@ -52,7 +52,8 @@ uses // FPC and LCL units
   CastleInternalExposeTransformsDialog, CastleInternalTiledLayersDialog,
   CastleSoundEngine, CastleFonts,
   CastleScriptParser, CastleInternalLclDesign, CastleTerrain, CastleLog,
-  CastleEditorAccess, CastleRenderOptions, CastleThirdPersonNavigation, CastleAnimationPlayer;
+  CastleEditorAccess, CastleRenderOptions, CastleThirdPersonNavigation, CastleAnimationPlayer,
+  CastleInternalAnimationPlayerDialog;
 
 {$define read_implementation}
 {$I castlepropedits_url.inc}
