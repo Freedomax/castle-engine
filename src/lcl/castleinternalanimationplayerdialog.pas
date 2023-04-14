@@ -32,7 +32,6 @@ type
   var
     FTrack: TAnimationTrack;
     procedure SetTrack(const AValue: TAnimationTrack);
-    function TimeRenderPosition(const ATime: TFloatTime): single;
   public
   const
     PixelsEachSceond: single = 200;
@@ -42,10 +41,14 @@ type
 
   TAnimationPlayerView = class(TCastleView)
   private
+    FPlaying: boolean;
+    FPlayingChanged: TNotifyEvent;
   type
     TTrackViewList = {$Ifdef fpc}specialize{$endif}TObjectList<TTrackView>;
   const
     TrackHeight = 100;
+    ItemFontSize = 15;
+    ItemSpacing = 2;
   var
     FAnimationPlayer: TAnimationPlayer;
     FRoot: TCastleUserInterface;
@@ -54,10 +57,14 @@ type
     procedure AButtonDeleteClick(Sender: TObject);
     procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);
+    procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     { Track index, "-1" means all changed. }
     procedure KeyFrameListChanged(const Index: integer);
     function GetCurrentAnimation: TAnimation;
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
+    procedure SetPlaying(const AValue: boolean);
+    procedure SetPlayingChanged(const AValue: TNotifyEvent);
+
   protected
     ButtonAddKeyFrame: TCastleButton;
     procedure ReloadTracks;
@@ -73,15 +80,15 @@ type
     property AnimationPlayer: TAnimationPlayer
       read FAnimationPlayer write SetAnimationPlayer;
     property CurrentAnimation: TAnimation read GetCurrentAnimation;
+    property Playing: boolean read FPlaying write SetPlaying;
+    property PlayingChanged: TNotifyEvent read FPlayingChanged write SetPlayingChanged;
   end;
 
   TAnimationPlayerDialog = class(TForm)
     ButtonNewAnimation: TButton;
     ButtonRemoveAnimation: TButton;
     ButtonNewTrack: TButton;
-    ButtonStart: TButton;
-    ButtonStop: TButton;
-    ButtonPanel1: TButtonPanel;
+    ButtonPlayStop: TButton;
     CastleControl1: TCastleControl;
     ComboBoxAnimation: TComboBox;
     ComboBoxPlayStyle: TComboBox;
@@ -91,8 +98,7 @@ type
     procedure ButtonRemoveAnimationClick(Sender: TObject);
     procedure ButtonNewAnimationClick(Sender: TObject);
     procedure ButtonNewTrackClick(Sender: TObject);
-    procedure ButtonStartClick(Sender: TObject);
-    procedure ButtonStopClick(Sender: TObject);
+    procedure ButtonPlayStopClick(Sender: TObject);
     procedure ComboBoxAnimationChange(Sender: TObject);
     procedure ComboBoxPlayStyleChange(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -100,6 +106,7 @@ type
   private
     FView: TAnimationPlayerView;
 
+    procedure FViewPlayingChanged(Sender: TObject);
     function GetAnimationPlayer: TAnimationPlayer;
 
     procedure InitView;
@@ -133,16 +140,16 @@ begin
   end;
 end;
 
-function TTrackView.TimeRenderPosition(const ATime: TFloatTime): single;
-begin
-  Result := RenderRect.Left + ATime * PixelsEachSceond * UIScale;
-end;
-
 procedure TTrackView.Render;
 var
   KeyFrame: TAnimationTrack.TAnimationKeyframe;
   FramePos: single;
   R: TFloatRectangle;
+
+  function TimeRenderPosition(const ATime: TFloatTime): single;
+  begin
+    Result := R.Left + ATime * PixelsEachSceond * UIScale;
+  end;
 
   procedure RenderLine(const X: single; const LineColor: TCastleColor;
   const LineWidth: single);
@@ -191,10 +198,34 @@ end;
 
 procedure TAnimationPlayerView.SetAnimationPlayer(const AValue: TAnimationPlayer);
 begin
-  if FAnimationPlayer = AValue then Exit;
+  if FAnimationPlayer <> AValue then
+  begin
+    if Assigned(FAnimationPlayer) then FAnimationPlayer.OnAnimationComplete := nil;
+    FAnimationPlayer := AValue;
+    FAnimationPlayer.OnAnimationComplete := @FAnimationPlayerAnimationComplete;
+  end;
 
-  FAnimationPlayer := AValue;
+end;
 
+procedure TAnimationPlayerView.SetPlaying(const AValue: boolean);
+begin
+  if FPlaying <> AValue then
+  begin
+    FPlaying := AValue;
+    if Assigned(CurrentAnimation) then
+    begin
+      if FPlaying then CurrentAnimation.Start
+      else
+        CurrentAnimation.Stop;
+    end;
+    if Assigned(FPlayingChanged) then FPlayingChanged(Self);
+  end;
+end;
+
+procedure TAnimationPlayerView.SetPlayingChanged(const AValue: TNotifyEvent);
+begin
+  if FPlayingChanged <> AValue then
+    FPlayingChanged := AValue;
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
@@ -211,6 +242,11 @@ begin
   KeyFrameListChanged(Index);
 end;
 
+procedure TAnimationPlayerView.FAnimationPlayerAnimationComplete(Sender: TObject);
+begin
+  Playing := False;
+end;
+
 procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
 
   procedure FixSize(const AIndex: integer);
@@ -224,6 +260,7 @@ var
 begin
   if Index < 0 then
   begin
+    Assert(FTrackViewList.Count <= CurrentAnimation.TrackList.Count);
     for I := 0 to FTrackViewList.Count - 1 do FixSize(I);
   end
   else
@@ -300,7 +337,7 @@ begin
   begin
     ATrack := CurrentAnimation.TrackList.Items[I];
     ATrackContainer := TCastleHorizontalGroup.Create(self);
-    ATrackContainer.Spacing := 2;
+    ATrackContainer.Spacing := ItemSpacing;
     FTrackListView.InsertFront(ATrackContainer);
 
     ATrackHeadView := TCastleRectangleControl.Create(Self);
@@ -315,13 +352,13 @@ begin
     ATrackHeadView.InsertFront(AHeadItemContainer);
 
     ALabelObjectName := TCastleLabel.Create(self);
-    ALabelObjectName.FontSize := 15;
+    ALabelObjectName.FontSize := ItemFontSize;
     ALabelObjectName.Color := CastleColors.White;
     ALabelObjectName.Caption := ATrack.ObjectName;
     AHeadItemContainer.InsertFront(ALabelObjectName);
 
     ALabelPropName := TCastleLabel.Create(self);
-    ALabelPropName.FontSize := 15;
+    ALabelPropName.FontSize := ItemFontSize;
     ALabelPropName.Color := CastleColors.White;
     ALabelPropName.Caption := ATrack.PropName;
     AHeadItemContainer.InsertFront(ALabelPropName);
@@ -332,13 +369,13 @@ begin
     ACheckBox.Tag := I;
     ACheckBox.OnChange := @ACheckBoxChange;
     ACheckBox.TextColor := CastleColors.White;
-    ACheckBox.FontSize := 15;
+    ACheckBox.FontSize := ItemFontSize;
     AHeadItemContainer.InsertFront(ACheckBox);
 
     AButtonDelete := TCastleButton.Create(Self);
     AButtonDelete.Caption := 'Remove';
     AButtonDelete.OnClick := @AButtonDeleteClick;
-    AButtonDelete.FontSize := 15;
+    AButtonDelete.FontSize := ItemFontSize;
     AButtonDelete.Tag := I;
     AHeadItemContainer.InsertFront(AButtonDelete);
     { TrackView. }
@@ -373,7 +410,7 @@ begin
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
-  FTrackListView.Spacing := 2;
+  FTrackListView.Spacing := ItemSpacing;
   FTrackListView.AutoSizeToChildren := True;
   AScrollView.ScrollArea.InsertFront(FTrackListView);
 
@@ -500,6 +537,18 @@ begin
   Result := FView.AnimationPlayer;
 end;
 
+procedure TAnimationPlayerDialog.FViewPlayingChanged(Sender: TObject);
+begin
+  if FView.Playing then
+  begin
+    ButtonPlayStop.Caption := 'Stop';
+  end
+  else
+  begin
+    ButtonPlayStop.Caption := 'Start';
+  end;
+end;
+
 procedure TAnimationPlayerDialog.ButtonNewTrackClick(Sender: TObject);
 var
   pt: TPoint;
@@ -509,16 +558,9 @@ begin
   PopupMenuAddTrack.Popup(pt.x, pt.y);
 end;
 
-procedure TAnimationPlayerDialog.ButtonStartClick(Sender: TObject);
+procedure TAnimationPlayerDialog.ButtonPlayStopClick(Sender: TObject);
 begin
-  if Assigned(CurrentAnimation) then
-    AnimationPlayer.Start;
-end;
-
-procedure TAnimationPlayerDialog.ButtonStopClick(Sender: TObject);
-begin
-  if Assigned(CurrentAnimation) then
-    AnimationPlayer.Stop;
+  FView.Playing := not FView.Playing;
 end;
 
 procedure TAnimationPlayerDialog.ComboBoxAnimationChange(Sender: TObject);
@@ -563,6 +605,7 @@ begin
   if not Assigned(FView) then
   begin
     FView := TAnimationPlayerView.Create(CastleControl1);
+    FView.PlayingChanged := @FViewPlayingChanged;
     CastleControl1.Container.View := FView;
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
   end;
@@ -619,12 +662,16 @@ end;
 
 procedure TAnimationPlayerDialog.UpdateUIControls;
 begin
-  ButtonStart.Enabled := Assigned(CurrentAnimation);
-  ButtonStop.Enabled := Assigned(CurrentAnimation);
+  ButtonPlayStop.Enabled := Assigned(CurrentAnimation);
   ButtonNewAnimation.Enabled := Assigned(AnimationPlayer);
   ButtonRemoveAnimation.Enabled := Assigned(CurrentAnimation);
   ButtonNewTrack.Enabled := Assigned(CurrentAnimation);
   ComboBoxPlayStyle.Enabled := Assigned(CurrentAnimation);
+
+  if Assigned(CurrentAnimation) then
+    FView.Playing := CurrentAnimation.Playing
+  else
+    FView.Playing := False;
 end;
 
 end.

@@ -8,32 +8,14 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
   ClientWidth = 803
   OnCloseQuery = FormCloseQuery
   Position = poMainFormCenter
-  object ButtonPanel1: TButtonPanel
-    Left = 7
-    Height = 35
-    Top = 386
-    Width = 789
-    BorderSpacing.Around = 7
-    OKButton.Name = 'OKButton'
-    OKButton.DefaultCaption = True
-    HelpButton.Name = 'HelpButton'
-    HelpButton.Caption = '&Select All'
-    CloseButton.Name = 'CloseButton'
-    CloseButton.DefaultCaption = True
-    CancelButton.Name = 'CancelButton'
-    CancelButton.DefaultCaption = True
-    TabOrder = 0
-    ShowButtons = [pbOK, pbCancel, pbHelp]
-    ShowGlyphs = [pbOK, pbCancel, pbClose]
-  end
   object CastleControl1: TCastleControl
     Left = 0
-    Height = 337
+    Height = 386
     Top = 42
     Width = 803
     Align = alClient
     Options = []
-    TabOrder = 1
+    TabOrder = 0
   end
   object Panel1: TPanel
     Left = 0
@@ -43,7 +25,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     Align = alTop
     ClientHeight = 42
     ClientWidth = 803
-    TabOrder = 2
+    TabOrder = 1
     object ButtonNewAnimation: TButton
       Left = 115
       Height = 27
@@ -93,25 +75,15 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Style = csDropDownList
       TabOrder = 4
     end
-    object ButtonStart: TButton
-      Left = 696
+    object ButtonPlayStop: TButton
+      Left = 742
       Height = 27
       Top = 8
       Width = 49
       Anchors = [akTop, akRight]
       Caption = 'Start'
-      OnClick = ButtonStartClick
+      OnClick = ButtonPlayStopClick
       TabOrder = 5
-    end
-    object ButtonStop: TButton
-      Left = 747
-      Height = 27
-      Top = 8
-      Width = 49
-      Anchors = [akTop, akRight]
-      Caption = 'Stop'
-      OnClick = ButtonStopClick
-      TabOrder = 6
     end
   end
   object PopupMenuAddTrack: TPopupMenu

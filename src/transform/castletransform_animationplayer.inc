@@ -1,6 +1,6 @@
 {%MainUnit castletransform.pas}
 {
-  Copyright 2023 Michalis Kamburelis.
+  Copyright 2023 Michalis Kamburelis, Freedomax.
 
   This file is part of "Castle Game Engine".
 

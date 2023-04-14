@@ -153,7 +153,6 @@ type
     procedure Update(const DeltaTime: TFloatTime);
 
     property OnComplete: TNotifyEvent read FOnComplete write SetOnComplete;
-    property Playing: boolean read FPlaying write SetPlaying default False;
   public
     constructor Create;
     destructor Destroy; override;
@@ -172,6 +171,7 @@ type
       read FPlayStyle write SetPlayStyle default apsOnce;
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
     property TrackList: TAnimationTrackList read FTrackList;
+    property Playing: boolean read FPlaying write SetPlaying default False;
   end;
 
   TAnimationPlayer = class(TCastleComponent)
