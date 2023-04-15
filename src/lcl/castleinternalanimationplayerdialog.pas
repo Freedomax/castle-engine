@@ -39,6 +39,14 @@ type
     property Track: TAnimationTrack read FTrack write SetTrack;
   end;
 
+  TTrackListScrollView = class(TCastleScrollView)
+  public
+  const
+    TrackListHeadHeight = 20;
+    procedure RenderOverChildren; override;
+
+  end;
+
   TAnimationPlayerView = class(TCastleView)
   private
     FAnimationPlayerChanged: TNotifyEvent;
@@ -48,6 +56,7 @@ type
     TTrackViewList = {$Ifdef fpc}specialize{$endif}TObjectList<TTrackView>;
   const
     TrackHeight = 100;
+    TrackHeadViewWidth = 150;
     ItemFontSize = 15;
     ItemFontSmallSize = 12;
     ItemSpacing = 2;
@@ -100,6 +109,7 @@ type
     ComboBoxAnimation: TComboBox;
     ComboBoxPlayStyle: TComboBox;
     MenuItem1: TMenuItem;
+    MenuItem2: TMenuItem;
     Panel1: TPanel;
     PopupMenuAddTrack: TPopupMenu;
     procedure ButtonRemoveAnimationClick(Sender: TObject);
@@ -110,6 +120,7 @@ type
     procedure ComboBoxPlayStyleChange(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: boolean);
     procedure MenuItem1Click(Sender: TObject);
+    procedure MenuItem2Click(Sender: TObject);
   private
     FView: TAnimationPlayerView;
 
@@ -189,6 +200,17 @@ begin
     FramePos := TimeRenderPosition(KeyFrame.Time);
     RenderKeyFrame;
   end;
+end;
+
+procedure TTrackListScrollView.RenderOverChildren;
+var
+  R: TFloatRectangle;
+begin
+  R := RenderRect;
+  R.Bottom := R.Top - TrackListHeadHeight * UIScale;
+  DrawRectangle(R, Vector4(0, 0, 0, 0.618));
+
+  inherited RenderOverChildren;
 end;
 
 procedure TAnimationPlayerView.SetAnimationPlayer(const AValue: TAnimationPlayer);
@@ -324,12 +346,11 @@ procedure TAnimationPlayerView.ReloadTracks;
 
 var
   I: integer;
-  ATrackList: TAnimationTrackList;
   ATrack: TAnimationTrack;
   ATrackContainer: TCastleHorizontalGroup;
   ATrackView: TTrackView;
   ATrackHeadView: TCastleRectangleControl;
-  { HeadView items. }
+  { TrackHeadView items. }
   AHeadItemContainer: TCastleVerticalGroup;
   ACheckBox: TCastleCheckbox;
   ALabelPropName: TCastleLabel;
@@ -341,10 +362,9 @@ begin
   if not Assigned(CurrentAnimation) then
     Exit;
 
-  ATrackList := CurrentAnimation.TrackList;
-  ButtonAddKeyFrame.Exists := ATrackList.Count > 0;
+  ButtonAddKeyFrame.Exists := CurrentAnimation.TrackList.Count > 0;
   FTrackViewList.Clear;
-  for  I := 0 to ATrackList.Count - 1 do
+  for  I := 0 to CurrentAnimation.TrackList.Count - 1 do
   begin
     ATrack := CurrentAnimation.TrackList.Items[I];
     ATrackContainer := TCastleHorizontalGroup.Create(self);
@@ -355,7 +375,7 @@ begin
     ATrackHeadView.Height := TrackHeight;
     ATrackHeadView.Color := Vector4(0, 0, 0, 0.4);
     ATrackHeadView.Tag := I;
-    ATrackHeadView.Width := 180;
+    ATrackHeadView.Width := TrackHeadViewWidth;
     ATrackContainer.InsertFront(ATrackHeadView);
     { HeadView items. }
     AHeadItemContainer := TCastleVerticalGroup.Create(self);
@@ -413,7 +433,7 @@ end;
 { TAnimationPlayerView ---------------------------------------------------- }
 procedure TAnimationPlayerView.Start;
 var
-  AScrollView: TCastleScrollView;
+  AScrollView: TTrackListScrollView;
 begin
   inherited Start;
   FTrackViewList := TTrackViewList.Create(False);
@@ -422,7 +442,7 @@ begin
   FRoot.FullSize := True;
   self.InsertFront(FRoot);
 
-  AScrollView := TCastleScrollView.Create(Self);
+  AScrollView := TTrackListScrollView.Create(Self);
   FRoot.InsertFront(AScrollView);
   AScrollView.FullSize := True;
   AScrollView.EnableDragging := True;
@@ -431,6 +451,9 @@ begin
   FTrackListView.FullSize := False;
   FTrackListView.Spacing := ItemSpacing;
   FTrackListView.AutoSizeToChildren := True;
+  FTrackListView.Anchor(vpTop, vpTop);
+  FTrackListView.Anchor(hpLeft, hpLeft);
+  FTrackListView.Translation := Vector2(0, -TTrackListScrollView.TrackListHeadHeight);
   AScrollView.ScrollArea.InsertFront(FTrackListView);
 
   ButtonAddKeyFrame := TCastleButton.Create(self);
@@ -439,8 +462,8 @@ begin
   ButtonAddKeyFrame.Anchor(vpTop, vpTop);
   ButtonAddKeyFrame.Anchor(hpLeft, hpLeft);
   ButtonAddKeyFrame.AutoSize := False;
-  ButtonAddKeyFrame.Height := 20;
-  ButtonAddKeyFrame.Width := 20;
+  ButtonAddKeyFrame.Height := TTrackListScrollView.TrackListHeadHeight;
+  ButtonAddKeyFrame.Width := TTrackListScrollView.TrackListHeadHeight;
   FRoot.InsertFront(ButtonAddKeyFrame);
 end;
 
@@ -581,6 +604,35 @@ begin
     end;
   finally
     FreeAndNil(Form);
+  end;
+end;
+
+procedure TAnimationPlayerDialog.MenuItem2Click(Sender: TObject);
+
+  function GetObject: TPersistent;
+  var
+    comp: TComponent;
+  begin
+    comp := AnimationPlayer.Owner;
+    if (comp is TCastleUserInterface) then
+      Result := (comp as TCastleUserInterface).TranslationPersistent
+    else
+      Result := (comp as TCastleTransform).TranslationPersistent;
+  end;
+
+var
+  i: integer;
+  Track: TAnimationPropertyTrack;
+  APropName: string;
+begin
+  for i := 0 to 9 do
+  begin
+    if i mod 2 = 0 then APropName := 'X'
+    else
+      APropName := 'Y';
+    Track := TAnimationPropertyTrack.Create(GetObject, APropName);
+    //Track.FriendlyObjectName := Form.SelectResult.FriendlyObjectName;
+    FView.AddTrack(Track);
   end;
 end;
 

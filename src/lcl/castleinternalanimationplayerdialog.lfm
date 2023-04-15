@@ -93,5 +93,9 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Caption = 'PropertyTrack'
       OnClick = MenuItem1Click
     end
+    object MenuItem2: TMenuItem
+      Caption = 'Add 10 tracks(debug)'
+      OnClick = MenuItem2Click
+    end
   end
 end
