@@ -23,7 +23,7 @@ uses
   Generics.Collections, CastleTimeUtils, CastleLog, TypInfo, Variants, CastleVectors;
 
 type
-  TAnimationTrackMode = (tmDiscrete, tmContinuous);
+  TAnimationTrackMode = (tmContinuous, tmDiscrete);
   TLerpFunc = function(const ALerp: single): single;
 
   TAnimationTrack = class abstract
@@ -565,6 +565,7 @@ type
     {$IFDEF FPC}specialize{$ENDIF}TComparer<TAnimationKeyframe>;
 begin
   inherited Create;
+  FMode := TAnimationTrackMode.tmContinuous;
   FKeyframeList := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
     {$Ifdef fpc}@{$endif}CompareKeyframe));
   FKeyframeList.OnNotify :=
@@ -841,7 +842,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

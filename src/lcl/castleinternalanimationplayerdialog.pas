@@ -40,11 +40,16 @@ type
   end;
 
   TTrackListScrollView = class(TCastleScrollView)
+  private
+    FBeforeRenderOverChildren: TNotifyEvent;
+    procedure SetBeforeRenderOverChildren(const AValue: TNotifyEvent);
   public
   const
     TrackListHeadHeight = 20;
     procedure RenderOverChildren; override;
 
+    property BeforeRenderOverChildren: TNotifyEvent
+      read FBeforeRenderOverChildren write SetBeforeRenderOverChildren;
   end;
 
   TAnimationPlayerView = class(TCastleView)
@@ -69,6 +74,7 @@ type
     procedure AButtonDeleteClick(Sender: TObject);
     procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);
+    procedure AScrollViewBeforeRenderOverChildren(Sender: TObject);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
     { Track index, "-1" means all changed. }
@@ -207,14 +213,15 @@ begin
   end;
 end;
 
-procedure TTrackListScrollView.RenderOverChildren;
-var
-  R: TFloatRectangle;
+procedure TTrackListScrollView.SetBeforeRenderOverChildren(const AValue: TNotifyEvent);
 begin
-  R := RenderRect;
-  R.Bottom := R.Top - TrackListHeadHeight * UIScale;
-  DrawRectangle(R, Vector4(0, 0, 0, 0.618));
+  if not SameMethods(TMethod(FBeforeRenderOverChildren), TMethod(AValue)) then
+    FBeforeRenderOverChildren := AValue;
+end;
 
+procedure TTrackListScrollView.RenderOverChildren;
+begin
+  if Assigned(FBeforeRenderOverChildren) then FBeforeRenderOverChildren(Self);
   inherited RenderOverChildren;
 end;
 
@@ -287,6 +294,47 @@ begin
     Random(100) / 25, Random(100) / 25);
 
   KeyFrameListChanged(Index);
+end;
+
+procedure TAnimationPlayerView.AScrollViewBeforeRenderOverChildren(Sender: TObject);
+
+  procedure RenderTimeLine;
+  var
+    RTrack, R: TFloatRectangle;
+
+    procedure RenderLine(const X: single; const LineColor: TCastleColor;
+    const LineWidth: single);
+    var
+      arr: array[0..1] of TVector2;
+    begin
+      arr[0] := Vector2(X, R.Bottom);
+      arr[1] := Vector2(X, R.Top);
+      DrawPrimitive2D(pmLines,
+        arr,
+        LineColor, bsSrcAlpha, bdOneMinusSrcAlpha, False, LineWidth);
+    end;
+
+  begin
+    if not Assigned(CurrentAnimation) then Exit;
+    if FTrackViewList.Count = 0 then Exit;
+    if not Playing then Exit;
+
+    RTrack := FTrackViewList.First.RenderRect;
+    R := RenderRect;
+    RenderLine(RTrack.Left + TTrackView.PixelsEachSceond *
+      CurrentAnimation.ActualCurrentTime * UIScale, CastleColors.Green, 2);
+  end;
+
+var
+  RScrollView: TFloatRectangle;
+begin
+  { Draw head rect. }
+  RScrollView := (Sender as TTrackListScrollView).RenderRect;
+  RScrollView.Bottom := RScrollView.Top -
+    TTrackListScrollView.TrackListHeadHeight * UIScale;
+  DrawRectangle(RScrollView, Vector4(0, 0, 0, 0.618));
+  { TimeLine. }
+  RenderTimeLine;
 end;
 
 procedure TAnimationPlayerView.FAnimationPlayerAnimationComplete(Sender: TObject);
@@ -466,6 +514,8 @@ begin
   FRoot.InsertFront(AScrollView);
   AScrollView.FullSize := True;
   AScrollView.EnableDragging := True;
+  AScrollView.BeforeRenderOverChildren :=
+ {$Ifdef fpc}@{$endif}AScrollViewBeforeRenderOverChildren;
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
@@ -494,31 +544,8 @@ begin
 end;
 
 procedure TAnimationPlayerView.RenderOverChildren;
-var
-  RTrack, R: TFloatRectangle;
-
-  procedure RenderLine(const X: single; const LineColor: TCastleColor;
-  const LineWidth: single);
-  var
-    arr: array[0..1] of TVector2;
-  begin
-    arr[0] := Vector2(X, R.Bottom);
-    arr[1] := Vector2(X, R.Top);
-    DrawPrimitive2D(pmLines,
-      arr,
-      LineColor, bsSrcAlpha, bdOneMinusSrcAlpha, False, LineWidth);
-  end;
-
 begin
   inherited RenderOverChildren;
-  if not Assigned(CurrentAnimation) then Exit;
-  if FTrackViewList.Count = 0 then Exit;
-  if not Playing then Exit;
-
-  RTrack := FTrackViewList.First.RenderRect;
-  R := RenderRect;
-  RenderLine(RTrack.Left + TTrackView.PixelsEachSceond *
-    CurrentAnimation.ActualCurrentTime * UIScale, CastleColors.Green, 2);
 end;
 
 procedure TAnimationPlayerView.Update(const SecondsPassed: single;
