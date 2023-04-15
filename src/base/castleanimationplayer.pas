@@ -26,6 +26,17 @@ type
   TAnimationTrackMode = (tmContinuous, tmDiscrete);
   TLerpFunc = function(const ALerp: single): single;
 
+  TLerpFuncType = (lftCustom, lftLiner, lftSin, lftCos, lftOneMinusSin, lftOneMinusCos,
+    lftUniformDeceleration);
+
+const
+  TLerpFuncArr: array[TLerpFuncType] of TLerpFunc =
+    (nil, {$Ifdef fpc}@{$endif}LerpFuncLiner, {$Ifdef fpc}@{$endif}LerpFuncSin,
+    {$Ifdef fpc}@{$endif}LerpFuncCos, {$Ifdef fpc}@{$endif}LerpFuncOneMinusSin,
+    {$Ifdef fpc}@{$endif}LerpFuncOneMinusCos,
+    {$Ifdef fpc}@{$endif}LerpFuncUniformDeceleration);
+
+type
   TAnimationTrack = class abstract
   public
   type
@@ -33,6 +44,8 @@ type
       Time: TFloatTime;
       Value: variant;
       LerpFunc: TLerpFunc;
+      // only for serialize
+      LerpFuncType: TLerpFuncType;
     end;
 
     TAnimationKeyframeList = class(
@@ -72,6 +85,9 @@ type
       original Lerp, if it's nil, it means that Lerp is not modified. Lerp always ranges from 0 to 1. }
     procedure AddKeyframe(const ATime: TFloatTime; const AValue: variant;
       const ALerpFunc: TLerpFunc = nil);
+    { Add the value of the current object as a keyframe and return a value indicating success or failure. }
+    function AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+      const ALerpFunc: TLerpFunc = nil): boolean; virtual;
     { Calculate the value corresponding to the time and execute it. }
     procedure Evaluate(const ATime: TFloatTime);
     { The duration of this animation track is determined by the sorted last frame. }
@@ -100,6 +116,8 @@ type
       override;
   public
     constructor Create(AComponent: TPersistent; const AProperty: string); overload;
+    function AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+      const ALerpFunc: TLerpFunc = nil): boolean; override;
     function ObjectName: string; override;
     function PropName: string; override;
     property Component: TPersistent read FComponent;
@@ -308,6 +326,12 @@ begin
   FKeyframeList.Add(Keyframe);
 end;
 
+function TAnimationTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+  const ALerpFunc: TLerpFunc): boolean;
+begin
+  Result := False;
+end;
+
 procedure TAnimationTrack.Evaluate(const ATime: TFloatTime);
 var
   AValue: variant;
@@ -428,6 +452,7 @@ begin
 
   bCompleted := False;
   FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
+  EvalTime := 0;
 
   //delphi not support: FCurrentTime := FCurrentTime mod MaxTime
   case FPlayStyle of
@@ -449,7 +474,7 @@ begin
     begin
       bCompleted := FCurrentTime >= MaxTime;
       EvalTime := FCurrentTime;
-    end;//no others
+    end;
   end;
 
   for I := 0 to FTrackList.Count - 1 do
@@ -678,6 +703,16 @@ begin
       [FProperty, FComponent.ClassName]);
 end;
 
+function TAnimationPropertyTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+  const ALerpFunc: TLerpFunc): boolean;
+begin
+  if not Assigned(FComponent) then
+    Exit(inherited AddCurrentValueAsKeyframe(ATime, ALerpFunc));
+
+  AddKeyframe(ATime, GetPropValue(FComponent, FPropertyInfo), ALerpFunc);
+  Result := True;
+end;
+
 function TAnimationPropertyTrack.ObjectName: string;
 begin
   Result := inherited;
@@ -779,8 +814,8 @@ end;
 
 procedure TAnimationPlayer.SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
 begin
-  if FOnCurrentAnimationChanged = AValue then Exit;
-  FOnCurrentAnimationChanged := AValue;
+  if not SameMethods(TMethod(FOnCurrentAnimationChanged), TMethod(AValue)) then
+    FOnCurrentAnimationChanged := AValue;
 end;
 
 procedure TAnimationPlayer.SetAnimation(const AValue: string);
@@ -845,7 +880,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
