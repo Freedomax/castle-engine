@@ -40,7 +40,7 @@ type
   TAnimationTrack = class abstract
   public
   type
-    TAnimationKeyframe = record
+    TAnimationKeyframe = class
       Time: TFloatTime;
       Value: variant;
       LerpFunc: TLerpFunc;
@@ -49,9 +49,9 @@ type
     end;
 
     TAnimationKeyframeList = class(
-      {$IFDEF FPC}specialize{$ENDIF} TList<TAnimationKeyframe>)
+      {$IFDEF FPC}specialize{$ENDIF} TObjectList<TAnimationKeyframe>)
     protected
-      function SearchIndex(const AValue: TAnimationKeyframe): SizeInt;
+      function SearchIndex(const ATime: TFloatTime): SizeInt;
 
     end;
 
@@ -83,8 +83,8 @@ type
     { Add a keyframe. The time is calculated in seconds, with the time when the animation
       starts running as the zero second. LerpFunc represents the equation for modifying the
       original Lerp, if it's nil, it means that Lerp is not modified. Lerp always ranges from 0 to 1. }
-    procedure AddKeyframe(const ATime: TFloatTime; const AValue: variant;
-      const ALerpFunc: TLerpFunc = nil);
+    function AddKeyframe(const ATime: TFloatTime; const AValue: variant;
+      const ALerpFunc: TLerpFunc = nil): TAnimationKeyframe;
     { Add the value of the current object as a keyframe and return a value indicating success or failure. }
     function AddCurrentValueAsKeyframe(const ATime: TFloatTime;
       const ALerpFunc: TLerpFunc = nil): boolean; virtual;
@@ -130,8 +130,8 @@ type
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
   public
-    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector2;
-      const ALerpFunc: TLerpFunc = nil);
+    function AddKeyframe(const ATime: TFloatTime; const AValue: TVector2;
+      const ALerpFunc: TLerpFunc = nil): TAnimationTrack.TAnimationKeyframe;
   end;
 
   TAnimationVector3Track = class abstract(TAnimationTrack)
@@ -139,8 +139,8 @@ type
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
   public
-    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector3;
-      const ALerpFunc: TLerpFunc = nil);
+    function AddKeyframe(const ATime: TFloatTime; const AValue: TVector3;
+      const ALerpFunc: TLerpFunc = nil): TAnimationTrack.TAnimationKeyframe;
   end;
 
   TAnimationVector4Track = class abstract(TAnimationTrack)
@@ -148,8 +148,8 @@ type
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
   public
-    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector4;
-      const ALerpFunc: TLerpFunc = nil);
+    function AddKeyframe(const ATime: TFloatTime; const AValue: TVector4;
+      const ALerpFunc: TLerpFunc = nil): TAnimationTrack.TAnimationKeyframe;
   end;
 
   TAnimationTrackList = class(
@@ -315,15 +315,14 @@ begin
   Result := '';
 end;
 
-procedure TAnimationTrack.AddKeyframe(const ATime: TFloatTime;
-  const AValue: variant; const ALerpFunc: TLerpFunc);
-var
-  Keyframe: TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const ATime: TFloatTime;
+  const AValue: variant; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
-  Keyframe.Time := ATime;
-  Keyframe.Value := AValue;
-  Keyframe.LerpFunc := ALerpFunc;
-  FKeyframeList.Add(Keyframe);
+  Result := TAnimationKeyframe.Create;
+  Result.Time := ATime;
+  Result.Value := AValue;
+  Result.LerpFunc := ALerpFunc;
+  FKeyframeList.Add(Result);
 end;
 
 function TAnimationTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;
@@ -336,7 +335,6 @@ procedure TAnimationTrack.Evaluate(const ATime: TFloatTime);
 var
   AValue: variant;
   Index: SizeInt;
-  Keyframe: TAnimationKeyframe;
 begin
   if FKeyframeList.Count = 0 then
     Exit;
@@ -345,8 +343,7 @@ begin
     AValue := FKeyframeList.First.Value
   else
   begin
-    Keyframe.Time := ATime;
-    Index := FKeyframeList.SearchIndex(Keyframe) - 1;
+    Index := FKeyframeList.SearchIndex(ATime) - 1;
     if Between(Index, 0, FKeyframeList.Count - 2) then
       AValue := Interpolate(FKeyframeList[Index], FKeyframeList[Index + 1], ATime)
     else
@@ -523,7 +520,8 @@ begin
     Result := 2 * MaxTime - Result;
 end;
 
-function TAnimationTrack.Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
+function TAnimationTrack.Interpolate(
+  const Keyframe1, Keyframe2: TAnimationTrack.TAnimationKeyframe;
   const Time: TFloatTime): variant;
 var
   ALerp: single;
@@ -595,29 +593,30 @@ begin
   inherited Create;
   FMode := TAnimationTrackMode.tmContinuous;
   FKeyframeList := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
-    {$Ifdef fpc}@{$endif}CompareKeyframe));
+    {$Ifdef fpc}@{$endif}CompareKeyframe), True);
   FKeyframeList.OnNotify :=
     {$Ifdef fpc}@{$endif}KeyframesNotify;
 end;
 
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
-  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
+  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack.TAnimationKeyframe; AAction: TCollectionNotification);
 begin
   FKeyframeList.Sort;
   if Assigned(FOnChange) then FOnChange(Self);
 end;
 
 function TAnimationTrack.TAnimationKeyframeList.SearchIndex(
-  const AValue: TAnimationKeyframe): SizeInt;
+  const ATime: TFloatTime): SizeInt;
+
+  function Compare(const A, B: TFloatTime): integer;
+  begin
+    Result := Sign(A - B);
+  end;
+
 var
-  {$IFDEF fpc}
-  L, H: Integer;
-  mid, cmp: Integer;
-   {$ELSE}
-  Index: integer;
-  {$endif}
+  L, H: integer;
+  mid, cmp: integer;
 begin
-  {$IFDEF fpc}
   //from delphi
   if Count = 0 then
   begin
@@ -629,7 +628,7 @@ begin
   while L <= H do
   begin
     mid := L + (H - L) shr 1;
-    cmp := FComparer.Compare(FItems[mid], AValue);
+    cmp := Compare(Items[mid].Time, ATime);
     if cmp < 0 then
       L := mid + 1
     else if cmp > 0 then
@@ -638,16 +637,12 @@ begin
     begin
       repeat
         Dec(mid);
-      until (mid < 0) or (FComparer.Compare(FItems[mid], AValue) <> 0);
+      until (mid < 0) or (Compare(Items[mid].Time, ATime) <> 0);
       Result := mid + 1;
       Exit;
     end;
   end;
   Result := L;
-   {$ELSE}
-  BinarySearch(AValue, Index);
-  Result := Index;
-  {$endif}
 end;
 
 function TAnimationPropertyTrack.GetFriendlyObjectName: string;
@@ -740,10 +735,11 @@ begin
   Result := VariantFromVector2(V3);
 end;
 
-procedure TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc);
+function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
-  inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
+  Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
 
 function TAnimationVector3Track.CalcValue(const Value1, Value2: variant;
@@ -757,10 +753,11 @@ begin
   Result := VariantFromVector3(V3);
 end;
 
-procedure TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc);
+function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
-  inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
+  Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
 
 function TAnimationVector4Track.CalcValue(const Value1, Value2: variant;
@@ -774,10 +771,11 @@ begin
   Result := VariantFromVector4(V3);
 end;
 
-procedure TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc);
+function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
-  inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
+  Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
 
 procedure TAnimation.Stop(const ResetTime: boolean);
