@@ -48,17 +48,9 @@ begin
     Exit;
   end;
 
-  D := TAnimationPlayerDialog.Create(nil);
-  try
-    D.Load(AnimationPlayer);
-    if D.ShowModal = mrOk then
-    begin
+  D := TAnimationPlayerDialog.GetInstance;
+  D.Load(AnimationPlayer);
+  D.Show;
 
-      self.Modified('');
-    end;
-
-  finally
-    FreeAndNil(D);
-  end;
 end;
 

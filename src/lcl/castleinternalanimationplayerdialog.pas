@@ -41,6 +41,7 @@ type
 
   TAnimationPlayerView = class(TCastleView)
   private
+    FAnimationPlayerChanged: TNotifyEvent;
     FPlaying: boolean;
     FPlayingChanged: TNotifyEvent;
   type
@@ -63,12 +64,14 @@ type
     procedure KeyFrameListChanged(const Index: integer);
     function GetCurrentAnimation: TAnimation;
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
+    procedure SetAnimationPlayerChanged(const AValue: TNotifyEvent);
     procedure SetPlaying(const AValue: boolean);
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
 
   protected
     ButtonAddKeyFrame: TCastleButton;
     procedure ReloadTracks;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
     procedure Start; override;
     procedure Stop; override;
@@ -84,6 +87,8 @@ type
     property CurrentAnimation: TAnimation read GetCurrentAnimation;
     property Playing: boolean read FPlaying write SetPlaying;
     property PlayingChanged: TNotifyEvent read FPlayingChanged write SetPlayingChanged;
+    property AnimationPlayerChanged: TNotifyEvent
+      read FAnimationPlayerChanged write SetAnimationPlayerChanged;
   end;
 
   TAnimationPlayerDialog = class(TForm)
@@ -108,6 +113,7 @@ type
   private
     FView: TAnimationPlayerView;
 
+    procedure FViewAnimationPlayerChanged(Sender: TObject);
     procedure FViewPlayingChanged(Sender: TObject);
     function GetAnimationPlayer: TAnimationPlayer;
 
@@ -122,6 +128,8 @@ type
     property CurrentAnimation: TAnimation read GetCurrentAnimation;
   public
     constructor Create(AOwner: TComponent); override;
+    { Get glocal instance. }
+    class function GetInstance: TAnimationPlayerDialog;
     destructor Destroy; override;
     procedure Load(const AAnimationPlayer: TAnimationPlayer);
   end;
@@ -187,12 +195,27 @@ procedure TAnimationPlayerView.SetAnimationPlayer(const AValue: TAnimationPlayer
 begin
   if FAnimationPlayer <> AValue then
   begin
-    if Assigned(FAnimationPlayer) then FAnimationPlayer.OnAnimationComplete := nil;
+    if Assigned(FAnimationPlayer) then
+    begin
+      FAnimationPlayer.OnAnimationComplete := nil;
+      FAnimationPlayer.RemoveFreeNotification(Self);
+    end;
     FAnimationPlayer := AValue;
-    FAnimationPlayer.OnAnimationComplete :=
+    if Assigned(FAnimationPlayer) then
+    begin
+      FAnimationPlayer.OnAnimationComplete :=
  {$Ifdef fpc}@{$endif}FAnimationPlayerAnimationComplete;
+      FAnimationPlayer.FreeNotification(Self);
+    end;
+    if Assigned(FAnimationPlayerChanged) then FAnimationPlayerChanged(Self);
   end;
 
+end;
+
+procedure TAnimationPlayerView.SetAnimationPlayerChanged(const AValue: TNotifyEvent);
+begin
+  if not SameMethods(TMethod(FAnimationPlayerChanged), TMethod(AValue)) then
+    FAnimationPlayerChanged := AValue;
 end;
 
 procedure TAnimationPlayerView.SetPlaying(const AValue: boolean);
@@ -379,6 +402,14 @@ begin
   KeyFrameListChanged(-1);
 end;
 
+procedure TAnimationPlayerView.Notification(AComponent: TComponent;
+  Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and (AComponent = AnimationPlayer) then
+    AnimationPlayer := nil;
+end;
+
 { TAnimationPlayerView ---------------------------------------------------- }
 procedure TAnimationPlayerView.Start;
 var
@@ -485,6 +516,16 @@ begin
   InitView;
 end;
 
+var
+  AnimationPlayerDialog: TAnimationPlayerDialog;
+
+class function TAnimationPlayerDialog.GetInstance: TAnimationPlayerDialog;
+begin
+  if not Assigned(AnimationPlayerDialog) then
+    AnimationPlayerDialog := TAnimationPlayerDialog.Create(Application);
+  Result := AnimationPlayerDialog;
+end;
+
 destructor TAnimationPlayerDialog.Destroy;
 begin
   inherited;
@@ -493,7 +534,6 @@ end;
 procedure TAnimationPlayerDialog.Load(const AAnimationPlayer: TAnimationPlayer);
 begin
   FView.AnimationPlayer := AAnimationPlayer;
-  AnimationListChanged;
 end;
 
 procedure TAnimationPlayerDialog.FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -566,6 +606,22 @@ begin
   end;
 end;
 
+procedure TAnimationPlayerDialog.FViewAnimationPlayerChanged(Sender: TObject);
+var
+  AName: string;
+const
+  ACaption = 'Castle Animation Player';
+begin
+  if Assigned(AnimationPlayer) then AName := (AnimationPlayer.Owner as TComponent).Name
+  else
+    AName := '';
+  if Aname = '' then
+    Caption := ACaption
+  else
+    Caption := ACaption + ' - ' + AName;
+  AnimationListChanged;
+end;
+
 procedure TAnimationPlayerDialog.ButtonNewTrackClick(Sender: TObject);
 var
   pt: TPoint;
@@ -623,6 +679,7 @@ begin
   begin
     FView := TAnimationPlayerView.Create(CastleControl1);
     FView.PlayingChanged := {$Ifdef fpc}@{$endif}FViewPlayingChanged;
+    FView.AnimationPlayerChanged := {$Ifdef fpc}@{$endif}FViewAnimationPlayerChanged;
     CastleControl1.Container.View := FView;
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
   end;
@@ -657,11 +714,15 @@ begin
   try
     ComboBoxAnimation.Clear;
     ComboBoxAnimation.Items.Add('');
-    for AName in AnimationPlayer.AnimationList.Keys do
-      ComboBoxAnimation.Items.Add(AName);
+    if Assigned(AnimationPlayer) then
+    begin
+      for AName in AnimationPlayer.AnimationList.Keys do
+        ComboBoxAnimation.Items.Add(AName);
 
-    ComboBoxAnimation.ItemIndex :=
-      ComboBoxAnimation.Items.IndexOf(AnimationPlayer.Animation);
+      ComboBoxAnimation.ItemIndex :=
+        ComboBoxAnimation.Items.IndexOf(AnimationPlayer.Animation);
+    end;
+
   finally
     ComboBoxAnimation.Items.EndUpdate;
   end;
@@ -679,6 +740,7 @@ end;
 
 procedure TAnimationPlayerDialog.UpdateUIControls;
 begin
+  ComboBoxAnimation.Enabled := Assigned(AnimationPlayer);
   ButtonPlayStop.Enabled := Assigned(CurrentAnimation);
   ButtonNewAnimation.Enabled := Assigned(AnimationPlayer);
   ButtonRemoveAnimation.Enabled := Assigned(CurrentAnimation);
