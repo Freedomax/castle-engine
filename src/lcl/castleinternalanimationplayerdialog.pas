@@ -283,17 +283,43 @@ begin
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
+
+  function GetMousePosTime: TFloatTime;
+  var
+    ATrackView: TCastleUserInterface;
+    AMousePos: TVector2;
+  begin
+    ATrackView := FTrackViewList.First;
+    AMousePos := ATrackView.ContainerToLocalPosition(Container.MousePosition);
+    Result := AMousePos.X / (TTrackView.PixelsEachSceond * ATrackView.UIScale);
+  end;
+
 var
   Index: integer;
+  ATime: TFloatTime;
+  Track: TAnimationTrack;
+  v: variant;
 begin
   if not Assigned(CurrentAnimation) then Exit;
   if CurrentAnimation.TrackList.Count = 0 then Exit;
-
+   {
   Index := Random(CurrentAnimation.TrackList.Count);
   CurrentAnimation.TrackList.Items[Index].AddKeyframe(
     Random(100) / 25, Random(100) / 25);
+  }
+  ATime := GetMousePosTime;
+  for Track in CurrentAnimation.TrackList do
+  begin
+    if Track is TAnimationPropertyTrack then
+    begin
+      //TAnimationPropertyTrack(Track).Component;
+      v := GetPropValue(TAnimationPropertyTrack(Track).Component,
+        TAnimationPropertyTrack(Track).PropertyInfo);
+      Track.AddKeyframe(ATime, v);
+    end;
+  end;
 
-  KeyFrameListChanged(Index);
+  KeyFrameListChanged(-1);
 end;
 
 procedure TAnimationPlayerView.AScrollViewBeforeRenderOverChildren(Sender: TObject);

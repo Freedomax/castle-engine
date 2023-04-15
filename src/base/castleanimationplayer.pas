@@ -102,6 +102,9 @@ type
     constructor Create(AComponent: TPersistent; const AProperty: string); overload;
     function ObjectName: string; override;
     function PropName: string; override;
+    property Component: TPersistent read FComponent;
+    property PropertyName: string read FProperty;
+    property PropertyInfo: PPropInfo read FPropertyInfo;
   end;
 
   TAnimationVector2Track = class abstract(TAnimationTrack)
@@ -842,8 +845,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
