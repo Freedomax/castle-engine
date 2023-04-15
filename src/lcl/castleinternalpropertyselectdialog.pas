@@ -10,6 +10,12 @@ uses
   RttiUtils;
 
 type
+  TPropertySelectResult = record
+    SelectedObject: TPersistent;
+    SelectedProperty: string;
+    FriendlyObjectName: string;
+  end;
+
   TPropertySelectForm = class(TForm)
     ButtonPanel1: TButtonPanel;
     Splitter1: TSplitter;
@@ -19,12 +25,10 @@ type
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure TreeViewControlsSelectionChanged(Sender: TObject);
   private
-    FSelectedObject: TPersistent;
-    FSelectedProperty: string;
+    FSelectResult: TPropertySelectResult;
     procedure UpdateSelectedResult;
   public
-    property SelectedProperty: string read FSelectedProperty;
-    property SelectedObject: TPersistent read FSelectedObject;
+    property SelectResult: TPropertySelectResult read FSelectResult;
     procedure Load(const AControl: TCastleUserInterface);
   end;
 
@@ -33,7 +37,7 @@ var
 
 implementation
 
-uses TypInfo;
+uses TypInfo, CastleStringUtils;
 
 {$R *.lfm}
 
@@ -98,30 +102,60 @@ begin
 end;
 
 procedure TPropertySelectForm.UpdateSelectedResult;
+var
+  Node: TTreeNode;
 begin
   if Assigned(TreeViewControls.Selected) then
-    FSelectedObject := TPersistent(TreeViewControls.Selected.Data)
+    FSelectResult.SelectedObject := TPersistent(TreeViewControls.Selected.Data)
   else
-    FSelectedObject := nil;
+    FSelectResult.SelectedObject := nil;
 
   if Assigned(TreeViewProperties.Selected) then
   begin
     if Assigned(TreeViewProperties.Selected.Data) then
     begin
       //child object, update FSelectedObject
-      FSelectedObject := TPersistent(TreeViewProperties.Selected.Data);
-      FSelectedProperty := '';
+      FSelectResult.SelectedObject := TPersistent(TreeViewProperties.Selected.Data);
+      FSelectResult.SelectedProperty := '';
     end
     else
     begin
       //child object, update FSelectedObject
       if Assigned(TreeViewProperties.Selected.Parent) then
-        FSelectedObject := TPersistent(TreeViewProperties.Selected.Parent.Data);
-      FSelectedProperty := TreeViewProperties.Selected.Text;
+        FSelectResult.SelectedObject :=
+          TPersistent(TreeViewProperties.Selected.Parent.Data);
+      FSelectResult.SelectedProperty := TreeViewProperties.Selected.Text;
     end;
   end
   else
-    FSelectedProperty := '';
+    FSelectResult.SelectedProperty := '';
+
+  FSelectResult.FriendlyObjectName := '';
+  if Assigned(TreeViewControls.Selected) then
+  begin
+    Node := TreeViewProperties.Selected;
+    if Assigned(Node) then
+    begin
+      if not Assigned(Node.Data) then  Node := Node.Parent;
+      if Assigned(Node) then
+      begin
+        FSelectResult.FriendlyObjectName := Node.Text;
+        while True do
+        begin
+          Node := Node.Parent;
+          if not Assigned(Node) then Break;
+          FSelectResult.FriendlyObjectName :=
+            Node.Text + '.' + FSelectResult.FriendlyObjectName;
+        end;
+      end;
+    end;
+    if FSelectResult.FriendlyObjectName = '' then
+      FSelectResult.FriendlyObjectName := TreeViewControls.Selected.Text
+    else
+      FSelectResult.FriendlyObjectName :=
+        TreeViewControls.Selected.Text + '.' +
+        SuffixRemove('Persistent', FSelectResult.FriendlyObjectName, True);
+  end;
 
 end;
 

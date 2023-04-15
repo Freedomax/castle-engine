@@ -48,6 +48,7 @@ type
   const
     TrackHeight = 100;
     ItemFontSize = 15;
+    ItemFontSmallSize = 12;
     ItemSpacing = 2;
   var
     FAnimationPlayer: TAnimationPlayer;
@@ -188,7 +189,8 @@ begin
   begin
     if Assigned(FAnimationPlayer) then FAnimationPlayer.OnAnimationComplete := nil;
     FAnimationPlayer := AValue;
-    FAnimationPlayer.OnAnimationComplete := @FAnimationPlayerAnimationComplete;
+    FAnimationPlayer.OnAnimationComplete :=
+ {$Ifdef fpc}@{$endif}FAnimationPlayerAnimationComplete;
   end;
 
 end;
@@ -290,11 +292,11 @@ procedure TAnimationPlayerView.ReloadTracks;
 
   function ColorByIndex(const AIndex: integer): TCastleColor;
   begin
-    { Always darker than white. }
-    Result.X := ((AIndex + 1) * 30 mod 200) / 255;
-    Result.Y := ((AIndex + 2) * 30 mod 200) / 255;
-    Result.Z := ((AIndex + 3) * 30 mod 200) / 255;
-    Result.W := 1;
+    { Always darker than white. Pay attention to prevent float mod}
+    Result.X := (int64((AIndex + 1) * 30) mod 200) / 255;
+    Result.Y := (int64((AIndex + 2) * 30) mod 200) / 255;
+    Result.Z := (int64((AIndex + 3) * 30) mod 200) / 255;
+    Result.W := 0.5;
   end;
 
 var
@@ -338,9 +340,9 @@ begin
     ATrackHeadView.InsertFront(AHeadItemContainer);
 
     ALabelObjectName := TCastleLabel.Create(self);
-    ALabelObjectName.FontSize := ItemFontSize;
+    ALabelObjectName.FontSize := ItemFontSmallSize;
     ALabelObjectName.Color := CastleColors.White;
-    ALabelObjectName.Caption := ATrack.ObjectName;
+    ALabelObjectName.Caption := ATrack.FriendlyObjectName;
     AHeadItemContainer.InsertFront(ALabelObjectName);
 
     ALabelPropName := TCastleLabel.Create(self);
@@ -353,14 +355,14 @@ begin
     ACheckBox.Caption := 'Continuous';
     ACheckBox.Checked := ATrack.Mode = tmContinuous;
     ACheckBox.Tag := I;
-    ACheckBox.OnChange := @ACheckBoxChange;
+    ACheckBox.OnChange := {$Ifdef fpc}@{$endif}ACheckBoxChange;
     ACheckBox.TextColor := CastleColors.White;
     ACheckBox.FontSize := ItemFontSize;
     AHeadItemContainer.InsertFront(ACheckBox);
 
     AButtonDelete := TCastleButton.Create(Self);
     AButtonDelete.Caption := 'Remove';
-    AButtonDelete.OnClick := @AButtonDeleteClick;
+    AButtonDelete.OnClick := {$Ifdef fpc}@{$endif}AButtonDeleteClick;
     AButtonDelete.FontSize := ItemFontSize;
     AButtonDelete.Tag := I;
     AHeadItemContainer.InsertFront(AButtonDelete);
@@ -526,10 +528,12 @@ begin
 
     if Form.ShowModal = mrOk then
     begin
-      if Assigned(Form.SelectedObject) and (Form.SelectedProperty <> '') then
+      if Assigned(Form.SelectResult.SelectedObject) and
+        (Form.SelectResult.SelectedProperty <> '') then
       begin
-        Track := TAnimationPropertyTrack.Create(Form.SelectedObject,
-          Form.SelectedProperty);
+        Track := TAnimationPropertyTrack.Create(Form.SelectResult.SelectedObject,
+          Form.SelectResult.SelectedProperty);
+        Track.FriendlyObjectName := Form.SelectResult.FriendlyObjectName;
         FView.AddTrack(Track);
       end
       else
@@ -618,7 +622,7 @@ begin
   if not Assigned(FView) then
   begin
     FView := TAnimationPlayerView.Create(CastleControl1);
-    FView.PlayingChanged := @FViewPlayingChanged;
+    FView.PlayingChanged := {$Ifdef fpc}@{$endif}FViewPlayingChanged;
     CastleControl1.Container.View := FView;
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
   end;

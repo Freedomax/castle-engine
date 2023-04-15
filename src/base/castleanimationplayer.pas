@@ -43,6 +43,7 @@ type
     end;
 
   strict private
+
     FOnChange: TNotifyEvent;
     FKeyframeList: TAnimationKeyframeList;
     FMode: TAnimationTrackMode;
@@ -52,9 +53,12 @@ type
       const Time: TFloatTime): variant;
     procedure SetOnChange(const AValue: TNotifyEvent);
   private
+    procedure SetFriendlyObjectName(const AValue: string);
     { This notification is used by @link(TAnimation), please do not use it. }
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
   strict protected
+    FFriendlyObjectName: string;
+    function GetFriendlyObjectName: string; virtual;
     procedure SetValue(const AValue: variant); virtual; abstract;
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       virtual;
@@ -72,6 +76,10 @@ type
     procedure Evaluate(const ATime: TFloatTime);
     { The duration of this animation track is determined by the sorted last frame. }
     function Duration: TFloatTime;
+    { The names of some sub-controls are empty, so you can manually set the names
+      with hierarchical structures here. For example, Box1.XX. }
+    property FriendlyObjectName: string read GetFriendlyObjectName
+      write SetFriendlyObjectName;
     { Interpolation mode, there are two types: discrete or continuous.
       If it is continuous, you can define an interpolation calculation equation
       for some keyframes by yourself (see @link(AddKeyframe)). If it is in the discrete mode,
@@ -86,6 +94,7 @@ type
     FProperty: string;
     FPropertyInfo: PPropInfo;
   strict protected
+    function GetFriendlyObjectName: string; override;
     procedure SetValue(const AValue: variant); override;
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
@@ -504,6 +513,17 @@ begin
     FOnChange := AValue;
 end;
 
+function TAnimationTrack.GetFriendlyObjectName: string;
+begin
+  Result := FFriendlyObjectName;
+  if Result = '' then Result := ObjectName;
+end;
+
+procedure TAnimationTrack.SetFriendlyObjectName(const AValue: string);
+begin
+  if FFriendlyObjectName <> AValue then FFriendlyObjectName := AValue;
+end;
+
 function TAnimationTrack.CalcValue(const Value1, Value2: variant;
   const ALerp: single): variant;
 var
@@ -595,6 +615,12 @@ begin
   BinarySearch(AValue, Index);
   Result := Index;
   {$endif}
+end;
+
+function TAnimationPropertyTrack.GetFriendlyObjectName: string;
+begin
+  Result := inherited GetFriendlyObjectName;
+  if Result = '' then Result := ObjectName;
 end;
 
 procedure TAnimationPropertyTrack.SetValue(const AValue: variant);
@@ -803,7 +829,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
