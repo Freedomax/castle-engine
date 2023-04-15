@@ -181,17 +181,17 @@ begin
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerSphere1.Parent as TCastleSphere).TranslationPersistent, 'X');
   Track.Mode := tmContinuous;
+  Track.AddKeyframe(1, 2.0);
   Track.AddKeyframe(0, -2.0, UniformCircularFunc_OneMiuCos);
   Track.AddKeyframe(0.5, 0.0, UniformCircularFunc_Sin);
-  Track.AddKeyframe(1, 2.0);
   Animation.AddTrack(Track);
 
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerSphere1.Parent as TCastleSphere).TranslationPersistent, 'Z');
   Track.Mode := tmContinuous;
+  Track.AddKeyframe(1, -2.0);
   Track.AddKeyframe(0, -2.0, UniformCircularFunc_Sin);
   Track.AddKeyframe(0.5, 0.0, UniformCircularFunc_OneMiuCos);
-  Track.AddKeyframe(1, -2.0);
   Animation.AddTrack(Track);
 
   Animation.PlayStyle := apsPingPong;
