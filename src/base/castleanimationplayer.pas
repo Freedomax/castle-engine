@@ -190,13 +190,15 @@ type
   public
   type
     TAnimationList = {$IFDEF FPC}specialize{$ENDIF} TObjectDictionary<string, TAnimation>;
-  private
+  strict private
     FAnimation: string;
     FCurrentAnimation: TAnimation;
     FAnimationList: TAnimationList;
     FOnAnimationComplete: TNotifyEvent;
+    FOnCurrentAnimationChanged: TNotifyEvent;
     FPlaying: boolean;
     procedure SetOnAnimationComplete(const AValue: TNotifyEvent);
+    procedure SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
     procedure UpdateAnimation;
     procedure SetAnimation(const AValue: string);
     procedure SetPlaying(const AValue: boolean);
@@ -220,10 +222,12 @@ type
     property AnimationList: TAnimationList read FAnimationList;
     property CurrentAnimation: TAnimation read FCurrentAnimation;
   published
-    property Animation: string read FAnimation write SetAnimation;
     property Playing: boolean read FPlaying write SetPlaying default False;
+    property Animation: string read FAnimation write SetAnimation;
     property OnAnimationComplete: TNotifyEvent
       read FOnAnimationComplete write SetOnAnimationComplete;
+    property OnCurrentAnimationChanged: TNotifyEvent
+      read FOnCurrentAnimationChanged write SetOnCurrentAnimationChanged;
   end;
 
 function FloatMod(a, b: TFloatTime): TFloatTime;
@@ -769,6 +773,12 @@ begin
     FOnAnimationComplete := AValue;
 end;
 
+procedure TAnimationPlayer.SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
+begin
+  if FOnCurrentAnimationChanged = AValue then Exit;
+  FOnCurrentAnimationChanged := AValue;
+end;
+
 procedure TAnimationPlayer.SetAnimation(const AValue: string);
 begin
   if FAnimation <> AValue then
@@ -782,6 +792,8 @@ begin
       WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
     end;
     UpdateAnimation;
+
+    if Assigned(FOnCurrentAnimationChanged) then FOnCurrentAnimationChanged(Self);
   end;
 
 end;

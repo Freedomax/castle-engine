@@ -24,8 +24,10 @@ type
     ButtonPanel: TButtonPanel;
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure TreeViewControlsSelectionChanged(Sender: TObject);
+    procedure TreeViewPropertiesDblClick(Sender: TObject);
   private
     FSelectResult: TPropertySelectResult;
+    FDblClickCompleted: boolean;
     procedure UpdateSelectedResult;
   public
     property SelectResult: TPropertySelectResult read FSelectResult;
@@ -101,6 +103,17 @@ begin
   end;
 end;
 
+procedure TPropertySelectForm.TreeViewPropertiesDblClick(Sender: TObject);
+begin
+  UpdateSelectedResult;
+  if Assigned(FSelectResult.SelectedObject) and
+    (FSelectResult.SelectedProperty <> '') then
+  begin
+    FDblClickCompleted := True;
+    ModalResult := mrOk;
+  end;
+end;
+
 procedure TPropertySelectForm.UpdateSelectedResult;
 var
   Node: TTreeNode;
@@ -161,7 +174,8 @@ end;
 
 procedure TPropertySelectForm.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-  UpdateSelectedResult;
+  if not FDblClickCompleted then
+    UpdateSelectedResult;
 end;
 
 procedure TPropertySelectForm.Load(const AControl: TCastleUserInterface);

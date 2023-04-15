@@ -6,7 +6,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
   Caption = 'AnimationPlayer'
   ClientHeight = 428
   ClientWidth = 803
-  OnCloseQuery = FormCloseQuery
+  FormStyle = fsStayOnTop
   Position = poMainFormCenter
   ShowInTaskBar = stAlways
   object CastleControl1: TCastleControl
