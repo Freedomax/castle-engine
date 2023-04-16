@@ -257,8 +257,6 @@ type
     procedure EnsureAnimationNameUnique(const AName: string);
     procedure AddAnimationNoCheck(const AName: string; const AAnimation: TAnimation);
     procedure InternalAnimationComplete(Sender: TObject);
-    procedure CustomSerialization(const SerializationProcess: TSerializationProcess);
-      override;
   protected
 
   public
@@ -274,11 +272,15 @@ type
     procedure Start(const ResetTime: boolean = True);
     procedure Stop(const ResetTime: boolean = True);
 
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess);
+      override;
+
+    { Not published, otherwise it will deserialize earlier than @link(CustomSerialization).}
+    property Animation: string read FAnimation write SetAnimation;
     property AnimationList: TAnimationList read FAnimationList;
     property CurrentAnimation: TAnimation read FCurrentAnimation;
   published
     property Playing: boolean read FPlaying write SetPlaying default False;
-    property Animation: string read FAnimation write SetAnimation;
     property OnAnimationComplete: TNotifyEvent
       read FOnAnimationComplete write SetOnAnimationComplete;
     property OnCurrentAnimationChanged: TNotifyEvent
@@ -873,8 +875,7 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -891,8 +892,7 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -909,8 +909,7 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -1022,8 +1021,47 @@ end;
 
 procedure TAnimationPlayer.CustomSerialization(
   const SerializationProcess: TSerializationProcess);
+
+  function KeyProp(const SObject, SPropName: string): string;
+  begin
+    Result := SObject + '-' + SPropName;
+  end;
+
+  function KeyItem(const SObject: string; const AIndex: integer): string;
+  begin
+    Result := SObject + '_' + AIndex.ToString;
+  end;
+
+  function KeyCount(const SObject: string): string;
+  begin
+    Result := SObject + '-_Count';
+  end;
+
+var
+  ACount, I: integer;
+  AniList:{$Ifdef fpc}specialize{$endif}TList<TAnimation>;
+  s: string;
+  bReading: boolean;
+  AniKeys:{$Ifdef fpc}specialize{$endif}TArray<string>;
+const
+  SAni = 'Animation';
 begin
   inherited CustomSerialization(SerializationProcess);
+  bReading := csLoading in ComponentState;
+
+  ACount := AnimationList.Keys.Count;
+  SerializationProcess.ReadWriteInteger(KeyCount(SAni), ACount, ACount > 0);
+  if ACount = 0 then Exit;
+
+  if not bReading then  AniKeys := AnimationList.Keys.ToArray;
+  for  I := 0 to ACount - 1 do
+  begin
+    if bReading then s := ''
+    else
+      s := AniKeys[i];
+    SerializationProcess.ReadWriteString(KeyItem(SAni, I), s, s <> '');
+    if bReading then  NewAnimation(S);
+  end;
 end;
 
 constructor TAnimationPlayer.Create(AOwner: TComponent);

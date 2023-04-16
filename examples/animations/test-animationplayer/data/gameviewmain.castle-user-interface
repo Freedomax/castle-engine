@@ -130,7 +130,12 @@
                 "$$ClassName" : "TCastleAnimationPlayerTransform",
                 "AnimationPlayer" : {
                   "$$ClassName" : "TAnimationPlayer",
-                  "Playing" : true
+                  "Animation" : "test",
+                  "Playing" : true,
+                  "Animation-_Count" : 3,
+                  "Animation_0" : "test",
+                  "Animation_1" : "223",
+                  "Animation_2" : "2"
                 },
                 "Name" : "AnimationPlayerBox1"
               }

@@ -51,6 +51,6 @@ begin
   D := TAnimationPlayerDialog.GetInstance;
   D.Load(AnimationPlayer);
   D.Show;
-
+  Modified;
 end;
 
