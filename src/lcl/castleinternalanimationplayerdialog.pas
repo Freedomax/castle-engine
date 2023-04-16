@@ -257,10 +257,6 @@ begin
   inherited Render;
 
   AIndex := GetMousePosFrame;
-  if Between(AIndex, 0, FTrack.KeyframeList.Count - 1) then
-  begin
-    ;
-  end;
   R := RenderRect;
   for I := 0 to FTrack.KeyframeList.Count - 1 do
   begin
@@ -680,24 +676,15 @@ end;
 
 procedure TAnimationPlayerView.Update(const SecondsPassed: single;
   var HandleInput: boolean);
-begin
-  inherited Update(SecondsPassed, HandleInput);
-
-end;
-
-function TAnimationPlayerView.Press(const Event: TInputPressRelease): boolean;
-begin
-  Result := inherited Press(Event);
-end;
-
-function TAnimationPlayerView.Motion(const Event: TInputMotion): boolean;
 var
   ATrackView: TTrackView;
   V: TVector2;
+  AIndex: integer;
 begin
-  Result := inherited Motion(Event);
+  inherited Update(SecondsPassed, HandleInput);
+
   ButtonAddKeyFrame.Translation :=
-    Vector2(ContainerToLocalPosition(Event.Position).X -
+    Vector2(ContainerToLocalPosition(Container.MousePosition).X -
     ButtonAddKeyFrame.EffectiveWidth / 2, 0);
 
   ATrackView := FTrackViewList.FocusedTrackView;
@@ -706,12 +693,27 @@ begin
     // V := ATrackView.LocalToContainerPosition(TVector2.Zero, True);
     // V := self.ContainerToLocalPosition(V);
     // TrackDesignerUI.Translation := V;
-    TrackDesignerUI.Exists := True;
     if TrackDesignerUI.Parent <> ATrackView then
       ATrackView.InsertFront(TrackDesignerUI);
+    AIndex := ATrackView.GetMousePosFrame;
+    TrackDesignerUI.Exists :=
+      Between(AIndex, 0, ATrackView.Track.KeyframeList.Count - 1);
+    if TrackDesignerUI.Exists then  TrackDesignerUI.Translation :=
+        Vector2(ATrackView.Track.KeyframeList[AIndex].Time *
+        TTrackView.PixelsEachSceond, 0);
   end
   else
     TrackDesignerUI.Exists := False;
+end;
+
+function TAnimationPlayerView.Press(const Event: TInputPressRelease): boolean;
+begin
+  Result := inherited Press(Event);
+end;
+
+function TAnimationPlayerView.Motion(const Event: TInputMotion): boolean;
+begin
+  Result := inherited Motion(Event);
 end;
 
 procedure TAnimationPlayerView.AddTrack(const ATrack: TAnimationTrack);
