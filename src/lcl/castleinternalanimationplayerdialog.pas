@@ -33,8 +33,8 @@ type
     FTrack: TAnimationTrack;
     procedure SetTrack(const AValue: TAnimationTrack);
   public
-    function GetMousePosTime(const APixelsEachSceond: single): TFloatTime;
-    function GetMousePosFrame(const APixelsEachSceond: single): integer;
+    function GetMousePosTime(const APixelsPerSceond: single): TFloatTime;
+    function GetMousePosFrame(const APixelsPerSceond: single): integer;
     function UnderMouse: boolean;
     property Track: TAnimationTrack read FTrack write SetTrack;
   end;
@@ -67,7 +67,7 @@ type
   private
     FAnimationPlayerChanged: TNotifyEvent;
     FCurrentAnimationChanged: TNotifyEvent;
-    FPixelsEachSceond: single;
+    FPixelsPerSceond: single;
     FPlaying: boolean;
     FPlayingChanged: TNotifyEvent;
   const
@@ -99,7 +99,7 @@ type
     procedure SetAnimationPlayerChanged(const AValue: TNotifyEvent);
     procedure SetCurrentAnimationChanged(const AValue: TNotifyEvent);
     procedure SetCurrentTime(const AValue: TFloatTime);
-    procedure SetPixelsEachSceond(const AValue: single);
+    procedure SetPixelsPerSceond(const AValue: single);
     procedure SetPlaying(const AValue: boolean);
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
 
@@ -127,7 +127,7 @@ type
       read FAnimationPlayer write SetAnimationPlayer;
     property CurrentAnimation: TAnimation read GetCurrentAnimation;
     property Playing: boolean read FPlaying write SetPlaying;
-    property PixelsEachSceond: single read FPixelsEachSceond write SetPixelsEachSceond;
+    property PixelsPerSceond: single read FPixelsPerSceond write SetPixelsPerSceond;
     property PlayingChanged: TNotifyEvent read FPlayingChanged write SetPlayingChanged;
     property AnimationPlayerChanged: TNotifyEvent
       read FAnimationPlayerChanged write SetAnimationPlayerChanged;
@@ -196,18 +196,18 @@ begin
   end;
 end;
 
-function TTrackView.GetMousePosTime(const APixelsEachSceond: single): TFloatTime;
+function TTrackView.GetMousePosTime(const APixelsPerSceond: single): TFloatTime;
 var
   AMousePos: TVector2;
 begin
   AMousePos := ContainerToLocalPosition(Container.MousePosition);
-  Result := AMousePos.X / APixelsEachSceond;
+  Result := AMousePos.X / APixelsPerSceond;
   if Result < 0 then Result := 0;
 end;
 
-function TTrackView.GetMousePosFrame(const APixelsEachSceond: single): integer;
+function TTrackView.GetMousePosFrame(const APixelsPerSceond: single): integer;
 begin
-  Result := FTrack.KeyframeList.TimeToKeyFrame(GetMousePosTime(APixelsEachSceond));
+  Result := FTrack.KeyframeList.TimeToKeyFrame(GetMousePosTime(APixelsPerSceond));
 end;
 
 function TTrackView.UnderMouse: boolean;
@@ -310,10 +310,10 @@ begin
   end;
 end;
 
-procedure TAnimationPlayerView.SetPixelsEachSceond(const AValue: single);
+procedure TAnimationPlayerView.SetPixelsPerSceond(const AValue: single);
 begin
-  if FPixelsEachSceond = AValue then Exit;
-  FPixelsEachSceond := AValue;
+  if FPixelsPerSceond = AValue then Exit;
+  FPixelsPerSceond := AValue;
 end;
 
 procedure TAnimationPlayerView.SetPlaying(const AValue: boolean);
@@ -344,7 +344,7 @@ procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
     ATrackView: TTrackView;
   begin
     ATrackView := FTrackViewList.First;
-    Result := ATrackView.GetMousePosTime(PixelsEachSceond);
+    Result := ATrackView.GetMousePosTime(PixelsPerSceond);
   end;
 
 var
@@ -416,7 +416,7 @@ var
 
     RTrack := FTrackViewList.First.RenderRect;
     R := RenderRect;
-    RenderLine(RTrack.Left + PixelsEachSceond * CurrentAnimation.ActualCurrentTime *
+    RenderLine(RTrack.Left + PixelsPerSceond * CurrentAnimation.ActualCurrentTime *
       UIScale, CastleColors.Green, 2);
   end;
 
@@ -441,7 +441,7 @@ var
     Y2Long := R.Bottom + 2 * HeaderView.UIScale;
     Y2Middle := (R.Top + R.Bottom) / 2;
     DeltaTime := 0.1;
-    DeltaW := DeltaTime * PixelsEachSceond * HeaderView.UIScale * Scale;
+    DeltaW := DeltaTime * PixelsPerSceond * HeaderView.UIScale * Scale;
     for I := 0 to Trunc(R.Width / DeltaW) - 1 do
     begin
       X := R.Left + (TrackHeadViewWidth + ItemSpacing) * UIScale + I * DeltaW;
@@ -479,7 +479,7 @@ var
 
   function TimeRenderPosition(const ATime: TFloatTime): single;
   begin
-    Result := R.Left + ATime * PixelsEachSceond * UIScale;
+    Result := R.Left + ATime * PixelsPerSceond * UIScale;
   end;
 
   procedure RenderLine(const X: single; const LineColor: TCastleColor;
@@ -513,7 +513,7 @@ var
   AIndex, I: integer;
 begin
   ATrackView := Sender as TTrackView;
-  AIndex := ATrackView.GetMousePosFrame(PixelsEachSceond);
+  AIndex := ATrackView.GetMousePosFrame(PixelsPerSceond);
   R := ATrackView.RenderRect;
   for I := 0 to ATrackView.Track.KeyframeList.Count - 1 do
   begin
@@ -545,7 +545,7 @@ procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
   procedure FixSize(const AIndex: integer);
   begin
     FTrackViewList.Items[AIndex].Width :=
-      PixelsEachSceond * CurrentAnimation.TrackList.Items[AIndex].Duration;
+      PixelsPerSceond * CurrentAnimation.TrackList.Items[AIndex].Duration;
   end;
 
 var
@@ -699,14 +699,14 @@ var
   Pos: TVector2;
 begin
   Pos := ContainerToLocalPosition(AMousePos);
-  Result := (Pos.X - (TrackHeadViewWidth + ItemSpacing)) / PixelsEachSceond;
+  Result := (Pos.X - (TrackHeadViewWidth + ItemSpacing)) / PixelsPerSceond;
 
 end;
 
 constructor TAnimationPlayerView.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FPixelsEachSceond := 200;
+  FPixelsPerSceond := 200;
 end;
 
 { TAnimationPlayerView ---------------------------------------------------- }
@@ -791,14 +791,14 @@ begin
   ATrackView := FTrackViewList.FocusedTrackView;
   if Assigned(ATrackView) then
   begin
-    AIndex := ATrackView.GetMousePosFrame(PixelsEachSceond);
+    AIndex := ATrackView.GetMousePosFrame(PixelsPerSceond);
     TrackDesignerUI.Exists :=
       Between(AIndex, 0, ATrackView.Track.KeyframeList.Count - 1);
     if TrackDesignerUI.Exists then
     begin
       V := ATrackView.LocalToContainerPosition(
         Vector2(ATrackView.Track.KeyframeList[AIndex].Time *
-        PixelsEachSceond, 0), True);
+        PixelsPerSceond, 0), True);
       V := self.ContainerToLocalPosition(V);
       TrackDesignerUI.Translation := V;
     end;

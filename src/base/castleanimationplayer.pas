@@ -256,8 +256,11 @@ type
     procedure SetPlaying(const AValue: boolean);
     procedure EnsureAnimationNameUnique(const AName: string);
     procedure AddAnimationNoCheck(const AName: string; const AAnimation: TAnimation);
-
     procedure InternalAnimationComplete(Sender: TObject);
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess);
+      override;
+  protected
+
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -1017,6 +1020,12 @@ begin
       FOnAnimationComplete(Self);
 end;
 
+procedure TAnimationPlayer.CustomSerialization(
+  const SerializationProcess: TSerializationProcess);
+begin
+  inherited CustomSerialization(SerializationProcess);
+end;
+
 constructor TAnimationPlayer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -1029,7 +1038,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
