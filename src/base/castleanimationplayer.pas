@@ -219,6 +219,7 @@ type
     procedure Stop(const ResetTime: boolean = True);
     procedure ForceUpdate; overload;
     procedure ForceUpdate(const ATime: TFloatTime); overload;
+    function IsEmpty: boolean;
 
     { FCurrentTime in PingPong mode needs to be corrected. }
     function GetActualCurrentTime: TFloatTime;
@@ -484,12 +485,15 @@ var
   bCompleted: boolean;
 begin
   if not FPlaying then  Exit;
-  if MaxTime <= 0 then Exit;
-  //if CastleDesignMode then Exit;
-
-  FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
-  UpdateByCurrentTime(bCompleted);
-
+  if IsEmpty then
+  begin
+    bCompleted := not Loop;
+  end
+  else
+  begin
+    FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
+    UpdateByCurrentTime(bCompleted);
+  end;
   { Execute finally to ensure the last frame is completed. }
   if bCompleted then
   begin
@@ -913,7 +917,7 @@ begin
   if ResetTime then
   begin
     FCurrentTime := 0;
-    Update(0.0);
+    ForceUpdate;
   end;
   if FPlaying then FPlaying := False;
 end;
@@ -928,6 +932,11 @@ end;
 procedure TAnimation.ForceUpdate(const ATime: TFloatTime);
 begin
   UpdateByTime(ATime);
+end;
+
+function TAnimation.IsEmpty: boolean;
+begin
+  Result := (FTrackList.Count = 0) or (MaxTime <= 0);
 end;
 
 function TAnimation.GetActualCurrentTime: TFloatTime;
@@ -1020,8 +1029,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
