@@ -87,6 +87,8 @@ type
     procedure AButtonDeleteClick(Sender: TObject);
     procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);
+    procedure AScrollViewHeaderPress(const Sender: TCastleUserInterface;
+      const Event: TInputPressRelease; var Handled: boolean);
     procedure AScrollViewHeaderRender(const Sender: TCastleUserInterface);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
@@ -107,6 +109,7 @@ type
     TrackDesignerUI: TTrackDesignerUI;
     procedure ReloadTracks;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    function MousePosToTime(const AMousePos: TVector2): TFloatTime;
 
     property CurrentTime: TFloatTime read GetCurrentTime write SetCurrentTime;
   public
@@ -197,6 +200,7 @@ var
 begin
   AMousePos := ContainerToLocalPosition(Container.MousePosition);
   Result := AMousePos.X / PixelsEachSceond;
+  if Result < 0.0 then Result := 0.0;
 end;
 
 function TTrackView.GetMousePosFrame: integer;
@@ -349,7 +353,10 @@ end;
 
 procedure TAnimationPlayerView.SetCurrentTime(const AValue: TFloatTime);
 begin
-  if Assigned(CurrentAnimation) then CurrentAnimation.ActualCurrentTime := AValue;
+  if Assigned(CurrentAnimation) then
+  begin
+    CurrentAnimation.ActualCurrentTime := AValue;
+  end;
 end;
 
 procedure TAnimationPlayerView.SetPlaying(const AValue: boolean);
@@ -410,6 +417,20 @@ begin
   KeyFrameListChanged(-1);
 end;
 
+procedure TAnimationPlayerView.AScrollViewHeaderPress(
+  const Sender: TCastleUserInterface;
+  const Event: TInputPressRelease; var Handled: boolean);
+begin
+  if Event.IsMouseButton(TCastleMouseButton.buttonLeft) then
+  begin
+    if Assigned(CurrentAnimation) then
+    begin
+      CurrentTime := MousePosToTime(Event.Position);
+      CurrentAnimation.ForceUpdate;
+    end;
+  end;
+end;
+
 procedure TAnimationPlayerView.AScrollViewHeaderRender(
   const Sender: TCastleUserInterface);
 var
@@ -466,8 +487,7 @@ var
     DeltaW := DeltaTime * TTrackView.PixelsEachSceond * HeaderView.UIScale * Scale;
     for I := 0 to Trunc(R.Width / DeltaW) - 1 do
     begin
-      X := R.Left + (TrackHeadViewWidth + ItemSpacing) * Self.UIScale + I *
-        DeltaW;
+      X := R.Left + (TrackHeadViewWidth + ItemSpacing) * UIScale + I * DeltaW;
       if (I mod 10) = 0 then
       begin
         Str := FormatFloat('0.#', I * DeltaTime);
@@ -665,6 +685,16 @@ begin
     AnimationPlayer := nil;
 end;
 
+function TAnimationPlayerView.MousePosToTime(const AMousePos: TVector2): TFloatTime;
+var
+  Pos: TVector2;
+begin
+  Pos := ContainerToLocalPosition(AMousePos);
+  Result := (Pos.X - (TrackHeadViewWidth + ItemSpacing)) /
+    TTrackView.PixelsEachSceond;
+
+end;
+
 { TAnimationPlayerView ---------------------------------------------------- }
 procedure TAnimationPlayerView.Start;
 var
@@ -693,6 +723,7 @@ begin
   AScrollViewHeader.Height := TrackListHeadHeight;
   AScrollViewHeader.WidthFraction := 1.0;
   AScrollViewHeader.OnRender := {$Ifdef fpc}@{$endif}AScrollViewHeaderRender;
+  AScrollViewHeader.OnPress := {$Ifdef fpc}@{$endif}AScrollViewHeaderPress;
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
@@ -741,7 +772,7 @@ begin
 
   ButtonAddKeyFrame.Translation :=
     Vector2(ContainerToLocalPosition(Container.MousePosition).X -
-    ButtonAddKeyFrame.EffectiveWidth / 2, 0);
+    ButtonAddKeyFrame.EffectiveWidth / 2, -TrackListHeadHeight);
 
   ATrackView := FTrackViewList.FocusedTrackView;
   if Assigned(ATrackView) then

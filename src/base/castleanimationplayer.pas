@@ -205,6 +205,8 @@ type
     function GetPingPongEvalTime: TFloatTime;
   protected
     procedure Update(const DeltaTime: TFloatTime);
+    procedure UpdateByCurrentTime(out bCompleted: boolean);
+    procedure UpdateByTime(const ATime: TFloatTime);
 
     property OnComplete: TNotifyEvent read FOnComplete write SetOnComplete;
   public
@@ -215,6 +217,8 @@ type
     procedure ClearTracks;
     procedure Start(const ResetTime: boolean = True);
     procedure Stop(const ResetTime: boolean = True);
+    procedure ForceUpdate; overload;
+    procedure ForceUpdate(const ATime: TFloatTime); overload;
 
     { FCurrentTime in PingPong mode needs to be corrected. }
     function GetActualCurrentTime: TFloatTime;
@@ -410,7 +414,12 @@ end;
 procedure TAnimation.SetActualCurrentTime(const AValue: TFloatTime);
 begin
   if ActualCurrentTime <> AValue then
-    FCurrentTime := AValue;
+  begin
+    if AValue >= 0 then
+      FCurrentTime := AValue
+    else
+      FCurrentTime := 0;
+  end;
 end;
 
 procedure TAnimation.SetPlayStyle(const AValue: TAnimationPlayStyle);
@@ -472,19 +481,31 @@ end;
 
 procedure TAnimation.Update(const DeltaTime: TFloatTime);
 var
-  I: integer;
-  Track: TAnimationTrack;
-  EvalTime: TFloatTime;
   bCompleted: boolean;
 begin
   if not FPlaying then  Exit;
   if MaxTime <= 0 then Exit;
   //if CastleDesignMode then Exit;
 
-  bCompleted := False;
   FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
-  EvalTime := 0;
+  UpdateByCurrentTime(bCompleted);
 
+  { Execute finally to ensure the last frame is completed. }
+  if bCompleted then
+  begin
+    Stop(False);
+    if Assigned(FOnComplete) then FOnComplete(Self);
+  end;
+end;
+
+procedure TAnimation.UpdateByCurrentTime(out bCompleted: boolean);
+var
+  EvalTime: TFloatTime;
+  I: integer;
+  Track: TAnimationTrack;
+begin
+  EvalTime := 0;
+  bCompleted := False;
   //delphi not support: FCurrentTime := FCurrentTime mod MaxTime
   case FPlayStyle of
     apsLoop:
@@ -513,12 +534,37 @@ begin
     Track := TAnimationTrack(FTrackList[I]);
     Track.Evaluate(EvalTime);
   end;
+end;
 
-  { Execute finally to ensure the last frame is completed. }
-  if bCompleted then
+procedure TAnimation.UpdateByTime(const ATime: TFloatTime);
+var
+  EvalTime: TFloatTime;
+  I: integer;
+  Track: TAnimationTrack;
+begin
+  EvalTime := 0;
+  //delphi not support: FCurrentTime := FCurrentTime mod MaxTime
+  case FPlayStyle of
+    apsLoop:
+    begin
+      EvalTime := FloatMod(ATime, MaxTime);
+    end;
+    apsPingPong, apsPingPongOnce:
+    begin
+      EvalTime := FloatMod(ATime, 2 * MaxTime);
+      if EvalTime >= MaxTime then
+        EvalTime := 2 * MaxTime - EvalTime;
+    end;
+    apsOnce:
+    begin
+      EvalTime := ATime;
+    end;
+  end;
+
+  for I := 0 to FTrackList.Count - 1 do
   begin
-    Stop(False);
-    if Assigned(FOnComplete) then FOnComplete(Self);
+    Track := TAnimationTrack(FTrackList[I]);
+    Track.Evaluate(EvalTime);
   end;
 end;
 
@@ -715,7 +761,8 @@ begin
       repeat
         Dec(mid);
       until (mid < 0) or (Compare(Items[mid].Time, ATime) <> 0);
-      Result := mid + 1;
+      //Founded, not "Result := mid + 1;", increase by 1
+      Result := mid + 2;
       Exit;
     end;
   end;
@@ -819,7 +866,8 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -836,7 +884,8 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -853,7 +902,8 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -866,6 +916,18 @@ begin
     Update(0.0);
   end;
   if FPlaying then FPlaying := False;
+end;
+
+procedure TAnimation.ForceUpdate;
+var
+  b: boolean;
+begin
+  UpdateByCurrentTime(b);
+end;
+
+procedure TAnimation.ForceUpdate(const ATime: TFloatTime);
+begin
+  UpdateByTime(ATime);
 end;
 
 function TAnimation.GetActualCurrentTime: TFloatTime;
@@ -958,7 +1020,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
