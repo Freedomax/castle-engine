@@ -403,6 +403,8 @@ end;
 
 procedure TAnimationPlayerView.AScrollViewHeaderRender(
   const Sender: TCastleUserInterface);
+var
+  HeaderView: TCastleUserInterfaceFont;
 
   procedure RenderPlaybackLine;
   var
@@ -442,40 +444,46 @@ procedure TAnimationPlayerView.AScrollViewHeaderRender(
     end;
 
   var
-    X, Y1, Y2: single;
+    X, Y2, Y1, Y2Long, Y2Middle: single;
     I: integer;
     DeltaTime: TFloatTime;
     Str: string;
+    DeltaW: single;
   begin
     //R := TFloatRectangle.Create(0, 0, ClientWidth, ClientHeight);
 
     // 绘制刻度
-    Y1 := R.Top + 20;
-    Y2 := R.Top + 30;
+    Y1 := R.Top;//- 2 * HeaderView.UIScale;
+    Y2Long := R.Bottom + 2 * HeaderView.UIScale;
+    Y2Middle := (R.Top + R.Bottom) / 2;
     DeltaTime := 0.1;
-    for I := 0 to Trunc(R.Width / 100) - 1 do
+    DeltaW := DeltaTime * TTrackView.PixelsEachSceond * HeaderView.UIScale;
+    for I := 0 to Trunc(R.Width / DeltaW) - 1 do
     begin
-      X := I * 100 * Scale;
+      X := R.Left + (TrackHeadViewWidth + ItemSpacing) * Self.UIScale + I *
+        DeltaW * HeaderView.UIScale * Scale;
       if (I mod 10) = 0 then // 每10个刻度显示一个数字
       begin
         Str := FormatFloat('0.#', I * DeltaTime);
-        //DrawText(Str, Vector2(X, Y2), Black);
-        //TODO: no font
-        Container.DefaultFont.Print(Vector2(X, Y2), CastleColors.White, Str);
-        ;
+        HeaderView.Font.Print(Vector2(X + 2 * HeaderView.UIScale, Y2Long),
+          Vector4(1, 1, 1, 0.88), Str);
       end;
-      RenderLine(Vector2(X, Y1), Vector2(X, Y2), Black, Scale * 2);
+      if (I mod 5) = 0 then Y2 := Y2Long
+      else
+        Y2 := Y2Middle;
+      RenderLine(Vector2(X, Y1), Vector2(X, Y2), Vector4(1, 1, 1, 0.5), Scale * 2);
     end;
   end;
 
 var
-  RScrollView: TFloatRectangle;
+  RHeader: TFloatRectangle;
 begin
   { Draw head rect. }
-  RScrollView := (Sender as TCastleUserInterfaceFont).RenderRect;
-  DrawRectangle(RScrollView, Vector4(0, 0, 0, 0.618));
+  HeaderView := (Sender as TCastleUserInterfaceFont);
+  RHeader := HeaderView.RenderRect;
+  DrawRectangle(RHeader, Vector4(0, 0, 0, 0.618));
   { TimeLine. }
-  // RenderTimeLine(RScrollView, 1);
+  RenderTimeLine(RHeader, 1);
   { PlaybackLine. }
   RenderPlaybackLine;
 end;
@@ -667,6 +675,7 @@ begin
   AScrollViewHeader := TCastleUserInterfaceFont.Create(Self);
   AScrollViewHeader.Anchor(vpTop, vpTop);
   AScrollViewHeader.Anchor(hpLeft, hpLeft);
+  AScrollViewHeader.FontSize := Self.ItemFontSize;
   AScrollView.InsertFront(AScrollViewHeader);
   AScrollViewHeader.Height := TrackListHeadHeight;
   AScrollViewHeader.WidthFraction := 1.0;
