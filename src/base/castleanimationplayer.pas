@@ -37,7 +37,7 @@ const
     {$Ifdef fpc}@{$endif}LerpFuncUniformDeceleration);
 
 type
-  TAnimationTrack = class abstract
+  TAnimationTrack = class abstract (TPersistent)
   public
   type
     TKeyFrameChangeType = (kfcTime, kfcValue, kfcLerpFunc);
@@ -103,6 +103,8 @@ type
     destructor Destroy; override;
     function ObjectName: string; virtual;
     function PropName: string; virtual;
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess);
+      virtual;
     { Add a keyframe. The time is calculated in seconds, with the time when the animation
       starts running as the zero second. LerpFunc represents the equation for modifying the
       original Lerp, if it's nil, it means that Lerp is not modified. Lerp always ranges from 0 to 1. }
@@ -126,6 +128,8 @@ type
     property Mode: TAnimationTrackMode read FMode write FMode;
     property KeyframeList: TAnimationKeyframeList read FKeyframeList;
   end;
+
+  TAnimationTrackClass = class of TAnimationTrack;
 
   TAnimationPropertyTrack = class(TAnimationTrack)
   strict private
@@ -349,6 +353,18 @@ end;
 function TAnimationTrack.PropName: string;
 begin
   Result := '';
+end;
+
+procedure TAnimationTrack.CustomSerialization(
+  const SerializationProcess: TSerializationProcess);
+begin
+  { Track Properties. }
+           { LerpFuncType: TLerpFuncType;
+      property Value: variant read FValue write SetValue;
+      property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
+
+      property Time: TFloatTime read FTime write SetTime;  }
+
 end;
 
 function TAnimationTrack.AddKeyframe(const ATime: TFloatTime;
@@ -1021,6 +1037,9 @@ end;
 
 procedure TAnimationPlayer.CustomSerialization(
   const SerializationProcess: TSerializationProcess);
+const
+  SAni = 'Animation';
+  STrack = 'Track';
 
   function KeyProp(const SObject, SPropName: string): string;
   begin
@@ -1037,26 +1056,37 @@ procedure TAnimationPlayer.CustomSerialization(
     Result := SObject + '-_Count';
   end;
 
+  function CreateTrackByClassName(const AClassName: string): TAnimationTrack;
+  var
+    AClass: TPersistentClass;
+  begin
+    AClass := GetClass(AClassName);
+    if Assigned(AClass) then Result := TAnimationTrackClass(AClass).Create
+    else
+      Result := nil;
+  end;
+
 var
-  ACount, I, Aint: integer;
+  AniCount, TrackCount, I, J, K, Aint: integer;
   AFloat: single;
   Ani: TAnimation;
+  Track: TAnimationTrack;
+  Aboolean: boolean;
   s: string;
   bReading: boolean;
   AniKeys:{$Ifdef fpc}specialize{$endif}TArray<string>;
-const
-  SAni = 'Animation';
 begin
   inherited CustomSerialization(SerializationProcess);
   bReading := csLoading in ComponentState;
 
-  ACount := AnimationList.Keys.Count;
-  SerializationProcess.ReadWriteInteger(KeyCount(SAni), ACount, ACount > 0);
-  if ACount = 0 then Exit;
+  AniCount := AnimationList.Keys.Count;
+  SerializationProcess.ReadWriteInteger(KeyCount(SAni), AniCount, AniCount > 0);
+  if AniCount = 0 then Exit;
 
   if not bReading then  AniKeys := AnimationList.Keys.ToArray;
-  for  I := 0 to ACount - 1 do
+  for  I := 0 to AniCount - 1 do
   begin
+    { Get Animation. }
     if bReading then s := ''
     else
       s := AniKeys[i];
@@ -1065,19 +1095,49 @@ begin
     else
     if not AnimationList.TryGetValue(S, Ani) then WritelnWarning(
         'CustomSerialization:animation "%s" not exist', [S]);
-    {
-    property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
-    property TrackList: TAnimationTrackList read FTrackList;
-    property Playing: boolean read FPlaying write SetPlaying default False; }
+    { Animation Properties. }
     Aint := Ord(Ani.PlayStyle);
     SerializationProcess.ReadWriteInteger(KeyProp(KeyItem(SAni, I), 'PlayStyle'),
-      Aint, Aint = 0);
+      Aint, Aint <> 0);
     if bReading then  Ani.PlayStyle := TAnimationPlayStyle(Aint);
 
     AFloat := Ani.Speed;
     SerializationProcess.ReadWriteSingle(KeyProp(KeyItem(SAni, I), 'Speed'),
-      AFloat, SameValue(AFloat, 1));
+      AFloat, not SameValue(AFloat, 1));
     if bReading then  Ani.Speed := AFloat;
+    { TrackList }
+    TrackCount := Ani.TrackList.Count;
+    SerializationProcess.ReadWriteInteger(KeyCount(KeyProp(KeyItem(SAni, I), STrack)),
+      TrackCount, TrackCount > 0);
+    if TrackCount = 0 then Continue;
+
+    for  J := 0 to TrackCount - 1 do
+    begin
+      { Get Track. }
+      if bReading then  s := ''
+      else
+        s := Ani.TrackList[J].ClassName;
+      SerializationProcess.ReadWriteString(
+        KeyProp(KeyItem(KeyProp(KeyItem(SAni, I), STrack), J), 'TrackClass'),
+        s, s <> '');
+      if s = '' then Continue;
+      if bReading then
+      begin
+        Track := CreateTrackByClassName(s);
+        Ani.AddTrack(Track);
+      end
+      else
+      begin
+        Track := ani.TrackList[J];
+      end;
+      if not Assigned(Track) then
+      begin
+        WritelnWarning('CustomSerialization:Track is nil. Track id: %d TrackClass: "%s"',
+          [J, s]);
+        Continue;
+      end;
+      Track.CustomSerialization(SerializationProcess);
+    end;
   end;
 end;
 
@@ -1093,8 +1153,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
@@ -1158,5 +1217,8 @@ begin
   if Assigned(FCurrentAnimation) then FCurrentAnimation.Stop(ResetTime);
 end;
 
+
+initialization
+  RegisterClass(TAnimationPropertyTrack);
 
 end.

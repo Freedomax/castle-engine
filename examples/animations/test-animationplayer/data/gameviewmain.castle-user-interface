@@ -134,10 +134,10 @@
                   "Animation-_Count" : 3,
                   "Animation_0" : "test",
                   "Animation_0-PlayStyle" : 1,
+                  "Animation_0-Track-_Count" : 1,
+                  "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
                   "Animation_1" : "223",
-                  "Animation_1-PlayStyle" : 3,
-                  "Animation_2" : "2",
-                  "Animation_2-PlayStyle" : 0
+                  "Animation_2" : "2"
                 },
                 "Name" : "AnimationPlayerBox1"
               }
