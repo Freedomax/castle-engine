@@ -24,7 +24,7 @@ uses
   Dialogs, ButtonPanel, StdCtrls, ExtCtrls, Menus, ComCtrls, Buttons,
   CastleAnimationPlayer, CastleControl, CastleControls, CastleUIControls,
   CastleVectors, CastleColors, CastleKeysMouse, RttiUtils, CastleTransform,
-  CastleViewport, CastleTimeUtils, Variants, CastleRectangles;
+  CastleViewport, CastleTimeUtils, Variants, CastleRectangles, CastleFonts;
 
 type
   TTrackView = class(TCastleRectangleControl)
@@ -43,16 +43,6 @@ type
   end;
 
   TTrackListScrollView = class(TCastleScrollView)
-  private
-    FBeforeRenderOverChildren: TNotifyEvent;
-    procedure SetBeforeRenderOverChildren(const AValue: TNotifyEvent);
-  public
-  const
-    TrackListHeadHeight = 20;
-    procedure RenderOverChildren; override;
-
-    property BeforeRenderOverChildren: TNotifyEvent
-      read FBeforeRenderOverChildren write SetBeforeRenderOverChildren;
   end;
 
   TTrackDesignerUI = class(TCastleUserInterface)
@@ -88,6 +78,7 @@ type
     ItemFontSize = 15;
     ItemFontSmallSize = 12;
     ItemSpacing = 2;
+    TrackListHeadHeight = 20;
   var
     FAnimationPlayer: TAnimationPlayer;
     FRoot: TCastleUserInterface;
@@ -96,7 +87,7 @@ type
     procedure AButtonDeleteClick(Sender: TObject);
     procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);
-    procedure AScrollViewBeforeRenderOverChildren(Sender: TObject);
+    procedure AScrollViewHeaderRender(const Sender: TCastleUserInterface);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
     { Track index, "-1" means all changed. }
@@ -109,6 +100,7 @@ type
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
 
   protected
+    FFont: TCastleFont;
     ButtonAddKeyFrame: TCastleButton;
     TrackDesignerUI: TTrackDesignerUI;
     procedure ReloadTracks;
@@ -271,18 +263,6 @@ begin
   end;
 end;
 
-procedure TTrackListScrollView.SetBeforeRenderOverChildren(const AValue: TNotifyEvent);
-begin
-  if not SameMethods(TMethod(FBeforeRenderOverChildren), TMethod(AValue)) then
-    FBeforeRenderOverChildren := AValue;
-end;
-
-procedure TTrackListScrollView.RenderOverChildren;
-begin
-  if Assigned(FBeforeRenderOverChildren) then FBeforeRenderOverChildren(Self);
-  inherited RenderOverChildren;
-end;
-
 constructor TTrackDesignerUI.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -421,9 +401,10 @@ begin
   KeyFrameListChanged(-1);
 end;
 
-procedure TAnimationPlayerView.AScrollViewBeforeRenderOverChildren(Sender: TObject);
+procedure TAnimationPlayerView.AScrollViewHeaderRender(
+  const Sender: TCastleUserInterface);
 
-  procedure RenderTimeLine;
+  procedure RenderPlaybackLine;
   var
     RTrack, R: TFloatRectangle;
 
@@ -450,16 +431,53 @@ procedure TAnimationPlayerView.AScrollViewBeforeRenderOverChildren(Sender: TObje
       CurrentAnimation.ActualCurrentTime * UIScale, CastleColors.Green, 2);
   end;
 
+  procedure RenderTimeLine(const R: TFloatRectangle; const Scale: single);
+
+    procedure RenderLine(const P1, P2: TVector2; const LineColor: TCastleColor;
+    const LineWidth: single);
+    begin
+      DrawPrimitive2D(pmLines,
+        [P1, P2],
+        LineColor, bsSrcAlpha, bdOneMinusSrcAlpha, False, LineWidth);
+    end;
+
+  var
+    X, Y1, Y2: single;
+    I: integer;
+    DeltaTime: TFloatTime;
+    Str: string;
+  begin
+    //R := TFloatRectangle.Create(0, 0, ClientWidth, ClientHeight);
+
+    // 绘制刻度
+    Y1 := R.Top + 20;
+    Y2 := R.Top + 30;
+    DeltaTime := 0.1;
+    for I := 0 to Trunc(R.Width / 100) - 1 do
+    begin
+      X := I * 100 * Scale;
+      if (I mod 10) = 0 then // 每10个刻度显示一个数字
+      begin
+        Str := FormatFloat('0.#', I * DeltaTime);
+        //DrawText(Str, Vector2(X, Y2), Black);
+        //TODO: no font
+        Container.DefaultFont.Print(Vector2(X, Y2), CastleColors.White, Str);
+        ;
+      end;
+      RenderLine(Vector2(X, Y1), Vector2(X, Y2), Black, Scale * 2);
+    end;
+  end;
+
 var
   RScrollView: TFloatRectangle;
 begin
   { Draw head rect. }
-  RScrollView := (Sender as TTrackListScrollView).RenderRect;
-  RScrollView.Bottom := RScrollView.Top -
-    TTrackListScrollView.TrackListHeadHeight * UIScale;
+  RScrollView := (Sender as TCastleUserInterfaceFont).RenderRect;
   DrawRectangle(RScrollView, Vector4(0, 0, 0, 0.618));
   { TimeLine. }
-  RenderTimeLine;
+  // RenderTimeLine(RScrollView, 1);
+  { PlaybackLine. }
+  RenderPlaybackLine;
 end;
 
 procedure TAnimationPlayerView.FAnimationPlayerAnimationComplete(Sender: TObject);
@@ -630,8 +648,11 @@ end;
 procedure TAnimationPlayerView.Start;
 var
   AScrollView: TTrackListScrollView;
+  AScrollViewHeader: TCastleUserInterfaceFont;
 begin
   inherited Start;
+  FFont := TCastleFont.Create(Self);
+
   FTrackViewList := TTrackViewList.Create(False);
 
   FRoot := TCastleUserInterface.Create(self);
@@ -642,8 +663,14 @@ begin
   FRoot.InsertFront(AScrollView);
   AScrollView.FullSize := True;
   AScrollView.EnableDragging := True;
-  AScrollView.BeforeRenderOverChildren :=
- {$Ifdef fpc}@{$endif}AScrollViewBeforeRenderOverChildren;
+
+  AScrollViewHeader := TCastleUserInterfaceFont.Create(Self);
+  AScrollViewHeader.Anchor(vpTop, vpTop);
+  AScrollViewHeader.Anchor(hpLeft, hpLeft);
+  AScrollView.InsertFront(AScrollViewHeader);
+  AScrollViewHeader.Height := TrackListHeadHeight;
+  AScrollViewHeader.WidthFraction := 1.0;
+  AScrollViewHeader.OnRender := {$Ifdef fpc}@{$endif}AScrollViewHeaderRender;
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
@@ -651,7 +678,7 @@ begin
   FTrackListView.AutoSizeToChildren := True;
   FTrackListView.Anchor(vpTop, vpTop);
   FTrackListView.Anchor(hpLeft, hpLeft);
-  FTrackListView.Translation := Vector2(0, -TTrackListScrollView.TrackListHeadHeight);
+  FTrackListView.Translation := Vector2(0, -TrackListHeadHeight);
   AScrollView.ScrollArea.InsertFront(FTrackListView);
 
   ButtonAddKeyFrame := TCastleButton.Create(self);
@@ -660,8 +687,8 @@ begin
   ButtonAddKeyFrame.Anchor(vpTop, vpTop);
   ButtonAddKeyFrame.Anchor(hpLeft, hpLeft);
   ButtonAddKeyFrame.AutoSize := False;
-  ButtonAddKeyFrame.Height := TTrackListScrollView.TrackListHeadHeight;
-  ButtonAddKeyFrame.Width := TTrackListScrollView.TrackListHeadHeight;
+  ButtonAddKeyFrame.Height := TrackListHeadHeight;
+  ButtonAddKeyFrame.Width := TrackListHeadHeight;
   FRoot.InsertFront(ButtonAddKeyFrame);
 
   TrackDesignerUI := TTrackDesignerUI.Create(Self);
