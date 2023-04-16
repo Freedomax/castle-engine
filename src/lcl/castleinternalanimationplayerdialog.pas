@@ -209,9 +209,15 @@ begin
 end;
 
 function TTrackView.UnderMouse: boolean;
+var
+  R: TFloatRectangle;
 begin
   if not Assigned(Container) then Exit(False);
-  Result := RenderRect.Contains(Container.MousePosition);
+  { Extending the selection range to the entire window allows the last frame to be selected as well. }
+  R := RenderRect;
+  if R.Right < Container.Width then
+    R.Width := R.Width + Container.Width - R.Right;
+  Result := R.Contains(Container.MousePosition);
 end;
 
 procedure TTrackView.Render;
@@ -660,6 +666,7 @@ begin
 
   TrackDesignerUI := TTrackDesignerUI.Create(Self);
   TrackDesignerUI.Height := TrackHeight;
+  TrackDesignerUI.Exists := False;
   FRoot.InsertFront(TrackDesignerUI);
 end;
 
@@ -690,17 +697,17 @@ begin
   ATrackView := FTrackViewList.FocusedTrackView;
   if Assigned(ATrackView) then
   begin
-    // V := ATrackView.LocalToContainerPosition(TVector2.Zero, True);
-    // V := self.ContainerToLocalPosition(V);
-    // TrackDesignerUI.Translation := V;
-    if TrackDesignerUI.Parent <> ATrackView then
-      ATrackView.InsertFront(TrackDesignerUI);
     AIndex := ATrackView.GetMousePosFrame;
     TrackDesignerUI.Exists :=
       Between(AIndex, 0, ATrackView.Track.KeyframeList.Count - 1);
-    if TrackDesignerUI.Exists then  TrackDesignerUI.Translation :=
+    if TrackDesignerUI.Exists then
+    begin
+      V := ATrackView.LocalToContainerPosition(
         Vector2(ATrackView.Track.KeyframeList[AIndex].Time *
-        TTrackView.PixelsEachSceond, 0);
+        TTrackView.PixelsEachSceond, 0), True);
+      V := self.ContainerToLocalPosition(V);
+      TrackDesignerUI.Translation := V;
+    end;
   end
   else
     TrackDesignerUI.Exists := False;
