@@ -134,8 +134,9 @@
                   "Animation-_Count" : 3,
                   "Animation_0" : "test",
                   "Animation_0-PlayStyle" : 1,
-                  "Animation_0-Track-_Count" : 1,
+                  "Animation_0-Track-_Count" : 2,
                   "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
+                  "Animation_0-Track_1-TrackClass" : "TAnimationPropertyTrack",
                   "Animation_1" : "223",
                   "Animation_2" : "2"
                 },

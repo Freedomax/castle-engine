@@ -300,6 +300,11 @@ function VariantFromVector3(const V: TVector3): variant;
 function VariantToVector4(const V: variant): TVector4;
 function VariantFromVector4(const V: TVector4): variant;
 
+
+function KeyProp(const SObject, SPropName: string): string;
+function KeyItem(const SObject: string; const AIndex: integer): string;
+function KeyCount(const SObject: string): string;
+
 implementation
 
 uses Math, Generics.Defaults;
@@ -337,6 +342,22 @@ end;
 function VariantFromVector4(const V: TVector4): variant;
 begin
   Result := VarArrayOf([V.X, V.Y, V.Z, V.W]);
+end;
+
+
+function KeyProp(const SObject, SPropName: string): string;
+begin
+  Result := SObject + '-' + SPropName;
+end;
+
+function KeyItem(const SObject: string; const AIndex: integer): string;
+begin
+  Result := SObject + '_' + AIndex.ToString;
+end;
+
+function KeyCount(const SObject: string): string;
+begin
+  Result := SObject + '-_Count';
 end;
 
 destructor TAnimationTrack.Destroy;
@@ -891,7 +912,8 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -908,7 +930,8 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -925,7 +948,8 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -1037,24 +1061,6 @@ end;
 
 procedure TAnimationPlayer.CustomSerialization(
   const SerializationProcess: TSerializationProcess);
-const
-  SAni = 'Animation';
-  STrack = 'Track';
-
-  function KeyProp(const SObject, SPropName: string): string;
-  begin
-    Result := SObject + '-' + SPropName;
-  end;
-
-  function KeyItem(const SObject: string; const AIndex: integer): string;
-  begin
-    Result := SObject + '_' + AIndex.ToString;
-  end;
-
-  function KeyCount(const SObject: string): string;
-  begin
-    Result := SObject + '-_Count';
-  end;
 
   function CreateTrackByClassName(const AClassName: string): TAnimationTrack;
   var
@@ -1066,12 +1072,14 @@ const
       Result := nil;
   end;
 
+const
+  SAni = 'Animation';
+  STrack = 'Track';
 var
-  AniCount, TrackCount, I, J, K, Aint: integer;
+  AniCount, TrackCount, I, J, Aint: integer;
   AFloat: single;
   Ani: TAnimation;
   Track: TAnimationTrack;
-  Aboolean: boolean;
   s, AniKeyPath, TrackKeyPath: string;
   bReading: boolean;
   AniKeys:{$Ifdef fpc}specialize{$endif}TArray<string>;
