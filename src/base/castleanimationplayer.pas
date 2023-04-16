@@ -103,8 +103,8 @@ type
     destructor Destroy; override;
     function ObjectName: string; virtual;
     function PropName: string; virtual;
-    procedure CustomSerialization(const SerializationProcess: TSerializationProcess);
-      virtual;
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
+      const APath: string); virtual;
     { Add a keyframe. The time is calculated in seconds, with the time when the animation
       starts running as the zero second. LerpFunc represents the equation for modifying the
       original Lerp, if it's nil, it means that Lerp is not modified. Lerp always ranges from 0 to 1. }
@@ -356,7 +356,7 @@ begin
 end;
 
 procedure TAnimationTrack.CustomSerialization(
-  const SerializationProcess: TSerializationProcess);
+  const SerializationProcess: TSerializationProcess; const APath: string);
 begin
   { Track Properties. }
            { LerpFuncType: TLerpFuncType;
@@ -1072,7 +1072,7 @@ var
   Ani: TAnimation;
   Track: TAnimationTrack;
   Aboolean: boolean;
-  s: string;
+  s, AniKeyPath, TrackKeyPath: string;
   bReading: boolean;
   AniKeys:{$Ifdef fpc}specialize{$endif}TArray<string>;
 begin
@@ -1086,39 +1086,41 @@ begin
   if not bReading then  AniKeys := AnimationList.Keys.ToArray;
   for  I := 0 to AniCount - 1 do
   begin
+    AniKeyPath := KeyItem(SAni, I);
     { Get Animation. }
     if bReading then s := ''
     else
       s := AniKeys[i];
-    SerializationProcess.ReadWriteString(KeyItem(SAni, I), s, s <> '');
+    SerializationProcess.ReadWriteString(AniKeyPath, s, s <> '');
     if bReading then  Ani := NewAnimation(S)
     else
     if not AnimationList.TryGetValue(S, Ani) then WritelnWarning(
         'CustomSerialization:animation "%s" not exist', [S]);
     { Animation Properties. }
     Aint := Ord(Ani.PlayStyle);
-    SerializationProcess.ReadWriteInteger(KeyProp(KeyItem(SAni, I), 'PlayStyle'),
+    SerializationProcess.ReadWriteInteger(KeyProp(AniKeyPath, 'PlayStyle'),
       Aint, Aint <> 0);
     if bReading then  Ani.PlayStyle := TAnimationPlayStyle(Aint);
 
     AFloat := Ani.Speed;
-    SerializationProcess.ReadWriteSingle(KeyProp(KeyItem(SAni, I), 'Speed'),
+    SerializationProcess.ReadWriteSingle(KeyProp(AniKeyPath, 'Speed'),
       AFloat, not SameValue(AFloat, 1));
     if bReading then  Ani.Speed := AFloat;
     { TrackList }
     TrackCount := Ani.TrackList.Count;
-    SerializationProcess.ReadWriteInteger(KeyCount(KeyProp(KeyItem(SAni, I), STrack)),
+    SerializationProcess.ReadWriteInteger(KeyCount(KeyProp(AniKeyPath, STrack)),
       TrackCount, TrackCount > 0);
     if TrackCount = 0 then Continue;
 
     for  J := 0 to TrackCount - 1 do
     begin
+      TrackKeyPath := KeyItem(KeyProp(KeyItem(SAni, I), STrack), J);
       { Get Track. }
       if bReading then  s := ''
       else
         s := Ani.TrackList[J].ClassName;
       SerializationProcess.ReadWriteString(
-        KeyProp(KeyItem(KeyProp(KeyItem(SAni, I), STrack), J), 'TrackClass'),
+        KeyProp(TrackKeyPath, 'TrackClass'),
         s, s <> '');
       if s = '' then Continue;
       if bReading then
@@ -1136,7 +1138,7 @@ begin
           [J, s]);
         Continue;
       end;
-      Track.CustomSerialization(SerializationProcess);
+      Track.CustomSerialization(SerializationProcess, TrackKeyPath);
     end;
   end;
 end;
@@ -1153,7 +1155,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
