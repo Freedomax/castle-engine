@@ -90,12 +90,14 @@ type
     procedure AScrollViewHeaderRender(const Sender: TCastleUserInterface);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
+    function GetCurrentTime: TFloatTime;
     { Track index, "-1" means all changed. }
     procedure KeyFrameListChanged(const Index: integer);
     function GetCurrentAnimation: TAnimation;
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
     procedure SetAnimationPlayerChanged(const AValue: TNotifyEvent);
     procedure SetCurrentAnimationChanged(const AValue: TNotifyEvent);
+    procedure SetCurrentTime(const AValue: TFloatTime);
     procedure SetPlaying(const AValue: boolean);
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
 
@@ -105,6 +107,8 @@ type
     TrackDesignerUI: TTrackDesignerUI;
     procedure ReloadTracks;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+
+    property CurrentTime: TFloatTime read GetCurrentTime write SetCurrentTime;
   public
     procedure Start; override;
     procedure Stop; override;
@@ -343,6 +347,11 @@ begin
     FCurrentAnimationChanged := AValue;
 end;
 
+procedure TAnimationPlayerView.SetCurrentTime(const AValue: TFloatTime);
+begin
+  if Assigned(CurrentAnimation) then CurrentAnimation.ActualCurrentTime := AValue;
+end;
+
 procedure TAnimationPlayerView.SetPlaying(const AValue: boolean);
 begin
   if FPlaying <> AValue then
@@ -450,19 +459,16 @@ var
     Str: string;
     DeltaW: single;
   begin
-    //R := TFloatRectangle.Create(0, 0, ClientWidth, ClientHeight);
-
-    // 绘制刻度
-    Y1 := R.Top;//- 2 * HeaderView.UIScale;
+    Y1 := R.Top;
     Y2Long := R.Bottom + 2 * HeaderView.UIScale;
     Y2Middle := (R.Top + R.Bottom) / 2;
     DeltaTime := 0.1;
-    DeltaW := DeltaTime * TTrackView.PixelsEachSceond * HeaderView.UIScale;
+    DeltaW := DeltaTime * TTrackView.PixelsEachSceond * HeaderView.UIScale * Scale;
     for I := 0 to Trunc(R.Width / DeltaW) - 1 do
     begin
       X := R.Left + (TrackHeadViewWidth + ItemSpacing) * Self.UIScale + I *
-        DeltaW * HeaderView.UIScale * Scale;
-      if (I mod 10) = 0 then // 每10个刻度显示一个数字
+        DeltaW;
+      if (I mod 10) = 0 then
       begin
         Str := FormatFloat('0.#', I * DeltaTime);
         HeaderView.Font.Print(Vector2(X + 2 * HeaderView.UIScale, Y2Long),
@@ -497,6 +503,13 @@ procedure TAnimationPlayerView.FAnimationPlayerCurrentAnimationChanged(
   Sender: TObject);
 begin
   if Assigned(FCurrentAnimationChanged) then FCurrentAnimationChanged(Self);
+end;
+
+function TAnimationPlayerView.GetCurrentTime: TFloatTime;
+begin
+  if Assigned(CurrentAnimation) then Result := CurrentAnimation.ActualCurrentTime
+  else
+    Result := -1;
 end;
 
 procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);

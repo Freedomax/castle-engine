@@ -190,6 +190,7 @@ type
     FCurrentTime: TFloatTime;
     FPlaying: boolean;
     FSpeed: single;
+    procedure SetActualCurrentTime(const AValue: TFloatTime);
     procedure SetOnComplete(const AValue: TNotifyEvent);
     procedure SetPlayStyle(const AValue: TAnimationPlayStyle);
     procedure TrackListNotify(ASender: TObject;
@@ -216,7 +217,9 @@ type
     procedure Stop(const ResetTime: boolean = True);
 
     { FCurrentTime in PingPong mode needs to be corrected. }
-    function ActualCurrentTime: TFloatTime;
+    function GetActualCurrentTime: TFloatTime;
+    property ActualCurrentTime: TFloatTime read GetActualCurrentTime
+      write SetActualCurrentTime;
     { The maximum duration among all tracks. }
     property MaxTime: TFloatTime read FMaxTime;
     { apsOnce: The animation plays only once and stops when it finishes.
@@ -402,6 +405,12 @@ procedure TAnimation.SetOnComplete(const AValue: TNotifyEvent);
 begin
   if not SameMethods(TMethod(FOnComplete), TMethod(AValue)) then
     FOnComplete := AValue;
+end;
+
+procedure TAnimation.SetActualCurrentTime(const AValue: TFloatTime);
+begin
+  if ActualCurrentTime <> AValue then
+    FCurrentTime := AValue;
 end;
 
 procedure TAnimation.SetPlayStyle(const AValue: TAnimationPlayStyle);
@@ -810,8 +819,7 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -828,8 +836,7 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -846,8 +853,7 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -862,7 +868,7 @@ begin
   if FPlaying then FPlaying := False;
 end;
 
-function TAnimation.ActualCurrentTime: TFloatTime;
+function TAnimation.GetActualCurrentTime: TFloatTime;
 begin
   if FPlayStyle in [apsPingPong, apsPingPongOnce] then
     Result := GetPingPongEvalTime
@@ -952,8 +958,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
