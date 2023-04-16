@@ -34,6 +34,8 @@ type
     procedure SetTrack(const AValue: TAnimationTrack);
   public
     function GetMousePosTime: TFloatTime;
+    function GetMousePosFrame: integer;
+    function UnderMouse: boolean;
   const
     PixelsEachSceond: single = 200;
     procedure Render; override;
@@ -53,14 +55,33 @@ type
       read FBeforeRenderOverChildren write SetBeforeRenderOverChildren;
   end;
 
+  TTrackDesignerUI = class(TCastleUserInterface)
+  private
+    FButtonRemove, FButtonLerpFunc: TCastleButton;
+    FTimeDragControl: TCastleRectangleControl;
+    FUIContainer: TCastleVerticalGroup;
+  public
+  const
+    DragUIHeight = 20;
+    ButtonHeight = 20;
+    ButtonFontSize = 12;
+    constructor Create(AOwner: TComponent); override;
+    property ButtonRemove: TCastleButton read FButtonRemove;
+    property ButtonLerpFunc: TCastleButton read FButtonLerpFunc;
+    property TimeDragControl: TCastleRectangleControl read FTimeDragControl;
+  end;
+
+  TTrackViewList = class( {$Ifdef fpc}specialize{$endif} TObjectList<TTrackView>)
+  public
+    function FocusedTrackView: TTrackView;
+  end;
+
   TAnimationPlayerView = class(TCastleView)
   private
     FAnimationPlayerChanged: TNotifyEvent;
     FCurrentAnimationChanged: TNotifyEvent;
     FPlaying: boolean;
     FPlayingChanged: TNotifyEvent;
-  type
-    TTrackViewList = {$Ifdef fpc}specialize{$endif}TObjectList<TTrackView>;
   const
     TrackHeight = 100;
     TrackHeadViewWidth = 150;
@@ -89,6 +110,7 @@ type
 
   protected
     ButtonAddKeyFrame: TCastleButton;
+    TrackDesignerUI: TTrackDesignerUI;
     procedure ReloadTracks;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
@@ -178,14 +200,24 @@ var
   AMousePos: TVector2;
 begin
   AMousePos := ContainerToLocalPosition(Container.MousePosition);
-  Result := AMousePos.X / (PixelsEachSceond * UIScale);
+  Result := AMousePos.X / PixelsEachSceond;
+end;
+
+function TTrackView.GetMousePosFrame: integer;
+begin
+  Result := FTrack.KeyframeList.TimeToKeyFrame(GetMousePosTime);
+end;
+
+function TTrackView.UnderMouse: boolean;
+begin
+  if not Assigned(Container) then Exit(False);
+  Result := RenderRect.Contains(Container.MousePosition);
 end;
 
 procedure TTrackView.Render;
 var
   FramePos: single;
   R: TFloatRectangle;
-  AMousePosTime: TFloatTime;
 
   function TimeRenderPosition(const ATime: TFloatTime): single;
   begin
@@ -223,10 +255,8 @@ var
   AIndex, I: integer;
 begin
   inherited Render;
-  if not Assigned(FTrack) then Exit;
 
-  AMousePosTime := GetMousePosTime;
-  AIndex := FTrack.KeyframeList.TimeToKeyFrame(AMousePosTime);
+  AIndex := GetMousePosFrame;
   if Between(AIndex, 0, FTrack.KeyframeList.Count - 1) then
   begin
     ;
@@ -249,6 +279,50 @@ procedure TTrackListScrollView.RenderOverChildren;
 begin
   if Assigned(FBeforeRenderOverChildren) then FBeforeRenderOverChildren(Self);
   inherited RenderOverChildren;
+end;
+
+constructor TTrackDesignerUI.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  Width := 60;
+  AutoSizeToChildren := True;
+  FUIContainer := TCastleVerticalGroup.Create(Self);
+  FUIContainer.AutoSizeToChildren := True;
+  InsertFront(FUIContainer);
+
+  FTimeDragControl := TCastleRectangleControl.Create(Self);
+  FTimeDragControl.Width := Width;
+  FTimeDragControl.Height := DragUIHeight;
+  FTimeDragControl.Color := Vector4(1, 1, 1, 0.5);
+  FUIContainer.InsertFront(FTimeDragControl);
+
+  FButtonLerpFunc := TCastleButton.Create(Self);
+  FButtonLerpFunc.AutoSize := False;
+  FButtonLerpFunc.Width := Width;
+  FButtonLerpFunc.Height := ButtonHeight;
+  FButtonLerpFunc.Caption := 'LerpFunc';
+  FButtonLerpFunc.FontSize := ButtonFontSize;
+  FUIContainer.InsertFront(FButtonLerpFunc);
+
+  FButtonRemove := TCastleButton.Create(Self);
+  FButtonRemove.AutoSize := False;
+  FButtonRemove.Width := Width;
+  FButtonRemove.Height := ButtonHeight;
+  FButtonRemove.Caption := 'Remove';
+  FButtonRemove.FontSize := ButtonFontSize;
+  FUIContainer.InsertFront(FButtonRemove);
+end;
+
+function TTrackViewList.FocusedTrackView: TTrackView;
+var
+  ATrackView: TTrackView;
+begin
+  Result := nil;
+  //TDO: optimize.
+  for ATrackView in self do
+  begin
+    if ATrackView.UnderMouse then exit(ATrackView);
+  end;
 end;
 
 procedure TAnimationPlayerView.SetAnimationPlayer(const AValue: TAnimationPlayer);
@@ -475,17 +549,20 @@ var
   AButtonDelete: TCastleButton;
 begin
   FTrackListView.ClearControls;
-  ButtonAddKeyFrame.Exists := False;
+  FTrackViewList.Clear;
   if not Assigned(CurrentAnimation) then
+  begin
+    ButtonAddKeyFrame.Exists := False;
     Exit;
+  end;
 
   ButtonAddKeyFrame.Exists := CurrentAnimation.TrackList.Count > 0;
-  FTrackViewList.Clear;
   for  I := 0 to CurrentAnimation.TrackList.Count - 1 do
   begin
     ATrack := CurrentAnimation.TrackList.Items[I];
     ATrackContainer := TCastleHorizontalGroup.Create(self);
     ATrackContainer.Spacing := ItemSpacing;
+    ATrackContainer.Culling := True;
     FTrackListView.InsertFront(ATrackContainer);
 
     ATrackHeadView := TCastleRectangleControl.Create(Self);
@@ -584,6 +661,10 @@ begin
   ButtonAddKeyFrame.Height := TTrackListScrollView.TrackListHeadHeight;
   ButtonAddKeyFrame.Width := TTrackListScrollView.TrackListHeadHeight;
   FRoot.InsertFront(ButtonAddKeyFrame);
+
+  TrackDesignerUI := TTrackDesignerUI.Create(Self);
+  TrackDesignerUI.Height := TrackHeight;
+  FRoot.InsertFront(TrackDesignerUI);
 end;
 
 procedure TAnimationPlayerView.Stop;
@@ -610,10 +691,27 @@ begin
 end;
 
 function TAnimationPlayerView.Motion(const Event: TInputMotion): boolean;
+var
+  ATrackView: TTrackView;
+  V: TVector2;
 begin
   Result := inherited Motion(Event);
   ButtonAddKeyFrame.Translation :=
-    Vector2(Event.Position.X - ButtonAddKeyFrame.Width / 2, 0);
+    Vector2(ContainerToLocalPosition(Event.Position).X -
+    ButtonAddKeyFrame.EffectiveWidth / 2, 0);
+
+  ATrackView := FTrackViewList.FocusedTrackView;
+  if Assigned(ATrackView) then
+  begin
+    // V := ATrackView.LocalToContainerPosition(TVector2.Zero, True);
+    // V := self.ContainerToLocalPosition(V);
+    // TrackDesignerUI.Translation := V;
+    TrackDesignerUI.Exists := True;
+    if TrackDesignerUI.Parent <> ATrackView then
+      ATrackView.InsertFront(TrackDesignerUI);
+  end
+  else
+    TrackDesignerUI.Exists := False;
 end;
 
 procedure TAnimationPlayerView.AddTrack(const ATrack: TAnimationTrack);
