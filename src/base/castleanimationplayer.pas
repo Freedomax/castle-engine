@@ -875,7 +875,8 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -892,7 +893,8 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -909,7 +911,8 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -1038,8 +1041,8 @@ procedure TAnimationPlayer.CustomSerialization(
   end;
 
 var
-  ACount, I: integer;
-  AniList:{$Ifdef fpc}specialize{$endif}TList<TAnimation>;
+  ACount, I, Aint: integer;
+  Ani: TAnimation;
   s: string;
   bReading: boolean;
   AniKeys:{$Ifdef fpc}specialize{$endif}TArray<string>;
@@ -1060,7 +1063,19 @@ begin
     else
       s := AniKeys[i];
     SerializationProcess.ReadWriteString(KeyItem(SAni, I), s, s <> '');
-    if bReading then  NewAnimation(S);
+    if bReading then  Ani := NewAnimation(S)
+    else
+    if not AnimationList.TryGetValue(S, Ani) then WritelnWarning(
+        'CustomSerialization:animation "%s" not exist', [S]);
+    {    property PlayStyle: TAnimationPlayStyle
+      read FPlayStyle write SetPlayStyle default apsOnce;
+    property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
+    property TrackList: TAnimationTrackList read FTrackList;
+    property Playing: boolean read FPlaying write SetPlaying default False; }
+    Aint := Ord(Ani.PlayStyle);
+    SerializationProcess.ReadWriteInteger(KeyProp(KeyItem(SAni, I), 'PlayStyle'),
+      Aint, ACount > 0);
+    if bReading then  Ani.PlayStyle := TAnimationPlayStyle(Aint);
   end;
 end;
 
@@ -1076,8 +1091,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
