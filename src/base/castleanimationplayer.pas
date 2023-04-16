@@ -70,9 +70,10 @@ type
 
     TAnimationKeyframeList = class(
       {$IFDEF FPC}specialize{$ENDIF} TObjectList<TAnimationKeyframe>)
-    protected
+    strict private
       function SearchIndex(const ATime: TFloatTime): SizeInt;
-
+    public
+      function TimeToKeyFrame(const ATime: TFloatTime): SizeInt;
     end;
 
   strict private
@@ -366,10 +367,11 @@ begin
     AValue := FKeyframeList.First.Value
   else
   begin
-    Index := FKeyframeList.SearchIndex(ATime) - 1;
+    Index := FKeyframeList.TimeToKeyFrame(ATime);
     if Between(Index, 0, FKeyframeList.Count - 2) then
       AValue := Interpolate(FKeyframeList[Index], FKeyframeList[Index + 1], ATime)
     else
+      { If the time is before the first frame or after the last frame, it's considered as the last static frame.}
       AValue := FKeyframeList.Last.Value;
   end;
   SetValue(AValue);
@@ -711,6 +713,12 @@ begin
   Result := L;
 end;
 
+function TAnimationTrack.TAnimationKeyframeList.TimeToKeyFrame(
+  const ATime: TFloatTime): SizeInt;
+begin
+  Result := SearchIndex(ATime) - 1;
+end;
+
 function TAnimationPropertyTrack.GetFriendlyObjectName: string;
 begin
   Result := inherited GetFriendlyObjectName;
@@ -941,7 +949,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

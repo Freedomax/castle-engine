@@ -33,6 +33,7 @@ type
     FTrack: TAnimationTrack;
     procedure SetTrack(const AValue: TAnimationTrack);
   public
+    function GetMousePosTime: TFloatTime;
   const
     PixelsEachSceond: single = 200;
     procedure Render; override;
@@ -172,11 +173,19 @@ begin
   end;
 end;
 
+function TTrackView.GetMousePosTime: TFloatTime;
+var
+  AMousePos: TVector2;
+begin
+  AMousePos := ContainerToLocalPosition(Container.MousePosition);
+  Result := AMousePos.X / (PixelsEachSceond * UIScale);
+end;
+
 procedure TTrackView.Render;
 var
-  KeyFrame: TAnimationTrack.TAnimationKeyframe;
   FramePos: single;
   R: TFloatRectangle;
+  AMousePosTime: TFloatTime;
 
   function TimeRenderPosition(const ATime: TFloatTime): single;
   begin
@@ -195,21 +204,38 @@ var
       LineColor, bsSrcAlpha, bdOneMinusSrcAlpha, False, LineWidth);
   end;
 
-  procedure RenderKeyFrame;
+  procedure RenderKeyFrame(const bSelected: boolean = False);
+  var
+    Rc: TFloatRectangle;
   begin
     RenderLine(FramePos, CastleColors.White, 1 * UIScale);
+
+    if bSelected then
+    begin
+      rc := FloatRectangle(FramePos - 10 * UIScale, R.Bottom, 20 * UIScale, R.Height);
+      DrawRectangle(Rc, Vector4(1, 1, 1, 0.382));
+
+    end;
     //RenderDetail;
   end;
 
+var
+  AIndex, I: integer;
 begin
   inherited Render;
   if not Assigned(FTrack) then Exit;
 
-  R := RenderRect;
-  for KeyFrame in FTrack.KeyframeList do
+  AMousePosTime := GetMousePosTime;
+  AIndex := FTrack.KeyframeList.TimeToKeyFrame(AMousePosTime);
+  if Between(AIndex, 0, FTrack.KeyframeList.Count - 1) then
   begin
-    FramePos := TimeRenderPosition(KeyFrame.Time);
-    RenderKeyFrame;
+    ;
+  end;
+  R := RenderRect;
+  for I := 0 to FTrack.KeyframeList.Count - 1 do
+  begin
+    FramePos := TimeRenderPosition(FTrack.KeyframeList[i].Time);
+    RenderKeyFrame(I = AIndex);
   end;
 end;
 
@@ -286,16 +312,13 @@ procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
 
   function GetMousePosTime: TFloatTime;
   var
-    ATrackView: TCastleUserInterface;
-    AMousePos: TVector2;
+    ATrackView: TTrackView;
   begin
     ATrackView := FTrackViewList.First;
-    AMousePos := ATrackView.ContainerToLocalPosition(Container.MousePosition);
-    Result := AMousePos.X / (TTrackView.PixelsEachSceond * ATrackView.UIScale);
+    Result := ATrackView.GetMousePosTime;
   end;
 
 var
-  Index: integer;
   ATime: TFloatTime;
   Track: TAnimationTrack;
   v: variant;
