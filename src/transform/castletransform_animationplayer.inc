@@ -200,21 +200,15 @@ begin
     end
     else
     begin
-      //Get FComponent
-      // StringToComponent
+      //Get FComponent  will done in self.Loaded
     end;
   end;
 
-  s := PropertyName;
+  s := FProperty;
   SerializationProcess.ReadWriteString(
     KeyProp(APath, 'PropertyName'),
     s, s <> '');
-  if bReading then
-  begin
-    FProperty := s;
-    if Assigned(FComponent) then
-      FPropertyInfo := GetPropInfo(FComponent, FProperty);
-  end;
+  if bReading then FProperty := s;
 end;
 
 function TAnimationPropertyTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;

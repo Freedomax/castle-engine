@@ -1,4 +1,4 @@
-unit castleinternalpropertyselectdialog;
+unit CastleInternalPropertySelectDialog;
 
 {$mode ObjFPC}{$H+}
 

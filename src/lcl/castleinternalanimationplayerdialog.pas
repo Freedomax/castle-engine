@@ -183,7 +183,7 @@ type
 implementation
 
 uses Math,
-  CastleLclUtils, castleinternalpropertyselectdialog, CastleGLUtils,
+  CastleLclUtils, CastleInternalPropertySelectDialog, CastleGLUtils,
   CastleRenderOptions, TypInfo, CastleStringUtils, CastleUtils;
 
 {$R *.lfm}

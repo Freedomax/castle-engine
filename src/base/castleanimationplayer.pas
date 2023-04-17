@@ -37,7 +37,8 @@ const
     {$Ifdef fpc}@{$endif}LerpFuncUniformDeceleration);
 
 type
-  TAnimationTrack = class abstract (TPersistent)
+  //inherit from TPersistent for RegisterClass
+  TAnimationTrack = class abstract(TPersistent)
   public
   type
     TKeyFrameChangeType = (kfcTime, kfcValue, kfcLerpFunc);
@@ -95,6 +96,8 @@ type
     procedure SetValue(const AValue: variant); virtual; abstract;
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       virtual;
+  protected
+    procedure Loaded(const APlayer: TComponent); virtual;
   public
     constructor Create; overload; virtual;
     destructor Destroy; override;
@@ -240,7 +243,7 @@ type
     procedure AddAnimationNoCheck(const AName: string; const AAnimation: TAnimation);
     procedure InternalAnimationComplete(Sender: TObject);
   protected
-
+    procedure Loaded; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -491,8 +494,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -804,6 +807,11 @@ begin
 
 end;
 
+procedure TAnimationTrack.Loaded(const APlayer: TComponent);
+begin
+
+end;
+
 function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif}
   Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
 begin
@@ -933,7 +941,8 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -950,7 +959,8 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -967,7 +977,8 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -1075,6 +1086,16 @@ procedure TAnimationPlayer.InternalAnimationComplete(Sender: TObject);
 begin
   if Sender = FCurrentAnimation then if Assigned(FOnAnimationComplete) then
       FOnAnimationComplete(Self);
+end;
+
+procedure TAnimationPlayer.Loaded;
+var
+  Track: TAnimationTrack;
+  Ani: TAnimation;
+begin
+  inherited Loaded;
+  for Ani in AnimationList.Values do
+    for Track in Ani.TrackList do Track.Loaded(Self);
 end;
 
 procedure TAnimationPlayer.CustomSerialization(
@@ -1201,7 +1222,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
