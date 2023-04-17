@@ -16,6 +16,8 @@
 
 {$ifdef read_interface}
   TAnimationPropertyTrack = class(TAnimationTrack)
+  private
+    function GetPropertyInfo: PPropInfo;
   strict protected
    FComponent: TPersistent;
    FProperty: string;
@@ -33,7 +35,7 @@
    function PropName: string; override;
    property Component: TPersistent read FComponent;
    property PropertyName: string read FProperty;
-   property PropertyInfo: PPropInfo read FPropertyInfo;
+   property PropertyInfo: PPropInfo read GetPropertyInfo;
   end;
 
   TAnimationTranslationTrack = class(TAnimationVector3Track)
@@ -84,10 +86,18 @@
 {$endif read_interface}
 
 {$ifdef read_implementation}
+
+function TAnimationPropertyTrack.GetPropertyInfo: PPropInfo;
+begin
+  if not Assigned(FPropertyInfo) and Assigned(FComponent) and (FProperty <> '') Then
+    FPropertyInfo := GetPropInfo(FComponent, FProperty);
+  Result := FPropertyInfo;
+end;
+
 { TAnimationPropertyTrack --------------------------------------------------------------- }
 procedure TAnimationPropertyTrack.SetValue(const AValue: variant);
 begin
-  if Assigned(FComponent) and Assigned(FPropertyInfo) then
+  if Assigned(FComponent) and Assigned(PropertyInfo) then
     SetPropValue(FComponent, FPropertyInfo, AValue);
 end;
 
@@ -98,7 +108,7 @@ var
   V1_float, V2_float: extended;
   Tk: TTypeKind;
 begin
-  if not Assigned(FPropertyInfo) then Exit;
+  if not Assigned(PropertyInfo) then Exit;
 
   Tk := FPropertyInfo^.PropType^.Kind;
   case Tk of
@@ -175,10 +185,6 @@ var
   ARoot: TCastleUserInterface;
 begin
   inherited;
-  {
-  FriendlyObjectName
-  property Component: TPersistent read FComponent;
-    property PropertyName: string read FProperty;   }
   s := FriendlyObjectName;
   SerializationProcess.ReadWriteString(
     KeyProp(APath, 'FriendlyObjectName'),
@@ -194,7 +200,7 @@ begin
     else
     begin
       //Get FComponent
-    // StringToComponent
+      // StringToComponent
     end;
   end;
 

@@ -496,6 +496,7 @@ TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
+  Result := AValue;
 end;
 
 function TAnimationTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;
