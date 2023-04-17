@@ -54,6 +54,8 @@
     procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
       const APath: string; const bReading: boolean; const APlayer: TComponent);
       override;
+    function AddKeyframeAtTime(const ATime: TFloatTime;
+     const ALerpFunc: TLerpFunc = nil): boolean; override;
   published
     property Transform: TCastleTransform read FTransform write FTransform;
   end;
@@ -70,6 +72,8 @@
     procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
       const APath: string; const bReading: boolean; const APlayer: TComponent);
       override;
+    function AddKeyframeAtTime(const ATime: TFloatTime;
+     const ALerpFunc: TLerpFunc = nil): boolean; override;
   published
     property Transform: TCastleTransform read FTransform write FTransform;
   end;
@@ -86,6 +90,8 @@
     procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
       const APath: string; const bReading: boolean; const APlayer: TComponent);
       override;
+    function AddKeyframeAtTime(const ATime: TFloatTime;
+     const ALerpFunc: TLerpFunc = nil): boolean; override;
   published
     property Transform: TCastleTransform read FTransform write FTransform;
   end;
@@ -315,6 +321,14 @@ begin
   ComponentSerialization(SerializationProcess, self, STransform, ObjectName, APath, bReading);
 end;
 
+function TAnimationTranslationTrack.AddKeyframeAtTime(const ATime: TFloatTime;
+  const ALerpFunc: TLerpFunc): boolean;
+begin
+  if not Assigned(FTransform) then Exit(inherited);
+  AddKeyframe(ATime, FTransform.Translation, ALerpFunc);
+  Result :=True;
+end;
+
 { TAnimationRotationTrack --------------------------------------------------------------- }
 procedure TAnimationRotationTrack.SetValue(const AValue: variant);
 begin
@@ -347,6 +361,14 @@ begin
   ComponentSerialization(SerializationProcess, self, STransform, ObjectName, APath, bReading);
 end;
 
+function TAnimationRotationTrack.AddKeyframeAtTime(const ATime: TFloatTime;
+  const ALerpFunc: TLerpFunc): boolean;
+begin
+  if not Assigned(FTransform) then Exit(inherited);
+  AddKeyframe(ATime, FTransform.Rotation, ALerpFunc);
+  Result :=True;
+end;
+
 { TAnimationScaleTrack --------------------------------------------------------------- }
 procedure TAnimationScaleTrack.SetValue(const AValue: variant);
 begin
@@ -377,6 +399,14 @@ begin
   inherited;
   //Get FTransform
   ComponentSerialization(SerializationProcess, self, STransform, ObjectName, APath, bReading);
+end;
+
+function TAnimationScaleTrack.AddKeyframeAtTime(const ATime: TFloatTime;
+  const ALerpFunc: TLerpFunc): boolean;
+begin
+  if not Assigned(FTransform) then Exit(inherited);
+  AddKeyframe(ATime, FTransform.Scale, ALerpFunc);
+  Result :=True;
 end;
 
 { TCastleAnimationPlayerTransform --------------------------------------------------------------- }

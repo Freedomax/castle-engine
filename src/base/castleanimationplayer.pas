@@ -359,9 +359,9 @@ begin
   begin
     Len := VarArrayHighBound(V, 1) - VarArrayLowBound(V, 1) + 1;
     case Len of
-      2: Result := Format('(%f,%f)', [V[0], V[1]]);
-      3: Result := Format('(%f,%f,%f)', [V[0], V[1], V[2]]);
-      4: Result := Format('(%f,%f,%f,%f)', [V[0], V[1], V[2], V[3]]);
+      2: Result := Format('(%s,%s)', [V[0], V[1]]);
+      3: Result := Format('(%s,%s,%s)', [V[0], V[1], V[2]]);
+      4: Result := Format('(%s,%s,%s,%s)', [V[0], V[1], V[2], V[3]]);
       else
         Result := '';
     end;

@@ -199,10 +199,12 @@ begin
   begin
     TreeViewProperties.Align := alClient;
     TreeViewControls.Align := alLeft;
+    Caption := 'Select Property';
   end
   else
   begin
     TreeViewControls.Align := alClient;
+    Caption := 'Select Component';
   end;
 end;
 
