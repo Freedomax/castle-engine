@@ -51,6 +51,11 @@
     constructor Create(ATransform: TCastleTransform);
     function ObjectName: string; override;
     function PropName: string; override;
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
+      const APath: string; const bReading: boolean; const APlayer: TComponent);
+      override;
+  published
+    property Transform: TCastleTransform read FTransform write FTransform;
   end;
 
   TAnimationRotationTrack = class(TAnimationVector4Track)
@@ -62,6 +67,11 @@
     constructor Create(ATransform: TCastleTransform);
     function ObjectName: string; override;
     function PropName: string; override;
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
+      const APath: string; const bReading: boolean; const APlayer: TComponent);
+      override;
+  published
+    property Transform: TCastleTransform read FTransform write FTransform;
   end;
 
   TAnimationScaleTrack = class(TAnimationVector3Track)
@@ -73,6 +83,11 @@
     constructor Create(ATransform: TCastleTransform);
     function ObjectName: string; override;
     function PropName: string; override;
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
+      const APath: string; const bReading: boolean; const APlayer: TComponent);
+      override;
+  published
+    property Transform: TCastleTransform read FTransform write FTransform;
   end;
 
   TCastleAnimationPlayerTransform = class(TCastleTransform)
@@ -90,6 +105,8 @@
 {$endif read_interface}
 
 {$ifdef read_implementation}
+const
+  STransform = 'Transform';
 
 function TAnimationPropertyTrack.GetPropertyInfo: PPropInfo;
 begin
@@ -206,7 +223,6 @@ end;
 procedure TAnimationPropertyTrack.CustomSerialization(
   const SerializationProcess: TSerializationProcess; const APath: string;
   const bReading: boolean; const APlayer: TComponent);
-
 var
   s: string;
   Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
@@ -228,7 +244,7 @@ begin
     end
     else
     begin
-      //Get FComponent  will done in self.Loaded
+      //Get FComponent
       SerializationProcess.RequireComponent(self, GetPropInfo(self, 'InternalComponent'), Tokens[0]);
     end;
   end;
@@ -282,12 +298,21 @@ function TAnimationTranslationTrack.ObjectName: string;
 begin
   if Assigned(FTransform) then Result := FTransform.Name
   else
-    Result := inherited;
+    Result := '';
 end;
 
 function TAnimationTranslationTrack.PropName: string;
 begin
   Result := 'Translation';
+end;
+
+procedure TAnimationTranslationTrack.CustomSerialization(
+  const SerializationProcess: TSerializationProcess; const APath: string;
+  const bReading: boolean; const APlayer: TComponent);
+begin
+  inherited;
+  //Get FTransform
+  ComponentSerialization(SerializationProcess, self, STransform, ObjectName, APath, bReading);
 end;
 
 { TAnimationRotationTrack --------------------------------------------------------------- }
@@ -305,12 +330,21 @@ end;
 function TAnimationRotationTrack.ObjectName: string;
 begin
   if Assigned(FTransform) then Result := FTransform.Name
-  else Result := inherited;
+  else Result := '';
 end;
 
 function TAnimationRotationTrack.PropName: string;
 begin
   Result := 'Rotation';
+end;
+
+procedure TAnimationRotationTrack.CustomSerialization(
+  const SerializationProcess: TSerializationProcess; const APath: string;
+  const bReading: boolean; const APlayer: TComponent);
+begin
+  inherited;
+  //Get FTransform
+  ComponentSerialization(SerializationProcess, self, STransform, ObjectName, APath, bReading);
 end;
 
 { TAnimationScaleTrack --------------------------------------------------------------- }
@@ -328,12 +362,21 @@ end;
 function TAnimationScaleTrack.ObjectName: string;
 begin
   if Assigned(FTransform) then Result := FTransform.Name
-  else Result := inherited;
+  else Result := '';
 end;
 
 function TAnimationScaleTrack.PropName: string;
 begin
   Result := 'Scale';
+end;
+
+procedure TAnimationScaleTrack.CustomSerialization(
+  const SerializationProcess: TSerializationProcess; const APath: string;
+  const bReading: boolean; const APlayer: TComponent);
+begin
+  inherited;
+  //Get FTransform
+  ComponentSerialization(SerializationProcess, self, STransform, ObjectName, APath, bReading);
 end;
 
 { TCastleAnimationPlayerTransform --------------------------------------------------------------- }

@@ -955,6 +955,8 @@ type
           const ListEnumerate: TSerializationProcess.TListEnumerateEvent;
           const ListAdd: TSerializationProcess.TListAddEvent;
           const ListClear: TSerializationProcess.TListClearEvent); override;
+        procedure RequireComponent(const AObject: TObject; const APropInfo: PPropInfo;
+          const AComponentName: string); overload; override;
       end;
       TSerializationProcessWriterList = {$ifdef FPC}specialize{$endif} TObjectList<TSerializationProcessWriter>;
 
@@ -1039,6 +1041,13 @@ begin
   CurrentlyWritingArray := nil; // will be created on-demand
   Key := AKey;
   ListEnumerate({$ifdef FPC}@{$endif}WriteItem);
+end;
+
+procedure TCastleJsonWriter.TSerializationProcessWriter.RequireComponent(
+  const AObject: TObject; const APropInfo: PPropInfo;
+  const AComponentName: string);
+begin
+  //Avoid delphi warning
 end;
 
 constructor TCastleJsonWriter.Create;

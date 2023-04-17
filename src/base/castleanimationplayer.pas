@@ -287,9 +287,13 @@ function KeyProp(const SObject, SPropName: string): string;
 function KeyItem(const SObject: string; const AIndex: integer): string;
 function KeyCount(const SObject: string): string;
 
+procedure ComponentSerialization(const SerializationProcess: TSerializationProcess;
+  const AObject: TObject; const APropName, AComponentName, APath: string;
+  const bReading: boolean);
+
 implementation
 
-uses Math, Generics.Defaults;
+uses Math, Generics.Defaults, TypInfo;
 
 function FloatMod(a, b: TFloatTime): TFloatTime;
 begin
@@ -400,6 +404,18 @@ begin
   Result := SObject + '-_Count';
 end;
 
+procedure ComponentSerialization(const SerializationProcess: TSerializationProcess;
+  const AObject: TObject; const APropName, AComponentName, APath: string;
+  const bReading: boolean);
+var
+  s: string;
+begin
+  s := AComponentName;
+  SerializationProcess.ReadWriteString(KeyProp(APath, APropName), s, s <> '');
+  if bReading and (s <> '') then
+    SerializationProcess.RequireComponent(AObject, GetPropInfo(AObject, APropName), s);
+end;
+
 destructor TAnimationTrack.Destroy;
 begin
   FKeyframeList.Free;
@@ -491,8 +507,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
-TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(
+  const AValue: TAnimationKeyframe): TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -933,8 +949,7 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -951,8 +966,7 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -969,8 +983,7 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -1208,8 +1221,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
