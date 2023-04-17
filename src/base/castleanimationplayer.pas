@@ -1249,10 +1249,14 @@ end;
 
 procedure TAnimationPlayer.RemoveAnimation(const AName: string);
 begin
-  if FAnimation = AName then
-    Animation := '';
-
-  FAnimationList.Remove(AName);
+  if AnimationExists(AName) then
+  begin
+    if Animation = AName then
+      Animation := '';
+    FAnimationList.Remove(AName);
+  end
+  else
+    WritelnWarning('RemoveAnimation: animation "%s" not exist.', [AName]);
 end;
 
 procedure TAnimationPlayer.ClearAnimations;
