@@ -37,7 +37,7 @@ const
     {$Ifdef fpc}@{$endif}LerpFuncUniformDeceleration);
 
 type
-  //inherit from TPersistent for RegisterClass
+  { Inherit from TPersistent for RegisterClass and de/serilization referenced component. }
   TAnimationTrack = class abstract(TPersistent)
   public
   type

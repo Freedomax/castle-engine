@@ -1026,12 +1026,14 @@ begin
 end;
 
 procedure TAnimationPlayerDialog.ButtonRemoveAnimationClick(Sender: TObject);
+var
+  AName: string;
 begin
-  if MessageDlg('Confirm', Format('Are you sure you want to delete "%s"?',
-    [AnimationPlayer.Animation]), TMsgDlgType.mtConfirmation, [mbOK, mbCancel], '') =
-    mrCancel then
+  AName := AnimationPlayer.Animation;
+  if MessageDlg('Confirm', Format('Are you sure you want to delete "%s"?', [AName]),
+    TMsgDlgType.mtConfirmation, [mbOK, mbCancel], '') = mrCancel then
     Exit;
-  AnimationPlayer.RemoveAnimation(AnimationPlayer.Animation);
+  AnimationPlayer.RemoveAnimation(AName);
   AnimationListChanged;
 end;
 

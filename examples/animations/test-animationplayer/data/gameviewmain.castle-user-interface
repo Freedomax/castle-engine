@@ -131,7 +131,7 @@
                 "AnimationPlayer" : {
                   "$$ClassName" : "TAnimationPlayer",
                   "Playing" : true,
-                  "Animation-_Count" : 3,
+                  "Animation-_Count" : 2,
                   "Animation_0" : "test",
                   "Animation_0-PlayStyle" : 1,
                   "Animation_0-Track-_Count" : 2,
@@ -155,9 +155,7 @@
                   "Animation_0-Track_1-Frame_1-Value" : "0.706281542778015",
                   "Animation_0-Track_1-FriendlyObjectName" : "Box1.TranslationPersistent",
                   "Animation_0-Track_1-PropertyName" : "Z",
-                  "Animation_1" : "223",
-                  "Animation_2" : "2",
-                  "CurrentAnimation" : "223"
+                  "Animation_1" : "2"
                 },
                 "Name" : "AnimationPlayerBox1"
               }
