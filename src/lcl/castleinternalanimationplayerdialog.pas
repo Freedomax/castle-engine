@@ -328,6 +328,10 @@ begin
         CurrentAnimation.Stop;
     end;
     if Assigned(FPlayingChanged) then FPlayingChanged(Self);
+
+    if FPlaying and Assigned(AnimationPlayer) and not AnimationPlayer.Playing then
+      ShowMessage(
+        'Unable to play currently, please first set AnimationPlayer.Playing = true in object inspector.');
   end;
 end;
 

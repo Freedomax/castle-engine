@@ -16,8 +16,10 @@
 
 {$ifdef read_interface}
   TAnimationPropertyTrack = class(TAnimationTrack)
-  private
+  strict private
+    FInternalComponent: TComponent;
     function GetPropertyInfo: PPropInfo;
+    procedure SetInternalComponent(const AValue: TComponent);
   strict protected
    FComponent: TPersistent;
    FProperty: string;
@@ -36,6 +38,8 @@
    property Component: TPersistent read FComponent;
    property PropertyName: string read FProperty;
    property PropertyInfo: PPropInfo read GetPropertyInfo;
+  published
+   property InternalComponent: TComponent read FInternalComponent write SetInternalComponent ;
   end;
 
   TAnimationTranslationTrack = class(TAnimationVector3Track)
@@ -94,6 +98,63 @@ begin
   Result := FPropertyInfo;
 end;
 
+procedure TAnimationPropertyTrack.SetInternalComponent(const AValue: TComponent
+  );
+
+  function ChildObject(Persistent: TPersistent; const AName: string): TPersistent;
+  var
+    PropList: TPropInfoList;
+    i: integer;
+    PropValue: TObject;
+  begin
+    Result := nil;
+    PropList := TPropInfoList.Create(Persistent, tkProperties);
+    try
+      for i := 0 to PropList.Count - 1 do
+      begin
+        if (PropList[i]^.PropType^.Kind = tkClass) and (PropList[i]^.Name = AName) then
+        begin
+          PropValue := GetObjectProp(Persistent, PropList[i]);
+          if PropValue is TPersistent then Exit(PropValue as TPersistent);
+        end;
+      end;
+    finally
+      PropList.Free;
+    end;
+  end;
+
+  function GetObject(AComponent:TPersistent; APropPath: string):TPersistent;
+  var
+    arr:{$Ifdef fpc}specialize{$endif} TArray<string>;
+    s:string;
+    i:integer;
+  begin
+    arr := APropPath.Split(['.']);
+    { arr[0] is AComponent's name. }
+    if Length(arr) > 1 then
+    begin
+      for i := 1 to length(arr) -1 do
+      begin
+        AComponent := ChildObject(AComponent, arr[i]);
+        if not Assigned(AComponent) then Break;
+      end;
+    end;
+    Result := AComponent;
+  end;
+
+begin
+  if FInternalComponent <> AValue then
+  begin
+     FInternalComponent := AValue;
+     if not Assigned(FInternalComponent) then Exit;
+     { Load FComponent from FriendlyObjectName. }
+     //self.FriendlyObjectName := ;
+     FComponent := GetObject(FInternalComponent, FriendlyObjectName);
+
+     WritelnWarning('FComponent:%s Prop:%s',[FComponent.ClassName, PropertyName]);
+  end;
+end;
+
 { TAnimationPropertyTrack --------------------------------------------------------------- }
 procedure TAnimationPropertyTrack.SetValue(const AValue: variant);
 begin
@@ -149,36 +210,6 @@ procedure TAnimationPropertyTrack.CustomSerialization(
   const SerializationProcess: TSerializationProcess; const APath: string;
   const bReading: boolean; const APlayer: TComponent);
 
-  function TraverseComponent(Persistent: TPersistent): TPersistent;
-  var
-    PropList: TPropInfoList;
-    i: integer;
-    PropValue: TObject;
-  begin
-    Result := nil;
-    PropList := TPropInfoList.Create(Persistent, tkProperties);
-    try
-      for i := 0 to PropList.Count - 1 do
-      begin
-        if PropList[i]^.PropType^.Kind = tkClass then
-        begin
-          PropValue := GetObjectProp(Persistent, PropList[i]);
-          if PropValue is TPersistent then
-          begin
-
-            // FillTreeView(TPersistent(PropValue), SubNode, TreeView);
-          end;
-        end
-        else
-        begin
-          //  TreeView.Items.Add(nil, PropList[i]^.Name);
-        end;
-      end;
-    finally
-      PropList.Free;
-    end;
-  end;
-
 var
   s: string;
   Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
@@ -201,6 +232,7 @@ begin
     else
     begin
       //Get FComponent  will done in self.Loaded
+      SerializationProcess.RequireComponent(self, GetPropInfo(self, 'InternalComponent'), Tokens[0]);
     end;
   end;
 

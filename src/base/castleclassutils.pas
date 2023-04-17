@@ -45,7 +45,7 @@ unit CastleClassUtils;
 interface
 
 uses Classes, SysUtils, Contnrs, Generics.Collections,
-  CastleUtils, CastleStringUtils;
+  CastleUtils, CastleStringUtils, TypInfo;
 
 { ---------------------------------------------------------------------------- }
 { @section(TStrings utilities) }
@@ -454,6 +454,8 @@ type
     procedure ReadWriteString(const Key: String; var Value: String; const IsStored: Boolean);
       overload; virtual; abstract;
     procedure ReadWriteSingle(const Key: String; var Value: Single; const IsStored: Boolean);
+      overload; virtual; abstract;
+    procedure RequireComponent(const AObject: TObject; const APropInfo: PPropInfo; const AComponentName:string);
       overload; virtual; abstract;
     { @groupEnd }
 
@@ -1012,7 +1014,7 @@ implementation
 uses
   {$ifdef UNIX} {$ifdef FPC} Unix, {$endif} {$endif}
   {$ifdef MSWINDOWS} Windows, {$endif}
-  StrUtils, Math {$ifdef FPC}, StreamIO, RTTIUtils {$endif}, TypInfo,
+  StrUtils, Math {$ifdef FPC}, StreamIO, RTTIUtils {$endif},
   CastleLog;
 
 { TStrings helpers ------------------------------------------------------- }

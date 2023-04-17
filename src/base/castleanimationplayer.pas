@@ -96,8 +96,6 @@ type
     procedure SetValue(const AValue: variant); virtual; abstract;
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       virtual;
-  protected
-    procedure Loaded(const APlayer: TComponent); virtual;
   public
     constructor Create; overload; virtual;
     destructor Destroy; override;
@@ -243,7 +241,6 @@ type
     procedure AddAnimationNoCheck(const AName: string; const AAnimation: TAnimation);
     procedure InternalAnimationComplete(Sender: TObject);
   protected
-    procedure Loaded; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -807,11 +804,6 @@ begin
 
 end;
 
-procedure TAnimationTrack.Loaded(const APlayer: TComponent);
-begin
-
-end;
-
 function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif}
   Left, Right: TAnimationTrack.TAnimationKeyframe): integer;
 begin
@@ -1088,16 +1080,6 @@ begin
       FOnAnimationComplete(Self);
 end;
 
-procedure TAnimationPlayer.Loaded;
-var
-  Track: TAnimationTrack;
-  Ani: TAnimation;
-begin
-  inherited Loaded;
-  for Ani in AnimationList.Values do
-    for Track in Ani.TrackList do Track.Loaded(Self);
-end;
-
 procedure TAnimationPlayer.CustomSerialization(
   const SerializationProcess: TSerializationProcess);
 
@@ -1208,6 +1190,10 @@ begin
       Track.CustomSerialization(SerializationProcess, TrackKeyPath, bReading, Self);
     end;
   end;
+
+  s := Animation;
+  SerializationProcess.ReadWriteString('CurrentAnimation', s, s <> '');
+  if bReading then Animation := s;
 end;
 
 constructor TAnimationPlayer.Create(AOwner: TComponent);
@@ -1222,8 +1208,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
