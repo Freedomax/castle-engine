@@ -148,8 +148,12 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
+    MenuItem6: TMenuItem;
     Panel1: TPanel;
     PopupMenuAddTrack: TPopupMenu;
+    Separator1: TMenuItem;
+    Separator2: TMenuItem;
+    Separator3: TMenuItem;
     procedure ButtonRemoveAnimationClick(Sender: TObject);
     procedure ButtonNewAnimationClick(Sender: TObject);
     procedure ButtonNewTrackClick(Sender: TObject);
@@ -159,6 +163,9 @@ type
     procedure MenuItem1Click(Sender: TObject);
     procedure MenuItem2Click(Sender: TObject);
     procedure MenuItem3Click(Sender: TObject);
+    procedure MenuItem4Click(Sender: TObject);
+    procedure MenuItem5Click(Sender: TObject);
+    procedure MenuItem6Click(Sender: TObject);
   private
     FView: TAnimationPlayerView;
 
@@ -168,6 +175,7 @@ type
     function GetAnimationPlayer: TAnimationPlayer;
     function GetPlayerParentUI: TCastleUserInterface;
     function SelectTransform: TCastleTransform;
+    function SelectUI: TCastleUserInterface;
 
     procedure InitView;
     procedure InitControls;
@@ -945,6 +953,42 @@ begin
   FView.AddTrack(Track);
 end;
 
+procedure TAnimationPlayerDialog.MenuItem4Click(Sender: TObject);
+var
+  Track: TAnimationPositionTrack;
+  AControl: TCastleUserInterface;
+begin
+  AControl := SelectUI;
+  if not Assigned(AControl) then Exit;
+
+  Track := TAnimationPositionTrack.Create(AControl);
+  FView.AddTrack(Track);
+end;
+
+procedure TAnimationPlayerDialog.MenuItem5Click(Sender: TObject);
+var
+  Track: TAnimationRotationTrack;
+  T: TCastleTransform;
+begin
+  T := SelectTransform;
+  if not Assigned(T) then Exit;
+
+  Track := TAnimationRotationTrack.Create(T);
+  FView.AddTrack(Track);
+end;
+
+procedure TAnimationPlayerDialog.MenuItem6Click(Sender: TObject);
+var
+  Track: TAnimationScaleTrack;
+  T: TCastleTransform;
+begin
+  T := SelectTransform;
+  if not Assigned(T) then Exit;
+
+  Track := TAnimationScaleTrack.Create(T);
+  FView.AddTrack(Track);
+end;
+
 function TAnimationPlayerDialog.GetCurrentAnimation: TAnimation;
 begin
   Result := FView.CurrentAnimation;
@@ -972,7 +1016,6 @@ end;
 function TAnimationPlayerDialog.SelectTransform: TCastleTransform;
 var
   Form: TPropertySelectForm;
-  Track: TAnimationTranslationTrack;
 begin
   Result := nil;
   Form := TPropertySelectForm.Create(nil);
@@ -985,6 +1028,30 @@ begin
         (Form.SelectResult.SelectedObject is TCastleTransform) then
       begin
         Result := Form.SelectResult.SelectedObject as TCastleTransform;
+      end
+      else
+        ShowMessage('Did not complete the selection.');
+    end;
+  finally
+    FreeAndNil(Form);
+  end;
+end;
+
+function TAnimationPlayerDialog.SelectUI: TCastleUserInterface;
+var
+  Form: TPropertySelectForm;
+begin
+  Result := nil;
+  Form := TPropertySelectForm.Create(nil);
+  try
+    Form.Load(GetPlayerParentUI, False, psmComponent);
+
+    if Form.ShowModal = mrOk then
+    begin
+      if Assigned(Form.SelectResult.SelectedObject) and
+        (Form.SelectResult.SelectedObject is TCastleUserInterface) then
+      begin
+        Result := Form.SelectResult.SelectedObject as TCastleUserInterface;
       end
       else
         ShowMessage('Did not complete the selection.');

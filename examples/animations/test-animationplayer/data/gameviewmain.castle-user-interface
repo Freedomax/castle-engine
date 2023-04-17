@@ -111,6 +111,7 @@
             },
             "RotationPersistent" : {
               "$$ClassName" : "TCastleVector4RotationPersistent",
+              "W" : 1.6700903177261353E+000,
               "Y" : 1.0000000000000000E+000
             },
             "SizePersistent" : {
@@ -131,7 +132,7 @@
                 "AnimationPlayer" : {
                   "$$ClassName" : "TAnimationPlayer",
                   "Playing" : true,
-                  "Animation-_Count" : 2,
+                  "Animation-_Count" : 3,
                   "Animation_0" : "test",
                   "Animation_0-PlayStyle" : 1,
                   "Animation_0-Track-_Count" : 2,
@@ -159,19 +160,31 @@
                   "Animation_0-Track_1-Frame_2-Value" : "0.503119111061096",
                   "Animation_0-Track_1-FriendlyObjectName" : "Box1.TranslationPersistent",
                   "Animation_0-Track_1-PropertyName" : "Z",
-                  "Animation_1" : "2",
-                  "Animation_1-PlayStyle" : 2,
+                  "Animation_1" : "3",
+                  "Animation_1-PlayStyle" : 1,
                   "Animation_1-Track-_Count" : 1,
-                  "Animation_1-Track_0-TrackClass" : "TAnimationTranslationTrack",
+                  "Animation_1-Track_0-TrackClass" : "TAnimationRotationTrack",
                   "Animation_1-Track_0-Frame-_Count" : 3,
                   "Animation_1-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
-                  "Animation_1-Track_0-Frame_0-Value" : "(-3.62863159179688,1,-3.44758939743042)",
-                  "Animation_1-Track_0-Frame_1-Time" : 1.0149999856948853E+000,
-                  "Animation_1-Track_0-Frame_1-Value" : "(-0.173430442810059,1,-2.01979684829712)",
-                  "Animation_1-Track_0-Frame_2-Time" : 2.0050001144409180E+000,
-                  "Animation_1-Track_0-Frame_2-Value" : "(3.44266700744629,1,-3.96033811569214)",
+                  "Animation_1-Track_0-Frame_0-Value" : "(0,1,0,0)",
+                  "Animation_1-Track_0-Frame_1-Time" : 1.0199999809265137E+000,
+                  "Animation_1-Track_0-Frame_1-Value" : "(0,1,0,0.800000011920929)",
+                  "Animation_1-Track_0-Frame_2-Time" : 1.9950000047683716E+000,
+                  "Animation_1-Track_0-Frame_2-Value" : "(0,1,0,1.89999997615814)",
                   "Animation_1-Track_0-Transform" : "Box1",
-                  "CurrentAnimation" : "2"
+                  "Animation_2" : "2",
+                  "Animation_2-PlayStyle" : 2,
+                  "Animation_2-Track-_Count" : 1,
+                  "Animation_2-Track_0-TrackClass" : "TAnimationTranslationTrack",
+                  "Animation_2-Track_0-Frame-_Count" : 3,
+                  "Animation_2-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+                  "Animation_2-Track_0-Frame_0-Value" : "(-3.62863159179688,1,-3.44758939743042)",
+                  "Animation_2-Track_0-Frame_1-Time" : 1.0149999856948853E+000,
+                  "Animation_2-Track_0-Frame_1-Value" : "(-0.173430442810059,1,-2.01979684829712)",
+                  "Animation_2-Track_0-Frame_2-Time" : 2.0050001144409180E+000,
+                  "Animation_2-Track_0-Frame_2-Value" : "(3.44266700744629,1,-3.96033811569214)",
+                  "Animation_2-Track_0-Transform" : "Box1",
+                  "CurrentAnimation" : "3"
                 },
                 "Name" : "AnimationPlayerBox1"
               }

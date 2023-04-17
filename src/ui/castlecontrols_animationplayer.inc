@@ -24,6 +24,11 @@
     constructor Create(AControl: TCastleUserInterface);
     function ObjectName: string; override;
     function PropName: string; override;
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
+      const APath: string; const bReading: boolean; const APlayer: TComponent);
+      override;
+  published
+    property Control: TCastleUserInterface read FControl write FControl;
   end;
 
   TCastleAnimationPlayer = class(TCastleUserInterface)
@@ -41,6 +46,9 @@
 {$endif read_interface}
 
 {$ifdef read_implementation}
+const
+  SUserInterface = 'Control';
+
 { TAnimationPositionTrack --------------------------------------------------------------- }
 procedure TAnimationPositionTrack.SetValue(const AValue: variant);
 begin
@@ -56,12 +64,21 @@ end;
 function TAnimationPositionTrack.ObjectName: string;
 begin
   if Assigned(FControl) then Result := FControl.Name
-  else Result := inherited;
+  else Result := '';
 end;
 
 function TAnimationPositionTrack.PropName: string;
 begin
   Result := 'Translation';
+end;
+
+procedure TAnimationPositionTrack.CustomSerialization(
+  const SerializationProcess: TSerializationProcess; const APath: string;
+  const bReading: boolean; const APlayer: TComponent);
+begin
+  inherited;
+  //Get FControl
+  ComponentSerialization(SerializationProcess, self, SUserInterface, ObjectName, APath, bReading);
 end;
 
 { TCastleAnimationPlayer --------------------------------------------------------------- }

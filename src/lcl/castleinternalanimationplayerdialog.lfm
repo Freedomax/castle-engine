@@ -93,9 +93,8 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Caption = 'PropertyTrack'
       OnClick = MenuItem1Click
     end
-    object MenuItem2: TMenuItem
-      Caption = 'Add 10 tracks(debug)'
-      OnClick = MenuItem2Click
+    object Separator3: TMenuItem
+      Caption = '-'
     end
     object MenuItem3: TMenuItem
       Caption = 'TranslationTrack(Transform)'
@@ -103,9 +102,25 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     end
     object MenuItem5: TMenuItem
       Caption = 'RotationTrack(Transform)'
+      OnClick = MenuItem5Click
+    end
+    object MenuItem6: TMenuItem
+      Caption = 'ScaleTrack(Transform)'
+      OnClick = MenuItem6Click
+    end
+    object Separator2: TMenuItem
+      Caption = '-'
     end
     object MenuItem4: TMenuItem
       Caption = 'PositionTrack(UI)'
+      OnClick = MenuItem4Click
+    end
+    object Separator1: TMenuItem
+      Caption = '-'
+    end
+    object MenuItem2: TMenuItem
+      Caption = 'Add 10 tracks(debug)'
+      OnClick = MenuItem2Click
     end
   end
 end
