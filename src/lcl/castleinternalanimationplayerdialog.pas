@@ -167,6 +167,7 @@ type
     procedure FViewPlayingChanged(Sender: TObject);
     function GetAnimationPlayer: TAnimationPlayer;
     function GetPlayerParentUI: TCastleUserInterface;
+    function SelectTransform: TCastleTransform;
 
     procedure InitView;
     procedure InitControls;
@@ -360,27 +361,26 @@ var
   ATime: TFloatTime;
   Track: TAnimationTrack;
   v: variant;
+  slt: TStringList;
 begin
   if not Assigned(CurrentAnimation) then Exit;
   if CurrentAnimation.TrackList.Count = 0 then Exit;
-   {
-  Index := Random(CurrentAnimation.TrackList.Count);
-  CurrentAnimation.TrackList.Items[Index].AddKeyframe(
-    Random(100) / 25, Random(100) / 25);
-  }
-  ATime := GetMousePosTime;
-  for Track in CurrentAnimation.TrackList do
-  begin
-    if Track is TAnimationPropertyTrack then
+
+  slt := TStringList.Create;
+  try
+    ATime := GetMousePosTime;
+    for Track in CurrentAnimation.TrackList do
     begin
-      //TAnimationPropertyTrack(Track).Component;
-      v := GetPropValue(TAnimationPropertyTrack(Track).Component,
-        TAnimationPropertyTrack(Track).PropertyInfo);
-      Track.AddKeyframe(ATime, v);
+      if not Track.AddKeyframeAtTime(ATime) then
+        slt.Add('AddKeyframeAtTime fail: ' + Track.ClassName);
     end;
+
+    KeyFrameListChanged(-1);
+    if slt.Count > 0 then ShowMessage(slt.Text);
+  finally
+    FreeAndNil(slt);
   end;
 
-  KeyFrameListChanged(-1);
 end;
 
 procedure TAnimationPlayerView.AScrollViewHeaderPress(
@@ -935,28 +935,14 @@ end;
 
 procedure TAnimationPlayerDialog.MenuItem3Click(Sender: TObject);
 var
-  Form: TPropertySelectForm;
   Track: TAnimationTranslationTrack;
+  T: TCastleTransform;
 begin
-  Form := TPropertySelectForm.Create(nil);
-  try
-    Form.Load(GetPlayerParentUI, False, psmComponent);
+  T := SelectTransform;
+  if not Assigned(T) then Exit;
 
-    if Form.ShowModal = mrOk then
-    begin
-      if Assigned(Form.SelectResult.SelectedObject) and
-        (Form.SelectResult.SelectedObject is TCastleTransform) then
-      begin
-        Track := TAnimationTranslationTrack.Create(Form.SelectResult.SelectedObject as
-          TCastleTransform);
-        FView.AddTrack(Track);
-      end
-      else
-        ShowMessage('Did not complete the selection.');
-    end;
-  finally
-    FreeAndNil(Form);
-  end;
+  Track := TAnimationTranslationTrack.Create(T);
+  FView.AddTrack(Track);
 end;
 
 function TAnimationPlayerDialog.GetCurrentAnimation: TAnimation;
@@ -981,6 +967,31 @@ begin
     Result := ((comp as TCastleTransform).World.Owner as TCastleUserInterface)
   else
     raise Exception.Create('Cannot find root TCastleUserInterface');
+end;
+
+function TAnimationPlayerDialog.SelectTransform: TCastleTransform;
+var
+  Form: TPropertySelectForm;
+  Track: TAnimationTranslationTrack;
+begin
+  Result := nil;
+  Form := TPropertySelectForm.Create(nil);
+  try
+    Form.Load(GetPlayerParentUI, False, psmComponent);
+
+    if Form.ShowModal = mrOk then
+    begin
+      if Assigned(Form.SelectResult.SelectedObject) and
+        (Form.SelectResult.SelectedObject is TCastleTransform) then
+      begin
+        Result := Form.SelectResult.SelectedObject as TCastleTransform;
+      end
+      else
+        ShowMessage('Did not complete the selection.');
+    end;
+  finally
+    FreeAndNil(Form);
+  end;
 end;
 
 procedure TAnimationPlayerDialog.FViewPlayingChanged(Sender: TObject);

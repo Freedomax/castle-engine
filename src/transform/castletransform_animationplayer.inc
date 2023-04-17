@@ -31,7 +31,7 @@
    constructor Create(AComponent: TPersistent; const AProperty: string); overload;
    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
      const APath: string; const bReading: boolean; const APlayer: TComponent); override;
-   function AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+   function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
    function ObjectName: string; override;
    function PropName: string; override;
@@ -256,11 +256,11 @@ begin
   if bReading then FProperty := s;
 end;
 
-function TAnimationPropertyTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+function TAnimationPropertyTrack.AddKeyframeAtTime(const ATime: TFloatTime;
   const ALerpFunc: TLerpFunc): boolean;
 begin
   if not Assigned(FComponent) then
-    Exit(inherited AddCurrentValueAsKeyframe(ATime, ALerpFunc));
+    Exit(inherited AddKeyframeAtTime(ATime, ALerpFunc));
 
   AddKeyframe(ATime, GetPropValue(FComponent, FPropertyInfo), ALerpFunc);
   Result := True;

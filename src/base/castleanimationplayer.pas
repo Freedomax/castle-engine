@@ -111,7 +111,7 @@ type
     function AddKeyframe(const AValue: TAnimationKeyframe): TAnimationKeyframe;
       overload;
     { Add the value of the current object as a keyframe and return a value indicating success or failure. }
-    function AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+    function AddKeyframeAtTime(const ATime: TFloatTime;
       const ALerpFunc: TLerpFunc = nil): boolean; virtual;
     { Calculate the value corresponding to the time and execute it. }
     procedure Evaluate(const ATime: TFloatTime);
@@ -515,7 +515,7 @@ begin
   Result := AValue;
 end;
 
-function TAnimationTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+function TAnimationTrack.AddKeyframeAtTime(const ATime: TFloatTime;
   const ALerpFunc: TLerpFunc): boolean;
 begin
   Result := False;
