@@ -63,9 +63,9 @@ var
 begin
   AniPlayer := Sender as TAnimationPlayer;
   LabelLog.Text.Add(Format('Animation: "%s" completed', [AniPlayer.Animation]));
-  if AniPlayer.Animation = '1' then AniPlayer.Animation := '2'
+  if AniPlayer.Animation = 'box1' then AniPlayer.Animation := 'box2'
   else
-  if AniPlayer.Animation = '2' then AniPlayer.Animation := '3';
+  if AniPlayer.Animation = 'box2' then AniPlayer.Animation := 'box3';
 end;
 
 procedure TViewMain.Button1Click(Sender: TObject);
@@ -108,7 +108,7 @@ begin
 
   { Box }
   //1
-  Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('1');
+  Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('box1');
   TranslationTrack := TAnimationTranslationTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox));
   TranslationTrack.Mode := tmContinuous;
@@ -119,7 +119,7 @@ begin
 
   Animation.AddTrack(TranslationTrack);
   //2
-  Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('2');
+  Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('box2');
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).RotationPersistent, 'W');
   Track.Mode := tmContinuous;
@@ -127,7 +127,7 @@ begin
   Track.AddKeyframe(1, -Pi / 2);
   Animation.AddTrack(Track);
   //3
-  Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('3');
+  Animation := AnimationPlayerBox1.AnimationPlayer.NewAnimation('box3');
   Track := TAnimationPropertyTrack.Create(
     (AnimationPlayerBox1.Parent as TCastleBox).TranslationPersistent, 'Z');
   Track.Mode := tmContinuous;
@@ -138,7 +138,7 @@ begin
   Animation.AddTrack(Track);
   //Play 1
   AnimationPlayerBox1.AnimationPlayer.OnAnimationComplete := Box1AnimationComplete;
-  AnimationPlayerBox1.AnimationPlayer.Animation := '1';
+  AnimationPlayerBox1.AnimationPlayer.Animation := 'box1';
   AnimationPlayerBox1.AnimationPlayer.Playing := True;
 
   { Label }

@@ -491,8 +491,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -933,7 +933,8 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -950,7 +951,8 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -967,7 +969,8 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -1122,10 +1125,26 @@ begin
     else
       s := AniKeys[i];
     SerializationProcess.ReadWriteString(AniKeyPath, s, s <> '');
-    if bReading then  Ani := NewAnimation(S)
+
+    Ani := nil;
+    if bReading then
+    begin
+      if not AnimationExists(S) then Ani := NewAnimation(S)
+      else
+      begin
+        WritelnWarning(
+          'CustomSerialization:animation "%s" already exist', [S]);
+        Continue;
+      end;
+    end
     else
-    if not AnimationList.TryGetValue(S, Ani) then WritelnWarning(
+    if not AnimationList.TryGetValue(S, Ani) then
+    begin
+      WritelnWarning(
         'CustomSerialization:animation "%s" not exist', [S]);
+      Continue;
+    end;
+
     { Animation Properties. }
     Aint := Ord(Ani.PlayStyle);
     SerializationProcess.ReadWriteInteger(KeyProp(AniKeyPath, 'PlayStyle'),
@@ -1185,7 +1204,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
