@@ -111,8 +111,13 @@
             },
             "RotationPersistent" : {
               "$$ClassName" : "TCastleVector4RotationPersistent",
-              "W" : 1.6700903177261353E+000,
               "Y" : 1.0000000000000000E+000
+            },
+            "ScalePersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : 1.1078997850418091E+000,
+              "Y" : 1.1078997850418091E+000,
+              "Z" : 1.1078997850418091E+000
             },
             "SizePersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
@@ -164,13 +169,19 @@
                   "Animation_1-PlayStyle" : 1,
                   "Animation_1-Track-_Count" : 1,
                   "Animation_1-Track_0-TrackClass" : "TAnimationRotationTrack",
-                  "Animation_1-Track_0-Frame-_Count" : 3,
+                  "Animation_1-Track_0-Frame-_Count" : 6,
                   "Animation_1-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
                   "Animation_1-Track_0-Frame_0-Value" : "(0,1,0,0)",
-                  "Animation_1-Track_0-Frame_1-Time" : 1.0199999809265137E+000,
-                  "Animation_1-Track_0-Frame_1-Value" : "(0,1,0,0.800000011920929)",
-                  "Animation_1-Track_0-Frame_2-Time" : 1.9950000047683716E+000,
-                  "Animation_1-Track_0-Frame_2-Value" : "(0,1,0,1.89999997615814)",
+                  "Animation_1-Track_0-Frame_1-Time" : 0.0000000000000000E+000,
+                  "Animation_1-Track_0-Frame_1-Value" : "(0,1,0,0)",
+                  "Animation_1-Track_0-Frame_2-Time" : 1.0049999952316284E+000,
+                  "Animation_1-Track_0-Frame_2-Value" : "(0,1,0,0)",
+                  "Animation_1-Track_0-Frame_3-Time" : 1.0199999809265137E+000,
+                  "Animation_1-Track_0-Frame_3-Value" : "(0,1,0,0.800000011920929)",
+                  "Animation_1-Track_0-Frame_4-Time" : 1.9950000047683716E+000,
+                  "Animation_1-Track_0-Frame_4-Value" : "(0,1,0,1.89999997615814)",
+                  "Animation_1-Track_0-Frame_5-Time" : 2.0199999809265137E+000,
+                  "Animation_1-Track_0-Frame_5-Value" : "(0,1,0,0)",
                   "Animation_1-Track_0-Transform" : "Box1",
                   "Animation_2" : "2",
                   "Animation_2-PlayStyle" : 2,
@@ -253,9 +264,9 @@
         },
         "TranslationPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : -9.3245700001716614E-002,
-          "Y" : 1.2257350921630859E+001,
-          "Z" : 4.0573105812072754E+000
+          "X" : -9.7313925623893738E-002,
+          "Y" : 1.2924036026000977E+001,
+          "Z" : 4.2516379356384277E+000
         }
       },
       "InternalDesignNavigations[dnFly]" : {

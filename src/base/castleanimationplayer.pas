@@ -297,6 +297,7 @@ uses Math, Generics.Defaults, TypInfo;
 
 function FloatMod(a, b: TFloatTime): TFloatTime;
 begin
+  if b <= 0 then Exit(0);
   Result := a - b * Floor(a / b);
 end;
 
@@ -507,8 +508,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -664,7 +665,6 @@ procedure TAnimation.UpdateByCurrentTime(out bCompleted: boolean);
 var
   EvalTime: TFloatTime;
   I: integer;
-  Track: TAnimationTrack;
 begin
   EvalTime := 0;
   bCompleted := False;
@@ -693,8 +693,7 @@ begin
 
   for I := 0 to FTrackList.Count - 1 do
   begin
-    Track := TAnimationTrack(FTrackList[I]);
-    Track.Evaluate(EvalTime);
+    FTrackList[I].Evaluate(EvalTime);
   end;
 end;
 
@@ -771,7 +770,14 @@ begin
     tmDiscrete: Result := Keyframe1.Value;
     tmContinuous:
     begin
-      ALerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
+      if Keyframe2.Time = Keyframe1.Time then
+        ALerp := 0
+      else
+        ALerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
+
+      if IsNan(ALerp) or IsInfinite(ALerp) then
+        raise Exception.Create('Floating point error');
+
       if Assigned(Keyframe1.LerpFunc) then ALerp := Keyframe1.LerpFunc(ALerp);
       Result := CalcValue(Keyframe1.Value, Keyframe2.Value, ALerp);
     end;
@@ -949,7 +955,8 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -966,7 +973,8 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -983,7 +991,8 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;

@@ -124,6 +124,8 @@ initialization
   R.Caption := ['Switch'];
   R.IsDeprecated := true;
   RegisterSerializableComponent(R);
+
+  RegisterClasses([TAnimationPositionTrack]);
 finalization
   FinalizationUIFonts;
   FinalizationClipboard;
