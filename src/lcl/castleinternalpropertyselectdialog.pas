@@ -15,6 +15,7 @@ type
     SelectedProperty: string;
     FriendlyObjectName: string;
   end;
+  TPropertySelectMode = (psmProperty, psmComponent);
 
   TPropertySelectForm = class(TForm)
     ButtonPanel1: TButtonPanel;
@@ -23,15 +24,20 @@ type
     TreeViewProperties: TTreeView;
     ButtonPanel: TButtonPanel;
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
+    procedure FormCreate(Sender: TObject);
     procedure TreeViewControlsSelectionChanged(Sender: TObject);
     procedure TreeViewPropertiesDblClick(Sender: TObject);
   private
     FSelectResult: TPropertySelectResult;
     FDblClickCompleted: boolean;
+    FMode: TPropertySelectMode;
+    procedure SetMode(const AValue: TPropertySelectMode);
     procedure UpdateSelectedResult;
   public
     property SelectResult: TPropertySelectResult read FSelectResult;
-    procedure Load(const AControl: TCastleUserInterface);
+    property Mode: TPropertySelectMode read FMode write SetMode;
+    procedure Load(const AControl: TCastleUserInterface;
+      const AsRoot: boolean = True; const AMode: TPropertySelectMode = psmProperty);
   end;
 
 var
@@ -90,6 +96,8 @@ procedure TPropertySelectForm.TreeViewControlsSelectionChanged(Sender: TObject);
 var
   Node: TTreeNode;
 begin
+  if FMode <> psmProperty then Exit;
+
   TreeViewProperties.Items.BeginUpdate;
   try
     TreeViewProperties.Items.Clear;
@@ -119,9 +127,18 @@ var
   Node: TTreeNode;
 begin
   if Assigned(TreeViewControls.Selected) then
-    FSelectResult.SelectedObject := TPersistent(TreeViewControls.Selected.Data)
+  begin
+    FSelectResult.SelectedObject := TPersistent(TreeViewControls.Selected.Data);
+    FSelectResult.FriendlyObjectName := TreeViewControls.Selected.Text;
+  end
   else
+  begin
     FSelectResult.SelectedObject := nil;
+    FSelectResult.FriendlyObjectName := '';
+  end;
+  FSelectResult.SelectedProperty := '';
+
+  if Fmode <> psmProperty then Exit;
 
   if Assigned(TreeViewProperties.Selected) then
   begin
@@ -167,9 +184,26 @@ begin
     else
       FSelectResult.FriendlyObjectName :=
         TreeViewControls.Selected.Text + '.' + FSelectResult.FriendlyObjectName;
-    //   SuffixRemove('Persistent', FSelectResult.FriendlyObjectName, True);
+    //do not:   SuffixRemove('Persistent', FSelectResult.FriendlyObjectName, True);
   end;
 
+end;
+
+procedure TPropertySelectForm.SetMode(const AValue: TPropertySelectMode);
+begin
+  if FMode = AValue then Exit;
+
+  FMode := AValue;
+  TreeViewProperties.Visible := FMode = psmProperty;
+  if FMode = psmProperty then
+  begin
+    TreeViewProperties.Align := alClient;
+    TreeViewControls.Align := alLeft;
+  end
+  else
+  begin
+    TreeViewControls.Align := alClient;
+  end;
 end;
 
 procedure TPropertySelectForm.FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -178,7 +212,13 @@ begin
     UpdateSelectedResult;
 end;
 
-procedure TPropertySelectForm.Load(const AControl: TCastleUserInterface);
+procedure TPropertySelectForm.FormCreate(Sender: TObject);
+begin
+  Mode := psmProperty;
+end;
+
+procedure TPropertySelectForm.Load(const AControl: TCastleUserInterface;
+  const AsRoot: boolean; const AMode: TPropertySelectMode);
 
   procedure TraverseTransforms(ATransform: TCastleTransform; Node: TTreeNode);
   var
@@ -226,8 +266,15 @@ procedure TPropertySelectForm.Load(const AControl: TCastleUserInterface);
     RootNode.Expand(True);
   end;
 
+var
+  ARoot: TCastleUserInterface;
 begin
-  PopulateTreeView(AControl, TreeViewControls);
+  Mode := AMode;
+
+  ARoot := AControl;
+  if not AsRoot then
+    while Assigned(ARoot.Parent) do ARoot := ARoot.Parent;
+  PopulateTreeView(ARoot, TreeViewControls);
 end;
 
 end.

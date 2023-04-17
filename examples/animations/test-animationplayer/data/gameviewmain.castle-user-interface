@@ -155,7 +155,12 @@
                   "Animation_0-Track_1-Frame_1-Value" : "0.706281542778015",
                   "Animation_0-Track_1-FriendlyObjectName" : "Box1.TranslationPersistent",
                   "Animation_0-Track_1-PropertyName" : "Z",
-                  "Animation_1" : "2"
+                  "Animation_1" : "2",
+                  "Animation_1-PlayStyle" : 3,
+                  "Animation_1-Track-_Count" : 1,
+                  "Animation_1-Track_0-TrackClass" : "TAnimationTranslationTrack",
+                  "Animation_1-Track_0-Transform" : "Box1",
+                  "CurrentAnimation" : "2"
                 },
                 "Name" : "AnimationPlayerBox1"
               }

@@ -97,5 +97,15 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Caption = 'Add 10 tracks(debug)'
       OnClick = MenuItem2Click
     end
+    object MenuItem3: TMenuItem
+      Caption = 'TranslationTrack(Transform)'
+      OnClick = MenuItem3Click
+    end
+    object MenuItem5: TMenuItem
+      Caption = 'RotationTrack(Transform)'
+    end
+    object MenuItem4: TMenuItem
+      Caption = 'PositionTrack(UI)'
+    end
   end
 end

@@ -145,6 +145,9 @@ type
     ComboBoxPlayStyle: TComboBox;
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    MenuItem5: TMenuItem;
     Panel1: TPanel;
     PopupMenuAddTrack: TPopupMenu;
     procedure ButtonRemoveAnimationClick(Sender: TObject);
@@ -155,6 +158,7 @@ type
     procedure ComboBoxPlayStyleChange(Sender: TObject);
     procedure MenuItem1Click(Sender: TObject);
     procedure MenuItem2Click(Sender: TObject);
+    procedure MenuItem3Click(Sender: TObject);
   private
     FView: TAnimationPlayerView;
 
@@ -162,6 +166,7 @@ type
     procedure FViewCurrentAnimationChanged(Sender: TObject);
     procedure FViewPlayingChanged(Sender: TObject);
     function GetAnimationPlayer: TAnimationPlayer;
+    function GetPlayerParentUI: TCastleUserInterface;
 
     procedure InitView;
     procedure InitControls;
@@ -864,24 +869,11 @@ end;
 procedure TAnimationPlayerDialog.MenuItem1Click(Sender: TObject);
 var
   Form: TPropertySelectForm;
-  comp: TComponent;
-  ARoot: TCastleUserInterface;
   Track: TAnimationPropertyTrack;
 begin
   Form := TPropertySelectForm.Create(nil);
   try
-    comp := FView.AnimationPlayer.Owner;
-    if comp is TCastleUserInterface then
-      ARoot := (comp as TCastleUserInterface)
-    else
-    if comp is TCastleTransform then
-      ARoot := ((comp as TCastleTransform).World.Owner as TCastleUserInterface)
-    else
-      raise Exception.Create('Cannot find root TCastleUserInterface');
-
-    while Assigned(ARoot.Parent) do ARoot := ARoot.Parent;
-
-    Form.Load(ARoot);
+    Form.Load(GetPlayerParentUI, False);
 
     if Form.ShowModal = mrOk then
     begin
@@ -894,7 +886,7 @@ begin
         FView.AddTrack(Track);
       end
       else
-        ShowMessage('Didnot complete the selection.');
+        ShowMessage('Did not complete the selection.');
     end;
   finally
     FreeAndNil(Form);
@@ -941,6 +933,32 @@ begin
   end;
 end;
 
+procedure TAnimationPlayerDialog.MenuItem3Click(Sender: TObject);
+var
+  Form: TPropertySelectForm;
+  Track: TAnimationTranslationTrack;
+begin
+  Form := TPropertySelectForm.Create(nil);
+  try
+    Form.Load(GetPlayerParentUI, False, psmComponent);
+
+    if Form.ShowModal = mrOk then
+    begin
+      if Assigned(Form.SelectResult.SelectedObject) and
+        (Form.SelectResult.SelectedObject is TCastleTransform) then
+      begin
+        Track := TAnimationTranslationTrack.Create(Form.SelectResult.SelectedObject as
+          TCastleTransform);
+        FView.AddTrack(Track);
+      end
+      else
+        ShowMessage('Did not complete the selection.');
+    end;
+  finally
+    FreeAndNil(Form);
+  end;
+end;
+
 function TAnimationPlayerDialog.GetCurrentAnimation: TAnimation;
 begin
   Result := FView.CurrentAnimation;
@@ -949,6 +967,20 @@ end;
 function TAnimationPlayerDialog.GetAnimationPlayer: TAnimationPlayer;
 begin
   Result := FView.AnimationPlayer;
+end;
+
+function TAnimationPlayerDialog.GetPlayerParentUI: TCastleUserInterface;
+var
+  comp: TComponent;
+begin
+  comp := FView.AnimationPlayer.Owner;
+  if comp is TCastleUserInterface then
+    Result := (comp as TCastleUserInterface)
+  else
+  if comp is TCastleTransform then
+    Result := ((comp as TCastleTransform).World.Owner as TCastleUserInterface)
+  else
+    raise Exception.Create('Cannot find root TCastleUserInterface');
 end;
 
 procedure TAnimationPlayerDialog.FViewPlayingChanged(Sender: TObject);
