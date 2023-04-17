@@ -155,6 +155,7 @@ procedure TAnimationPropertyTrack.CustomSerialization(
     i: integer;
     PropValue: TObject;
   begin
+    Result := nil;
     PropList := TPropInfoList.Create(Persistent, tkProperties);
     try
       for i := 0 to PropList.Count - 1 do
