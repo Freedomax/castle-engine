@@ -320,7 +320,7 @@ end;
 
 function VariantToVector3(const V: variant): TVector3;
 begin
-  if VariantLen(v) <> 2 then
+  if VariantLen(v) <> 3 then
     raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
       [3, VariantLen(v)]);
   Result := Vector3(V[0], V[1], V[2]);
@@ -333,7 +333,7 @@ end;
 
 function VariantToVector4(const V: variant): TVector4;
 begin
-  if VariantLen(v) <> 2 then
+  if VariantLen(v) <> 4 then
     raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
       [4, VariantLen(v)]);
   Result := Vector4(V[0], V[1], V[2], V[3]);
@@ -491,8 +491,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
-TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(
+  const AValue: TAnimationKeyframe): TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -933,8 +933,7 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -951,8 +950,7 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -969,8 +967,7 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -1112,7 +1109,11 @@ begin
   SerializationProcess.ReadWriteInteger(KeyCount(SAni), AniCount, AniCount > 0);
   if AniCount = 0 then Exit;
 
-  if not bReading then  AniKeys := AnimationList.Keys.ToArray;
+  if not bReading then
+  begin
+    AniKeys := AnimationList.Keys.ToArray;
+    if length(AniKeys) = 0 then Exit;
+  end;
   for  I := 0 to AniCount - 1 do
   begin
     AniKeyPath := KeyItem(SAni, I);
