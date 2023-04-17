@@ -121,7 +121,7 @@
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "X" : -3.7888646125793457E+000,
+              "X" : 2.7519693374633789E+000,
               "Y" : 1.0000000000000000E+000,
               "Z" : -3.0000000000000000E+000
             },
@@ -130,13 +130,18 @@
                 "$$ClassName" : "TCastleAnimationPlayerTransform",
                 "AnimationPlayer" : {
                   "$$ClassName" : "TAnimationPlayer",
-                  "Playing" : true,
                   "Animation-_Count" : 3,
                   "Animation_0" : "test",
                   "Animation_0-PlayStyle" : 1,
-                  "Animation_0-Track-_Count" : 2,
+                  "Animation_0-Track-_Count" : 1,
                   "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
-                  "Animation_0-Track_1-TrackClass" : "TAnimationPropertyTrack",
+                  "Animation_0-Track_0-Frame-_Count" : 2,
+                  "Animation_0-Track_0-Frame_0-Time" : 5.9999998658895493E-002,
+                  "Animation_0-Track_0-Frame_0-Value" : "-3.78886461257935",
+                  "Animation_0-Track_0-Frame_1-Time" : 1.6649999618530273E+000,
+                  "Animation_0-Track_0-Frame_1-Value" : "2.75196933746338",
+                  "Animation_0-Track_0-FriendlyObjectName" : "Box1.TranslationPersistent",
+                  "Animation_0-Track_0-PropertyName" : "X",
                   "Animation_1" : "223",
                   "Animation_2" : "2"
                 },

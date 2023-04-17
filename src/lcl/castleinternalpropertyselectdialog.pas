@@ -166,8 +166,8 @@ begin
       FSelectResult.FriendlyObjectName := TreeViewControls.Selected.Text
     else
       FSelectResult.FriendlyObjectName :=
-        TreeViewControls.Selected.Text + '.' +
-        SuffixRemove('Persistent', FSelectResult.FriendlyObjectName, True);
+        TreeViewControls.Selected.Text + '.' + FSelectResult.FriendlyObjectName;
+    //   SuffixRemove('Persistent', FSelectResult.FriendlyObjectName, True);
   end;
 
 end;

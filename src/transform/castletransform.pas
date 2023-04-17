@@ -23,7 +23,8 @@ uses SysUtils, Classes, Math, Generics.Collections, Contnrs, Kraft,
   CastleVectors, CastleFrustum, CastleBoxes, CastleClassUtils, CastleKeysMouse,
   CastleRectangles, CastleUtils, CastleTimeUtils, CastleComponentSerialize,
   CastleSoundEngine, CastleTriangles, CastleRenderOptions, CastleProjection,
-  CastleUIControls, CastleQuaternions, CastleColors, CastleInternalClassUtils, CastleAnimationPlayer;
+  CastleUIControls, CastleQuaternions, CastleColors, CastleInternalClassUtils,
+  CastleAnimationPlayer,TypInfo;
 
 type
   {$define read_interface}
@@ -52,7 +53,7 @@ implementation
 uses CastleLog, CastleApplicationProperties, CastleURIUtils, CastleInternalRays,
   CastleRenderContext,
   // TODO: this breaks unit dependencies, transform->scene
-  X3DNodes, CastleScene, CastleInternalPhysicsVisualization;
+  X3DNodes, CastleScene, CastleInternalPhysicsVisualization,RttiUtils;
 
 {$define read_implementation}
 {$I castletransform_initial_types.inc}
@@ -149,4 +150,6 @@ initialization
   RegisterSerializableComponent(TCastleWorldPlaneDistanceJoint, ['Physics', 'Joint', 'World Plane Distance']);
   RegisterSerializableComponent(TCastleSliderJoint, ['Physics', 'Joint', 'Slider']);
   {$endif CASTLE_EXPERIMENTAL_JOINTS}
+
+  RegisterClass(TAnimationPropertyTrack);
 end.

@@ -15,6 +15,27 @@
 }
 
 {$ifdef read_interface}
+  TAnimationPropertyTrack = class(TAnimationTrack)
+  strict protected
+   FComponent: TPersistent;
+   FProperty: string;
+   FPropertyInfo: PPropInfo;
+   procedure SetValue(const AValue: variant); override;
+   function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
+     override;
+  public
+   constructor Create(AComponent: TPersistent; const AProperty: string); overload;
+   procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
+     const APath: string; const bReading: boolean; const APlayer: TComponent); override;
+   function AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+     const ALerpFunc: TLerpFunc = nil): boolean; override;
+   function ObjectName: string; override;
+   function PropName: string; override;
+   property Component: TPersistent read FComponent;
+   property PropertyName: string read FProperty;
+   property PropertyInfo: PPropInfo read FPropertyInfo;
+  end;
+
   TAnimationTranslationTrack = class(TAnimationVector3Track)
   strict private
     FTransform: TCastleTransform;
@@ -63,6 +84,158 @@
 {$endif read_interface}
 
 {$ifdef read_implementation}
+{ TAnimationPropertyTrack --------------------------------------------------------------- }
+procedure TAnimationPropertyTrack.SetValue(const AValue: variant);
+begin
+  if Assigned(FComponent) and Assigned(FPropertyInfo) then
+    SetPropValue(FComponent, FPropertyInfo, AValue);
+end;
+
+function TAnimationPropertyTrack.CalcValue(const Value1, Value2: variant;
+  const ALerp: single): variant;
+var
+  V1_int, V2_int: int64;
+  V1_float, V2_float: extended;
+  Tk: TTypeKind;
+begin
+  if not Assigned(FPropertyInfo) then Exit;
+
+  Tk := FPropertyInfo^.PropType^.Kind;
+  case Tk of
+    tkInteger, tkInt64, tkEnumeration,
+    tkSet, tkChar, tkWChar:
+    begin
+      V1_int := Value1;
+      V2_int := Value2;
+      Result := Round((1 - ALerp) * V1_int + ALerp * V2_int);
+    end;
+    tkFloat:
+    begin
+      V1_float := Value1;
+      V2_float := Value2;
+      Result := (1 - ALerp) * V1_float + ALerp * V2_float;
+    end;
+    else
+      raise Exception.CreateFmt(
+        'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
+        [Ord(Tk), FProperty]);
+  end;
+
+end;
+
+constructor TAnimationPropertyTrack.Create(AComponent: TPersistent;
+  const AProperty: string);
+begin
+  Create;
+  FComponent := AComponent;
+  FProperty := AProperty;
+  FPropertyInfo := GetPropInfo(FComponent, FProperty);
+  if not Assigned(FPropertyInfo) then
+    raise Exception.CreateFmt('%s does not exist in %s',
+      [FProperty, FComponent.ClassName]);
+end;
+
+procedure TAnimationPropertyTrack.CustomSerialization(
+  const SerializationProcess: TSerializationProcess; const APath: string;
+  const bReading: boolean; const APlayer: TComponent);
+
+  function TraverseComponent(Persistent: TPersistent): TPersistent;
+  var
+    PropList: TPropInfoList;
+    i: integer;
+    PropValue: TObject;
+  begin
+    PropList := TPropInfoList.Create(Persistent, tkProperties);
+    try
+      for i := 0 to PropList.Count - 1 do
+      begin
+        if PropList[i]^.PropType^.Kind = tkClass then
+        begin
+          PropValue := GetObjectProp(Persistent, PropList[i]);
+          if PropValue is TPersistent then
+          begin
+
+            // FillTreeView(TPersistent(PropValue), SubNode, TreeView);
+          end;
+        end
+        else
+        begin
+          //  TreeView.Items.Add(nil, PropList[i]^.Name);
+        end;
+      end;
+    finally
+      PropList.Free;
+    end;
+  end;
+
+var
+  s: string;
+  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  comp: TComponent;
+  ARoot: TCastleUserInterface;
+begin
+  inherited;
+  {
+  FriendlyObjectName
+  property Component: TPersistent read FComponent;
+    property PropertyName: string read FProperty;   }
+  s := FriendlyObjectName;
+  SerializationProcess.ReadWriteString(
+    KeyProp(APath, 'FriendlyObjectName'),
+    s, s <> '');
+  if bReading and ( s<>'' ) then
+  begin
+    FriendlyObjectName := s;
+    Tokens := s.Split(['.']);
+    if Length(Tokens) < 1 then
+    begin
+      WritelnWarning('Canot serialize FriendlyObjectName, empty value.');
+    end
+    else
+    begin
+      //Get FComponent
+    // StringToComponent
+    end;
+  end;
+
+  s := PropertyName;
+  SerializationProcess.ReadWriteString(
+    KeyProp(APath, 'PropertyName'),
+    s, s <> '');
+  if bReading then
+  begin
+    FProperty := s;
+    if Assigned(FComponent) then
+      FPropertyInfo := GetPropInfo(FComponent, FProperty);
+  end;
+end;
+
+function TAnimationPropertyTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;
+  const ALerpFunc: TLerpFunc): boolean;
+begin
+  if not Assigned(FComponent) then
+    Exit(inherited AddCurrentValueAsKeyframe(ATime, ALerpFunc));
+
+  AddKeyframe(ATime, GetPropValue(FComponent, FPropertyInfo), ALerpFunc);
+  Result := True;
+end;
+
+function TAnimationPropertyTrack.ObjectName: string;
+begin
+  Result := inherited;
+  if not Assigned(FComponent) then exit;
+  if FComponent is TComponent then
+    Result := (FComponent as TComponent).Name
+  else
+    Result := '(' + FComponent.ClassName + ')';
+
+end;
+
+function TAnimationPropertyTrack.PropName: string;
+begin
+  Result := FProperty;
+end;
+
 { TAnimationTranslationTrack --------------------------------------------------------------- }
 procedure TAnimationTranslationTrack.SetValue(const AValue: variant);
 begin

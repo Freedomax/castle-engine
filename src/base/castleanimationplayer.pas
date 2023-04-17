@@ -20,7 +20,7 @@ interface
 
 uses
   Classes, SysUtils, CastleClassUtils, CastleUtils,
-  Generics.Collections, CastleTimeUtils, CastleLog, TypInfo, Variants, CastleVectors;
+  Generics.Collections, CastleTimeUtils, CastleLog, Variants, CastleVectors;
 
 type
   TAnimationTrackMode = (tmContinuous, tmDiscrete);
@@ -63,9 +63,7 @@ type
       LerpFuncType: TLerpFuncType;
       property Value: variant read FValue write SetValue;
       property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
-
       property Time: TFloatTime read FTime write SetTime;
-
     end;
 
     TAnimationKeyframeList = class(
@@ -77,7 +75,6 @@ type
     end;
 
   strict private
-
     FOnChange: TNotifyEvent;
     FKeyframeList: TAnimationKeyframeList;
     FMode: TAnimationTrackMode;
@@ -104,12 +101,14 @@ type
     function ObjectName: string; virtual;
     function PropName: string; virtual;
     procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
-      const APath: string); virtual;
+      const APath: string; const bReading: boolean; const APlayer: TComponent); virtual;
     { Add a keyframe. The time is calculated in seconds, with the time when the animation
       starts running as the zero second. LerpFunc represents the equation for modifying the
       original Lerp, if it's nil, it means that Lerp is not modified. Lerp always ranges from 0 to 1. }
     function AddKeyframe(const ATime: TFloatTime; const AValue: variant;
-      const ALerpFunc: TLerpFunc = nil): TAnimationKeyframe;
+      const ALerpFunc: TLerpFunc = nil): TAnimationKeyframe; overload;
+    function AddKeyframe(const AValue: TAnimationKeyframe): TAnimationKeyframe;
+      overload;
     { Add the value of the current object as a keyframe and return a value indicating success or failure. }
     function AddCurrentValueAsKeyframe(const ATime: TFloatTime;
       const ALerpFunc: TLerpFunc = nil): boolean; virtual;
@@ -130,27 +129,6 @@ type
   end;
 
   TAnimationTrackClass = class of TAnimationTrack;
-
-  TAnimationPropertyTrack = class(TAnimationTrack)
-  strict private
-    FComponent: TPersistent;
-    FProperty: string;
-    FPropertyInfo: PPropInfo;
-  strict protected
-    function GetFriendlyObjectName: string; override;
-    procedure SetValue(const AValue: variant); override;
-    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
-      override;
-  public
-    constructor Create(AComponent: TPersistent; const AProperty: string); overload;
-    function AddCurrentValueAsKeyframe(const ATime: TFloatTime;
-      const ALerpFunc: TLerpFunc = nil): boolean; override;
-    function ObjectName: string; override;
-    function PropName: string; override;
-    property Component: TPersistent read FComponent;
-    property PropertyName: string read FProperty;
-    property PropertyInfo: PPropInfo read FPropertyInfo;
-  end;
 
   TAnimationVector2Track = class abstract(TAnimationTrack)
   strict protected
@@ -300,6 +278,10 @@ function VariantFromVector3(const V: TVector3): variant;
 function VariantToVector4(const V: variant): TVector4;
 function VariantFromVector4(const V: TVector4): variant;
 
+function VariantLen(const V: variant): integer;
+function VariantToString(const V: variant): string;
+function VariantFromString(const S: string): variant;
+
 
 function KeyProp(const SObject, SPropName: string): string;
 function KeyItem(const SObject: string; const AIndex: integer): string;
@@ -314,8 +296,20 @@ begin
   Result := a - b * Floor(a / b);
 end;
 
+function VariantLen(const V: variant): integer;
+begin
+  if VarIsNull(v) then Exit(0);
+  if VarIsArray(V) then
+    Result := VarArrayHighBound(V, 1) - VarArrayLowBound(V, 1) + 1
+  else
+    Result := 1;
+end;
+
 function VariantToVector2(const V: variant): TVector2;
 begin
+  if VariantLen(v) <> 2 then
+    raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
+      [2, VariantLen(v)]);
   Result := Vector2(V[0], V[1]);
 end;
 
@@ -326,6 +320,9 @@ end;
 
 function VariantToVector3(const V: variant): TVector3;
 begin
+  if VariantLen(v) <> 2 then
+    raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
+      [3, VariantLen(v)]);
   Result := Vector3(V[0], V[1], V[2]);
 end;
 
@@ -336,12 +333,55 @@ end;
 
 function VariantToVector4(const V: variant): TVector4;
 begin
+  if VariantLen(v) <> 2 then
+    raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
+      [4, VariantLen(v)]);
   Result := Vector4(V[0], V[1], V[2], V[3]);
 end;
 
 function VariantFromVector4(const V: TVector4): variant;
 begin
   Result := VarArrayOf([V.X, V.Y, V.Z, V.W]);
+end;
+
+function VariantToString(const V: variant): string;
+var
+  I: integer;
+  Len: integer;
+  ArrPtr: Pointer;
+begin
+  if VarIsNull(v) then Exit('');
+  if VarIsArray(V) then
+  begin
+    Len := VarArrayHighBound(V, 1) - VarArrayLowBound(V, 1) + 1;
+    case Len of
+      2: Result := Format('(%f,%f)', [V[0], V[1]]);
+      3: Result := Format('(%f,%f,%f)', [V[0], V[1], V[2]]);
+      4: Result := Format('(%f,%f,%f,%f)', [V[0], V[1], V[2], V[3]]);
+      else
+        Result := '';
+    end;
+  end
+  else
+    Result := VarToStr(V);
+end;
+
+function VariantFromString(const S: string): variant;
+var
+  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  Len: integer;
+begin
+  Tokens := S.Trim(['(', ')']).Split([',']);
+  Len := Length(Tokens);
+  case Len of
+    2: Result := VarArrayOf([StrToFloat(Tokens[0]), StrToFloat(Tokens[1])]);
+    3: Result := VarArrayOf([StrToFloat(Tokens[0]), StrToFloat(Tokens[1]),
+        StrToFloat(Tokens[2])]);
+    4: Result := VarArrayOf([StrToFloat(Tokens[0]), StrToFloat(Tokens[1]),
+        StrToFloat(Tokens[2]), StrToFloat(Tokens[3])]);
+    else
+      Result := S;
+  end;
 end;
 
 
@@ -377,14 +417,67 @@ begin
 end;
 
 procedure TAnimationTrack.CustomSerialization(
-  const SerializationProcess: TSerializationProcess; const APath: string);
+  const SerializationProcess: TSerializationProcess; const APath: string;
+  const bReading: boolean; const APlayer: TComponent);
+var
+  Aint, I, KeyFrameCount: integer;
+  FramePath, s: string;
+  Frame: TAnimationKeyframe;
+  Afloat: single;
+const
+  SFrame = 'Frame';
 begin
   { Track Properties. }
-           { LerpFuncType: TLerpFuncType;
+   { property Mode: TAnimationTrackMode read FMode write FMode;
+    property KeyframeList: TAnimationKeyframeList read FKeyframeList;     }
+  Aint := Ord(FMode);
+  SerializationProcess.ReadWriteInteger(
+    KeyProp(APath, 'Mode'),
+    Aint, Aint <> 0);
+  Mode := TAnimationTrackMode(Aint);
+  { KeyFrameList }
+  KeyFrameCount := KeyframeList.Count;
+  SerializationProcess.ReadWriteInteger(KeyCount(KeyProp(APath, SFrame)),
+    KeyFrameCount, KeyFrameCount > 0);
+  if KeyFrameCount = 0 then Exit;
+
+  for i := 0 to KeyFrameCount - 1 do
+  begin
+    if bReading then
+    begin
+      Frame := TAnimationKeyframe.Create;
+      AddKeyframe(Frame);
+    end
+    else
+    begin
+      Frame := KeyframeList[I];
+    end;
+    { KeyFrame propery }
+    { LerpFuncType: TLerpFuncType;
       property Value: variant read FValue write SetValue;
       property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
+      property Time: TFloatTime read FTime write SetTime;    }
+    FramePath := KeyItem(KeyProp(APath, SFrame), I);
 
-      property Time: TFloatTime read FTime write SetTime;  }
+    Aint := Ord(Frame.LerpFuncType);
+    SerializationProcess.ReadWriteInteger(
+      KeyProp(FramePath, 'LerpFuncType'),
+      Aint, Aint <> 0);
+    Frame.LerpFuncType := TLerpFuncType(Aint);
+    Frame.LerpFunc := TLerpFuncArr[Frame.LerpFuncType];
+
+    Afloat := Frame.Time;
+    SerializationProcess.ReadWriteSingle(
+      KeyProp(FramePath, 'Time'),
+      Afloat, True);
+    Frame.Time := Afloat;
+
+    s := VariantToString(Frame.Value);
+    SerializationProcess.ReadWriteString(
+      KeyProp(FramePath, 'Value'),
+      s, s <> '');
+    Frame.Value := VariantFromString(s);
+  end;
 
 end;
 
@@ -395,8 +488,14 @@ begin
   Result.Time := ATime;
   Result.Value := AValue;
   Result.LerpFunc := ALerpFunc;
-  Result.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
-  FKeyframeList.Add(Result);
+  AddKeyframe(Result);
+end;
+
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
+begin
+  AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
+  FKeyframeList.Add(AValue);
 end;
 
 function TAnimationTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;
@@ -821,85 +920,6 @@ begin
   Result := SearchIndex(ATime) - 1;
 end;
 
-function TAnimationPropertyTrack.GetFriendlyObjectName: string;
-begin
-  Result := inherited GetFriendlyObjectName;
-  if Result = '' then Result := ObjectName;
-end;
-
-procedure TAnimationPropertyTrack.SetValue(const AValue: variant);
-begin
-  SetPropValue(FComponent, FPropertyInfo, AValue);
-end;
-
-function TAnimationPropertyTrack.CalcValue(const Value1, Value2: variant;
-  const ALerp: single): variant;
-var
-  V1_int, V2_int: int64;
-  V1_float, V2_float: extended;
-  Tk: TTypeKind;
-begin
-  Tk := FPropertyInfo^.PropType^.Kind;
-  case Tk of
-    tkInteger, tkInt64, tkEnumeration,
-    tkSet, tkChar, tkWChar:
-    begin
-      V1_int := Value1;
-      V2_int := Value2;
-      Result := Round((1 - ALerp) * V1_int + ALerp * V2_int);
-    end;
-    tkFloat:
-    begin
-      V1_float := Value1;
-      V2_float := Value2;
-      Result := (1 - ALerp) * V1_float + ALerp * V2_float;
-    end;
-    else
-      raise Exception.CreateFmt(
-        'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
-        [Ord(Tk), FProperty]);
-  end;
-
-end;
-
-constructor TAnimationPropertyTrack.Create(AComponent: TPersistent;
-  const AProperty: string);
-begin
-  Create;
-  FComponent := AComponent;
-  FProperty := AProperty;
-  FPropertyInfo := GetPropInfo(FComponent, FProperty);
-  if not Assigned(FPropertyInfo) then
-    raise Exception.CreateFmt('%s does not exist in %s',
-      [FProperty, FComponent.ClassName]);
-end;
-
-function TAnimationPropertyTrack.AddCurrentValueAsKeyframe(const ATime: TFloatTime;
-  const ALerpFunc: TLerpFunc): boolean;
-begin
-  if not Assigned(FComponent) then
-    Exit(inherited AddCurrentValueAsKeyframe(ATime, ALerpFunc));
-
-  AddKeyframe(ATime, GetPropValue(FComponent, FPropertyInfo), ALerpFunc);
-  Result := True;
-end;
-
-function TAnimationPropertyTrack.ObjectName: string;
-begin
-  Result := inherited;
-  if not Assigned(FComponent) then exit;
-  if FComponent is TComponent then
-    Result := (FComponent as TComponent).Name
-  else
-    Result := '(' + FComponent.ClassName + ')';
-
-end;
-
-function TAnimationPropertyTrack.PropName: string;
-begin
-  Result := FProperty;
-end;
-
 function TAnimationVector2Track.CalcValue(const Value1, Value2: variant;
   const ALerp: single): variant;
 var
@@ -1146,7 +1166,7 @@ begin
           [J, s]);
         Continue;
       end;
-      Track.CustomSerialization(SerializationProcess, TrackKeyPath);
+      Track.CustomSerialization(SerializationProcess, TrackKeyPath, bReading, Self);
     end;
   end;
 end;
@@ -1163,8 +1183,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
@@ -1227,9 +1246,5 @@ begin
   if FPlaying then FPlaying := False;
   if Assigned(FCurrentAnimation) then FCurrentAnimation.Stop(ResetTime);
 end;
-
-
-initialization
-  RegisterClass(TAnimationPropertyTrack);
 
 end.
