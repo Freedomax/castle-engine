@@ -145,13 +145,10 @@ procedure TAnimationPropertyTrack.SetInternalComponent(const AValue: TComponent
 begin
   if FInternalComponent <> AValue then
   begin
-     FInternalComponent := AValue;
-     if not Assigned(FInternalComponent) then Exit;
-     { Load FComponent from FriendlyObjectName. }
-     //self.FriendlyObjectName := ;
-     FComponent := GetObject(FInternalComponent, FriendlyObjectName);
-
-     WritelnWarning('FComponent:%s Prop:%s',[FComponent.ClassName, PropertyName]);
+    FInternalComponent := AValue;
+    if not Assigned(FInternalComponent) then Exit;
+    { Load FComponent from FriendlyObjectName. }
+    FComponent := GetObject(FInternalComponent, FriendlyObjectName);
   end;
 end;
 
