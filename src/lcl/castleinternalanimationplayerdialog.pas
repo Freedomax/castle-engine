@@ -595,8 +595,13 @@ end;
 procedure TAnimationPlayerView.ATrackContainerPress(const Sender: TCastleUserInterface;
   const Event: TInputPressRelease; var Handled: boolean);
 begin
-  FTrackViewList[Sender.Tag].Selected := not FTrackViewList[Sender.Tag].Selected;
-  Handled := True;
+  if Event.IsMouseButton(buttonLeft) then
+  begin
+    if not Container.Pressed.Items[keyCtrl] then
+      FTrackViewList.UnSelectAll;
+    FTrackViewList[Sender.Tag].Selected := not FTrackViewList[Sender.Tag].Selected;
+    Handled := True;
+  end;
 end;
 
 procedure TAnimationPlayerView.ATrackViewRender(const Sender: TCastleUserInterface);
