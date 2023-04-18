@@ -448,7 +448,8 @@ end;
 
 procedure TAnimationPlayerView.TrackDesignerUIButtonRemoveClick(Sender: TObject);
 begin
-  if MessageDlg('Confirm', Format('Are you sure you want to delete keyframe at %.2f second?',
+  if MessageDlg('Confirm', Format(
+    'Are you sure you want to delete keyframe at %.2f second?',
     [TrackDesignerUI.KeyFrame.Time]), TMsgDlgType.mtConfirmation,
     [mbOK, mbCancel], '') = mrCancel then
     Exit;
@@ -543,12 +544,11 @@ var
   begin
     if not Assigned(CurrentAnimation) then Exit;
     R := RenderRect;
-    RTrack := FTrackViewList.First.RenderRect;
     DrawVerticalLineAtMousePosition;
 
     if FTrackViewList.Count = 0 then Exit;
     if not Playing then Exit;
-
+    RTrack := FTrackViewList.First.RenderRect;
     RenderLine(RTrack.Left + PixelsPerSceond * CurrentAnimation.ActualCurrentTime *
       UIScale, CastleColors.Green, 2);
   end;
