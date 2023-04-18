@@ -29,17 +29,36 @@ uses
 type
   TTrackView = class(TCastleRectangleControl)
   strict private
+    FSelected: boolean;
   var
     FTrack: TAnimationTrack;
+    procedure SetSelected(const AValue: boolean);
     procedure SetTrack(const AValue: TAnimationTrack);
   public
     function GetMousePosTime(const APixelsPerSceond: single): TFloatTime;
     function GetMousePosFrame(const APixelsPerSceond: single): integer;
     function UnderMouse: boolean;
     property Track: TAnimationTrack read FTrack write SetTrack;
+    property Selected: boolean read FSelected write SetSelected;
+  end;
+
+  TTrackViewList = class( {$Ifdef fpc}specialize{$endif} TObjectList<TTrackView>)
+  public
+    function FocusedTrackView: TTrackView;
+    procedure SelectAll;
+    procedure UnSelectAll;
   end;
 
   TTrackListScrollView = class(TCastleScrollView)
+  end;
+
+  TTrackViewContainer = class(TCastleHorizontalGroup)
+  private
+    FTrackView: TTrackView;
+    procedure SetTrackView(const AValue: TTrackView);
+  public
+    procedure RenderOverChildren; override;
+    property TrackView: TTrackView read FTrackView write SetTrackView;
   end;
 
   TTrackDesignerUI = class(TCastleUserInterface)
@@ -63,11 +82,6 @@ type
     property Track: TAnimationTrack read FTrack write SetTrack;
     property KeyFrame: TAnimationTrack.TAnimationKeyframe
       read FKeyFrame write SetKeyFrame;
-  end;
-
-  TTrackViewList = class( {$Ifdef fpc}specialize{$endif} TObjectList<TTrackView>)
-  public
-    function FocusedTrackView: TTrackView;
   end;
 
   TAnimationPlayerView = class(TCastleView)
@@ -95,6 +109,8 @@ type
     procedure AScrollViewHeaderPress(const Sender: TCastleUserInterface;
       const Event: TInputPressRelease; var Handled: boolean);
     procedure AScrollViewHeaderRender(const Sender: TCastleUserInterface);
+    procedure ATrackContainerPress(const Sender: TCastleUserInterface;
+      const Event: TInputPressRelease; var Handled: boolean);
     procedure ATrackViewRender(const Sender: TCastleUserInterface);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
@@ -224,6 +240,12 @@ begin
   end;
 end;
 
+procedure TTrackView.SetSelected(const AValue: boolean);
+begin
+  if FSelected = AValue then Exit;
+  FSelected := AValue;
+end;
+
 function TTrackView.GetMousePosTime(const APixelsPerSceond: single): TFloatTime;
 var
   AMousePos: TVector2;
@@ -306,6 +328,36 @@ begin
   begin
     if ATrackView.UnderMouse then exit(ATrackView);
   end;
+end;
+
+procedure TTrackViewList.SelectAll;
+var
+  TrackView: TTrackView;
+begin
+  for TrackView in self do
+    TrackView.Selected := True;
+end;
+
+procedure TTrackViewList.UnSelectAll;
+var
+  TrackView: TTrackView;
+begin
+  for TrackView in self do
+    TrackView.Selected := False;
+end;
+
+procedure TTrackViewContainer.SetTrackView(const AValue: TTrackView);
+begin
+  if FTrackView = AValue then Exit;
+  FTrackView := AValue;
+end;
+
+procedure TTrackViewContainer.RenderOverChildren;
+begin
+  inherited RenderOverChildren;
+  if not Assigned(TrackView) then Exit;
+  if not TrackView.Selected then Exit;
+  DrawRectangleOutline(RenderRect, Vector4(1, 1, 0, 0.5), 2);
 end;
 
 procedure TAnimationPlayerView.SetAnimationPlayer(const AValue: TAnimationPlayer);
@@ -404,9 +456,9 @@ procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
 
 var
   ATime: TFloatTime;
-  Track: TAnimationTrack;
-  v: variant;
   slt: TStringList;
+  TrackView: TTrackView;
+  SelectedCount: integer;
 begin
   if not Assigned(CurrentAnimation) then Exit;
   if CurrentAnimation.TrackList.Count = 0 then Exit;
@@ -414,13 +466,17 @@ begin
   slt := TStringList.Create;
   try
     ATime := GetMousePosTime;
-    for Track in CurrentAnimation.TrackList do
+    SelectedCount := 0;
+    for TrackView in FTrackViewList do
     begin
-      if not Track.AddKeyframeAtTime(ATime) then
-        slt.Add('AddKeyframeAtTime fail: ' + Track.ClassName);
+      if not TrackView.Selected then Continue;
+      Inc(SelectedCount);
+      if not TrackView.Track.AddKeyframeAtTime(ATime) then
+        slt.Add('AddKeyframeAtTime fail: ' + TrackView.Track.ClassName);
     end;
-
-    KeyFrameListChanged(-1);
+    if SelectedCount = 0 then slt.Add('Please select some tracks(mouse click) first.')
+    else
+      KeyFrameListChanged(-1);
     if slt.Count > 0 then ShowMessage(slt.Text);
   finally
     FreeAndNil(slt);
@@ -534,6 +590,13 @@ begin
   RenderTimeLine(RHeader, 1);
   { PlaybackLine. }
   RenderPlaybackLine;
+end;
+
+procedure TAnimationPlayerView.ATrackContainerPress(const Sender: TCastleUserInterface;
+  const Event: TInputPressRelease; var Handled: boolean);
+begin
+  FTrackViewList[Sender.Tag].Selected := not FTrackViewList[Sender.Tag].Selected;
+  Handled := True;
 end;
 
 procedure TAnimationPlayerView.ATrackViewRender(const Sender: TCastleUserInterface);
@@ -672,7 +735,7 @@ procedure TAnimationPlayerView.ReloadTracks;
 var
   I: integer;
   ATrack: TAnimationTrack;
-  ATrackContainer: TCastleHorizontalGroup;
+  ATrackContainer: TTrackViewContainer;
   ATrackView: TTrackView;
   ATrackHeadView: TCastleRectangleControl;
   { TrackHeadView items. }
@@ -694,9 +757,11 @@ begin
   for  I := 0 to CurrentAnimation.TrackList.Count - 1 do
   begin
     ATrack := CurrentAnimation.TrackList.Items[I];
-    ATrackContainer := TCastleHorizontalGroup.Create(self);
+    ATrackContainer := TTrackViewContainer.Create(self);
     ATrackContainer.Spacing := ItemSpacing;
     ATrackContainer.Culling := True;
+    ATrackContainer.Tag := I;
+    ATrackContainer.OnPress := {$Ifdef fpc}@{$endif}ATrackContainerPress;
     FTrackListView.InsertFront(ATrackContainer);
 
     ATrackHeadView := TCastleRectangleControl.Create(Self);
@@ -745,6 +810,7 @@ begin
     ATrackView.Width := 1;
     ATrackView.Tag := I;
     ATrackView.OnRender := {$Ifdef fpc}@{$endif}ATrackViewRender;
+    ATrackContainer.TrackView := ATrackView;
     ATrackContainer.InsertFront(ATrackView);
     FTrackViewList.Add(ATrackView);
   end;
