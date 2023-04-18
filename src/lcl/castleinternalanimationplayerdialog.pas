@@ -595,12 +595,15 @@ end;
 
 procedure TAnimationPlayerView.ATrackContainerPress(const Sender: TCastleUserInterface;
   const Event: TInputPressRelease; var Handled: boolean);
+var
+  b: boolean;
 begin
   if Event.IsMouseButton(buttonLeft) then
   begin
+    b := not FTrackViewList[Sender.Tag].Selected;
     if not Container.Pressed.Items[keyCtrl] then
       FTrackViewList.UnSelectAll;
-    FTrackViewList[Sender.Tag].Selected := not FTrackViewList[Sender.Tag].Selected;
+    FTrackViewList[Sender.Tag].Selected := b;
     Handled := True;
   end;
 end;
@@ -736,6 +739,32 @@ begin
 end;
 
 procedure TAnimationPlayerView.ReloadTracks;
+type
+  TTrackSelections = {$Ifdef fpc}specialize{$endif}TDictionary<TAnimationTrack, boolean>;
+var
+  TrackSelections: TTrackSelections;
+  ATrackView: TTrackView;
+
+  procedure BeginReload;
+  begin
+    TrackSelections := nil;
+    if not Assigned(CurrentAnimation) then Exit;
+    if FTrackViewList.Count = 0 then exit;
+    TrackSelections := TTrackSelections.Create;
+    for  ATrackView in FTrackViewList do
+    begin
+      TrackSelections.AddOrSetValue(ATrackView.Track, ATrackView.Selected);
+    end;
+  end;
+
+  procedure EndReload;
+  var
+    b: boolean;
+  begin
+    if not Assigned(TrackSelections) then Exit;
+    for  ATrackView in FTrackViewList do
+      if TrackSelections.TryGetValue(ATrackView.Track, b) then ATrackView.Selected := b;
+  end;
 
   function ColorByIndex(const AIndex: integer): TCastleColor;
   begin
@@ -750,7 +779,6 @@ var
   I: integer;
   ATrack: TAnimationTrack;
   ATrackContainer: TTrackViewContainer;
-  ATrackView: TTrackView;
   ATrackHeadView: TCastleRectangleControl;
   { TrackHeadView items. }
   AHeadItemContainer: TCastleVerticalGroup;
@@ -759,76 +787,84 @@ var
   ALabelObjectName: TCastleLabel;
   AButtonDelete: TCastleButton;
 begin
-  FTrackListView.ClearControls;
-  FTrackViewList.Clear;
-  if not Assigned(CurrentAnimation) then
-  begin
-    ButtonAddKeyFrame.Exists := False;
-    Exit;
+  { Save trackview selections. }
+  BeginReload;
+  try
+    FTrackListView.ClearControls;
+    FTrackViewList.Clear;
+    if not Assigned(CurrentAnimation) then
+    begin
+      ButtonAddKeyFrame.Exists := False;
+      Exit;
+    end;
+
+    ButtonAddKeyFrame.Exists := CurrentAnimation.TrackList.Count > 0;
+    for  I := 0 to CurrentAnimation.TrackList.Count - 1 do
+    begin
+      ATrack := CurrentAnimation.TrackList.Items[I];
+      ATrackContainer := TTrackViewContainer.Create(self);
+      ATrackContainer.Spacing := ItemSpacing;
+      ATrackContainer.Culling := True;
+      ATrackContainer.Tag := I;
+      ATrackContainer.OnPress := {$Ifdef fpc}@{$endif}ATrackContainerPress;
+      FTrackListView.InsertFront(ATrackContainer);
+
+      ATrackHeadView := TCastleRectangleControl.Create(Self);
+      ATrackHeadView.Height := TrackHeight;
+      ATrackHeadView.Color := Vector4(0, 0, 0, 0.4);
+      ATrackHeadView.Tag := I;
+      ATrackHeadView.Width := TrackHeadViewWidth;
+      ATrackContainer.InsertFront(ATrackHeadView);
+      { HeadView items. }
+      AHeadItemContainer := TCastleVerticalGroup.Create(self);
+      AHeadItemContainer.FullSize := True;
+      ATrackHeadView.InsertFront(AHeadItemContainer);
+
+      ALabelObjectName := TCastleLabel.Create(self);
+      ALabelObjectName.FontSize := ItemFontSmallSize;
+      ALabelObjectName.Color := CastleColors.White;
+      ALabelObjectName.Caption := ATrack.FriendlyObjectName;
+      AHeadItemContainer.InsertFront(ALabelObjectName);
+
+      ALabelPropName := TCastleLabel.Create(self);
+      ALabelPropName.FontSize := ItemFontSize;
+      ALabelPropName.Color := CastleColors.White;
+      ALabelPropName.Caption := ATrack.PropName;
+      AHeadItemContainer.InsertFront(ALabelPropName);
+
+      ACheckBox := TCastleCheckbox.Create(self);
+      ACheckBox.Caption := 'Continuous';
+      ACheckBox.Checked := ATrack.Mode = tmContinuous;
+      ACheckBox.Tag := I;
+      ACheckBox.OnChange := {$Ifdef fpc}@{$endif}ACheckBoxChange;
+      ACheckBox.TextColor := CastleColors.White;
+      ACheckBox.FontSize := ItemFontSize;
+      AHeadItemContainer.InsertFront(ACheckBox);
+
+      AButtonDelete := TCastleButton.Create(Self);
+      AButtonDelete.Caption := 'Remove';
+      AButtonDelete.OnClick := {$Ifdef fpc}@{$endif}AButtonDeleteTrackClick;
+      AButtonDelete.FontSize := ItemFontSize;
+      AButtonDelete.Tag := I;
+      AHeadItemContainer.InsertFront(AButtonDelete);
+      { TrackView. }
+      ATrackView := TTrackView.Create(self);
+      ATrackView.Color := ColorByIndex(I);
+      ATrackView.Track := ATrack;
+      ATrackView.Height := TrackHeight;
+      ATrackView.Width := 1;
+      ATrackView.Tag := I;
+      ATrackView.OnRender := {$Ifdef fpc}@{$endif}ATrackViewRender;
+      ATrackContainer.TrackView := ATrackView;
+      ATrackContainer.InsertFront(ATrackView);
+      FTrackViewList.Add(ATrackView);
+    end;
+    KeyFrameListChanged(-1);
+
+  finally
+    { Restore trackview selections. }
+    EndReload;
   end;
-
-  ButtonAddKeyFrame.Exists := CurrentAnimation.TrackList.Count > 0;
-  for  I := 0 to CurrentAnimation.TrackList.Count - 1 do
-  begin
-    ATrack := CurrentAnimation.TrackList.Items[I];
-    ATrackContainer := TTrackViewContainer.Create(self);
-    ATrackContainer.Spacing := ItemSpacing;
-    ATrackContainer.Culling := True;
-    ATrackContainer.Tag := I;
-    ATrackContainer.OnPress := {$Ifdef fpc}@{$endif}ATrackContainerPress;
-    FTrackListView.InsertFront(ATrackContainer);
-
-    ATrackHeadView := TCastleRectangleControl.Create(Self);
-    ATrackHeadView.Height := TrackHeight;
-    ATrackHeadView.Color := Vector4(0, 0, 0, 0.4);
-    ATrackHeadView.Tag := I;
-    ATrackHeadView.Width := TrackHeadViewWidth;
-    ATrackContainer.InsertFront(ATrackHeadView);
-    { HeadView items. }
-    AHeadItemContainer := TCastleVerticalGroup.Create(self);
-    AHeadItemContainer.FullSize := True;
-    ATrackHeadView.InsertFront(AHeadItemContainer);
-
-    ALabelObjectName := TCastleLabel.Create(self);
-    ALabelObjectName.FontSize := ItemFontSmallSize;
-    ALabelObjectName.Color := CastleColors.White;
-    ALabelObjectName.Caption := ATrack.FriendlyObjectName;
-    AHeadItemContainer.InsertFront(ALabelObjectName);
-
-    ALabelPropName := TCastleLabel.Create(self);
-    ALabelPropName.FontSize := ItemFontSize;
-    ALabelPropName.Color := CastleColors.White;
-    ALabelPropName.Caption := ATrack.PropName;
-    AHeadItemContainer.InsertFront(ALabelPropName);
-
-    ACheckBox := TCastleCheckbox.Create(self);
-    ACheckBox.Caption := 'Continuous';
-    ACheckBox.Checked := ATrack.Mode = tmContinuous;
-    ACheckBox.Tag := I;
-    ACheckBox.OnChange := {$Ifdef fpc}@{$endif}ACheckBoxChange;
-    ACheckBox.TextColor := CastleColors.White;
-    ACheckBox.FontSize := ItemFontSize;
-    AHeadItemContainer.InsertFront(ACheckBox);
-
-    AButtonDelete := TCastleButton.Create(Self);
-    AButtonDelete.Caption := 'Remove';
-    AButtonDelete.OnClick := {$Ifdef fpc}@{$endif}AButtonDeleteTrackClick;
-    AButtonDelete.FontSize := ItemFontSize;
-    AButtonDelete.Tag := I;
-    AHeadItemContainer.InsertFront(AButtonDelete);
-    { TrackView. }
-    ATrackView := TTrackView.Create(self);
-    ATrackView.Color := ColorByIndex(I);
-    ATrackView.Track := ATrack;
-    ATrackView.Height := TrackHeight;
-    ATrackView.Width := 1;
-    ATrackView.Tag := I;
-    ATrackView.OnRender := {$Ifdef fpc}@{$endif}ATrackViewRender;
-    ATrackContainer.TrackView := ATrackView;
-    ATrackContainer.InsertFront(ATrackView);
-    FTrackViewList.Add(ATrackView);
-  end;
-  KeyFrameListChanged(-1);
 end;
 
 procedure TAnimationPlayerView.Notification(AComponent: TComponent;
