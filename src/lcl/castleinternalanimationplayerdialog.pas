@@ -182,9 +182,8 @@ type
   end;
 
   TAnimationPlayerDialog = class(TForm)
-    ButtonNewAnimation: TButton;
+    ButtonAnimation: TButton;
     ButtonPlayStop: TSpeedButton;
-    ButtonRemoveAnimation: TButton;
     ButtonNewTrack: TButton;
     CastleControl1: TCastleControl;
     ComboBoxAnimation: TComboBox;
@@ -196,16 +195,19 @@ type
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    MenuItemNewAnimation: TMenuItem;
+    MenuItemRemoveAnimation: TMenuItem;
+    MenuItemRenameAnimation: TMenuItem;
     MenuItemRemoveFrame: TMenuItem;
     MenuItemLerpFunc: TMenuItem;
     Panel1: TPanel;
+    PopupMenuAnimation: TPopupMenu;
     PopupMenuKeyFrame: TPopupMenu;
     PopupMenuAddTrack: TPopupMenu;
     Separator1: TMenuItem;
     Separator2: TMenuItem;
     Separator3: TMenuItem;
-    procedure ButtonRemoveAnimationClick(Sender: TObject);
-    procedure ButtonNewAnimationClick(Sender: TObject);
+    procedure ButtonAnimationClick(Sender: TObject);
     procedure ButtonNewTrackClick(Sender: TObject);
     procedure ButtonPlayStopClick(Sender: TObject);
     procedure ComboBoxAnimationChange(Sender: TObject);
@@ -217,6 +219,8 @@ type
     procedure MenuItem4Click(Sender: TObject);
     procedure MenuItem5Click(Sender: TObject);
     procedure MenuItem6Click(Sender: TObject);
+    procedure MenuItemNewAnimationClick(Sender: TObject);
+    procedure MenuItemRemoveAnimationClick(Sender: TObject);
   private
     FView: TAnimationPlayerView;
 
@@ -227,6 +231,7 @@ type
     function GetPlayerParentUI: TCastleUserInterface;
     function SelectTransform: TCastleTransform;
     function SelectUI: TCastleUserInterface;
+    procedure PopupMenuAtControlPos(AControl: TControl; AMenu: TPopupMenu);
 
     procedure InitView;
     procedure InitControls;
@@ -1350,6 +1355,30 @@ begin
   FView.AddTrack(Track);
 end;
 
+procedure TAnimationPlayerDialog.MenuItemNewAnimationClick(Sender: TObject);
+var
+  AName: string;
+begin
+  if InputQuery('NewAnimation', 'Input name:', AName) then
+  begin
+    AnimationPlayer.NewAnimation(AName);
+    AnimationPlayer.Animation := AName;
+    AnimationListChanged;
+  end;
+end;
+
+procedure TAnimationPlayerDialog.MenuItemRemoveAnimationClick(Sender: TObject);
+var
+  AName: string;
+begin
+  AName := AnimationPlayer.Animation;
+  if MessageDlg('Confirm', Format('Are you sure you want to delete "%s"?', [AName]),
+    TMsgDlgType.mtConfirmation, [mbOK, mbCancel], '') = mrCancel then
+    Exit;
+  AnimationPlayer.RemoveAnimation(AName);
+  AnimationListChanged;
+end;
+
 function TAnimationPlayerDialog.GetCurrentAnimation: TAnimation;
 begin
   Result := FView.CurrentAnimation;
@@ -1422,6 +1451,16 @@ begin
   end;
 end;
 
+procedure TAnimationPlayerDialog.PopupMenuAtControlPos(AControl: TControl;
+  AMenu: TPopupMenu);
+var
+  pt: TPoint;
+begin
+  AMenu.PopupComponent := AControl;
+  pt := AControl.ClientToScreen(Point(0, AControl.Height));
+  AMenu.Popup(pt.x, pt.y);
+end;
+
 procedure TAnimationPlayerDialog.FViewPlayingChanged(Sender: TObject);
 begin
   if FView.Playing then
@@ -1456,12 +1495,8 @@ begin
 end;
 
 procedure TAnimationPlayerDialog.ButtonNewTrackClick(Sender: TObject);
-var
-  pt: TPoint;
 begin
-  PopupMenuAddTrack.PopupComponent := ButtonNewTrack;
-  pt := ButtonNewTrack.ClientToScreen(Point(0, ButtonNewTrack.Height));
-  PopupMenuAddTrack.Popup(pt.x, pt.y);
+  PopupMenuAtControlPos(ButtonNewTrack, PopupMenuAddTrack);
 end;
 
 procedure TAnimationPlayerDialog.ButtonPlayStopClick(Sender: TObject);
@@ -1491,28 +1526,9 @@ begin
       FloatSpinEditSpeed.Value;
 end;
 
-procedure TAnimationPlayerDialog.ButtonNewAnimationClick(Sender: TObject);
-var
-  AName: string;
+procedure TAnimationPlayerDialog.ButtonAnimationClick(Sender: TObject);
 begin
-  if InputQuery('NewAnimation', 'Input name:', AName) then
-  begin
-    AnimationPlayer.NewAnimation(AName);
-    AnimationPlayer.Animation := AName;
-    AnimationListChanged;
-  end;
-end;
-
-procedure TAnimationPlayerDialog.ButtonRemoveAnimationClick(Sender: TObject);
-var
-  AName: string;
-begin
-  AName := AnimationPlayer.Animation;
-  if MessageDlg('Confirm', Format('Are you sure you want to delete "%s"?', [AName]),
-    TMsgDlgType.mtConfirmation, [mbOK, mbCancel], '') = mrCancel then
-    Exit;
-  AnimationPlayer.RemoveAnimation(AName);
-  AnimationListChanged;
+  PopupMenuAtControlPos(ButtonAnimation, PopupMenuAnimation);
 end;
 
 procedure TAnimationPlayerDialog.InitView;
@@ -1609,8 +1625,10 @@ procedure TAnimationPlayerDialog.UpdateUIControls;
 begin
   ComboBoxAnimation.Enabled := Assigned(AnimationPlayer);
   ButtonPlayStop.Enabled := Assigned(CurrentAnimation);
-  ButtonNewAnimation.Enabled := Assigned(AnimationPlayer);
-  ButtonRemoveAnimation.Enabled := Assigned(CurrentAnimation);
+  ButtonAnimation.Enabled := Assigned(AnimationPlayer);
+  MenuItemNewAnimation.Enabled := Assigned(AnimationPlayer);
+  MenuItemRemoveAnimation.Enabled := Assigned(CurrentAnimation);
+  MenuItemRenameAnimation.Enabled := Assigned(CurrentAnimation);
   ButtonNewTrack.Enabled := Assigned(CurrentAnimation);
   ComboBoxPlayStyle.Enabled := Assigned(CurrentAnimation);
   FloatSpinEditSpeed.Enabled := Assigned(CurrentAnimation);

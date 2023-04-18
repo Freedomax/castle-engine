@@ -27,13 +27,13 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     ClientHeight = 42
     ClientWidth = 803
     TabOrder = 1
-    object ButtonNewAnimation: TButton
+    object ButtonAnimation: TButton
       Left = 115
       Height = 27
       Top = 8
-      Width = 65
-      Caption = 'New'
-      OnClick = ButtonNewAnimationClick
+      Width = 85
+      Caption = 'Animation'
+      OnClick = ButtonAnimationClick
       TabOrder = 0
     end
     object ComboBoxAnimation: TComboBox
@@ -47,15 +47,6 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Style = csDropDownList
       TabOrder = 1
     end
-    object ButtonRemoveAnimation: TButton
-      Left = 182
-      Height = 27
-      Top = 8
-      Width = 70
-      Caption = 'Remove'
-      OnClick = ButtonRemoveAnimationClick
-      TabOrder = 2
-    end
     object ButtonNewTrack: TButton
       Left = 470
       Height = 27
@@ -63,10 +54,10 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Width = 105
       Caption = 'New Track'
       OnClick = ButtonNewTrackClick
-      TabOrder = 3
+      TabOrder = 2
     end
     object ComboBoxPlayStyle: TComboBox
-      Left = 256
+      Left = 205
       Height = 25
       Top = 8
       Width = 118
@@ -74,7 +65,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       OnChange = ComboBoxPlayStyleChange
       ReadOnly = True
       Style = csDropDownList
-      TabOrder = 4
+      TabOrder = 3
     end
     object ButtonPlayStop: TSpeedButton
       Left = 742
@@ -86,7 +77,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       OnClick = ButtonPlayStopClick
     end
     object FloatSpinEditSpeed: TFloatSpinEdit
-      Left = 380
+      Left = 329
       Height = 25
       Top = 8
       Width = 58
@@ -94,7 +85,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       MaxValue = 10000
       MinValue = 0.01
       OnChange = FloatSpinEditSpeedChange
-      TabOrder = 5
+      TabOrder = 4
       Value = 0.01
     end
   end
@@ -143,6 +134,21 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     end
     object MenuItemRemoveFrame: TMenuItem
       Caption = 'RemoveKeyFrame'
+    end
+  end
+  object PopupMenuAnimation: TPopupMenu
+    Left = 205
+    Top = 226
+    object MenuItemNewAnimation: TMenuItem
+      Caption = 'New'
+      OnClick = MenuItemNewAnimationClick
+    end
+    object MenuItemRemoveAnimation: TMenuItem
+      Caption = 'Remove'
+      OnClick = MenuItemRemoveAnimationClick
+    end
+    object MenuItemRenameAnimation: TMenuItem
+      Caption = 'Rename'
     end
   end
 end
