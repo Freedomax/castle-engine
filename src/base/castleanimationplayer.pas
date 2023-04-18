@@ -26,15 +26,16 @@ type
   TAnimationTrackMode = (tmContinuous, tmDiscrete);
   TLerpFunc = function(const ALerp: single): single;
 
-  TLerpFuncType = (lftCustom, lftLiner, lftSin, lftCos, lftOneMinusSin, lftOneMinusCos,
+  TLerpFuncType = (lftCustom, lftLiner, lftSin, lftElastic, lftBack,
+    lftOneMinusCos,
     lftUniformDeceleration);
 
 const
   TLerpFuncArr: array[TLerpFuncType] of TLerpFunc =
-    (nil, {$Ifdef fpc}@{$endif}LerpFuncLiner, {$Ifdef fpc}@{$endif}LerpFuncSin,
-    {$Ifdef fpc}@{$endif}LerpFuncCos, {$Ifdef fpc}@{$endif}LerpFuncOneMinusSin,
-    {$Ifdef fpc}@{$endif}LerpFuncOneMinusCos,
-    {$Ifdef fpc}@{$endif}LerpFuncUniformDeceleration);
+    (nil, {$Ifdef fpc}@{$endif}LerpLiner, {$Ifdef fpc}@{$endif}LerpSin,
+    {$Ifdef fpc}@{$endif}LerpElastic, {$Ifdef fpc}@{$endif}LerpBack,
+    {$Ifdef fpc}@{$endif}LerpOneMinusCos,
+    {$Ifdef fpc}@{$endif}LerpUniformDeceleration);
 
 type
   { Inherit from TPersistent for RegisterClass and de/serilization referenced component. }
@@ -1251,8 +1252,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

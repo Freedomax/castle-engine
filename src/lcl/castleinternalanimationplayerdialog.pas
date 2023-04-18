@@ -65,11 +65,14 @@ type
   private
     FLerpFunc: TLerpFunc;
     FPoints: TVector2List;
+    FLimitMaxY, FLimitMinY: single;
     procedure SetLerpFunc(const AValue: TLerpFunc);
+    procedure UpdatePoints;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Render; override;
+    procedure Resize; override;
     property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
   end;
 
@@ -386,14 +389,52 @@ begin
   if FLerpFunc = AValue then Exit;
   FLerpFunc := AValue;
   if not Assigned(FLerpFunc) then
-    FLerpFunc := {$Ifdef fpc}@{$endif}LerpFuncLiner;
+    FLerpFunc := {$Ifdef fpc}@{$endif}LerpLiner;
+  UpdatePoints;
+end;
+
+procedure TLerpFuncPreview.UpdatePoints;
+var
+  i: integer;
+  x, y, w, h, MaxY, MinY, AScale, AOffset: single;
+begin
+  FPoints.Clear;
+  w := EffectiveWidth;
+  h := EffectiveHeight;
+  if (w <= 0) or ((h <= 0)) then exit;
+  FLimitMaxY := h;
+  FLimitMinY := 0;
+  MaxY := 1;
+  MinY := 0;
+  // 计算曲线上的点
+  for i := 0 to Floor(w) div 3 do
+  begin
+    x := i * 3 / w;
+    y := LerpFunc(x);
+    if y > MaxY then MaxY := y;
+    if y < MinY then MinY := y;
+
+    x := x * w;
+    y := y * h;
+    FPoints.Add(Vector2(x, y));
+  end;
+
+  if (MaxY > 1) or (MinY < 0) then
+  begin
+    AScale := 1 / (MaxY - MinY);
+    AOffset := -MinY * h;
+    FLimitMaxY := (h + AOffset) * AScale;
+    FLimitMinY := AOffset * AScale;
+    for i := 0 to FPoints.Count - 1 do
+      FPoints[i] := Vector2(FPoints[i].X, (FPoints[i].y + AOffset) * AScale);
+  end;
 end;
 
 constructor TLerpFuncPreview.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FPoints := TVector2List.Create;
-  FLerpFunc := {$Ifdef fpc}@{$endif}LerpFuncLiner;
+  FLerpFunc := {$Ifdef fpc}@{$endif}LerpLiner;
 end;
 
 destructor TLerpFuncPreview.Destroy;
@@ -408,22 +449,29 @@ procedure TLerpFuncPreview.Render;
   var
     i: integer;
     x, y: single;
+    arr:  {$Ifdef fpc}specialize{$endif}TArray<TVector2>;
   begin
-    if (R.Width <= 0) or ((R.Height <= 0)) then exit;
-    FPoints.Count := 0;
-    // 计算曲线上的点
-    for i := 0 to Round(R.Width) div 3 do
-    begin
-      x := i * 3 / R.Width;
-      y := LerpFunc(x);
+    if FPoints.Count <= 0 then Exit;
+    SetLength(arr, FPoints.Count);
 
-      x := R.Left + x * R.Width;
-      y := R.Bottom + y * R.Height;
-      FPoints.Add(Vector2(x, y));
+    for i := Low(arr) to High(arr) do
+    begin
+      x := R.Left + FPoints[i].X * UIScale;
+      y := R.Bottom + FPoints[i].Y * UIScale;
+      arr[i] := Vector2(x, y);
     end;
-    DrawPrimitive2D(pmLineStrip,
-      FPoints.ToArray,
-      CastleColors.Black, bsSrcAlpha, bdOneMinusSrcAlpha, False, 2);
+    if FLimitMaxY * UIScale < R.Height then
+      DrawPrimitive2D(pmLineStrip,
+        [Vector2(R.Left, R.Bottom + FLimitMaxY * UIScale),
+        Vector2(R.Right, R.Bottom + FLimitMaxY * UIScale)],
+        Vector4(1, 1, 1, 0.5), bsSrcAlpha, bdOneMinusSrcAlpha, False, 1);
+    if FLimitMinY > 0 then
+      DrawPrimitive2D(pmLineStrip,
+        [Vector2(R.Left, R.Bottom + FLimitMinY * UIScale),
+        Vector2(R.Right, R.Bottom + FLimitMinY * UIScale)],
+        Vector4(1, 1, 1, 0.5), bsSrcAlpha, bdOneMinusSrcAlpha, False, 1);
+    DrawPrimitive2D(pmLineStrip, arr,
+      Vector4(0, 0.5, 0, 0.786), bsSrcAlpha, bdOneMinusSrcAlpha, False, 2);
   end;
 
 var
@@ -432,12 +480,12 @@ begin
   inherited Render;
   R := RenderRect;
   DrawCurve(R);
-                 {
+end;
 
-  SetLength(pts,10);
-  DrawPrimitive2D(pmLines,
-    pts,
-    CastleColors.Black, bsSrcAlpha, bdOneMinusSrcAlpha, False, 2); }
+procedure TLerpFuncPreview.Resize;
+begin
+  inherited Resize;
+  UpdatePoints;
 end;
 
 procedure TAnimationPlayerView.SetAnimationPlayer(const AValue: TAnimationPlayer);
@@ -1087,6 +1135,11 @@ begin
     begin
       TrackDesignerUI.Track := ATrackView.Track;
       TrackDesignerUI.KeyFrame := ATrackView.Track.KeyframeList[AIndex];
+      TrackDesignerUI.LerpFuncPreview.Exists :=
+        ATrackView.Track.Mode = TAnimationTrackMode.tmContinuous;
+      if TrackDesignerUI.LerpFuncPreview.Exists then
+        TrackDesignerUI.LerpFuncPreview.LerpFunc :=
+          ATrackView.Track.KeyframeList[AIndex].LerpFunc;
 
       V := ATrackView.LocalToContainerPosition(
         Vector2(ATrackView.Track.KeyframeList[AIndex].Time *
