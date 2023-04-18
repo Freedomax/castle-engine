@@ -21,8 +21,8 @@ implementation
 uses CastleApplicationProperties, CastleWindow, CastleLog;
 
 initialization
-  ApplicationProperties.ApplicationName := 'test-animationplayer';
-  ApplicationProperties.Caption := 'Test AnimationPlayer';
+  ApplicationProperties.ApplicationName := 'animationplayer_bycode';
+  ApplicationProperties.Caption := 'AnimationPlayer By Code';
   ApplicationProperties.Version := '0.1';
 
   if not IsLibrary then
