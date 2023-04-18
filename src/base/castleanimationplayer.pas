@@ -112,6 +112,8 @@ type
       const ALerpFunc: TLerpFunc = nil): TAnimationKeyframe; overload;
     function AddKeyframe(const AValue: TAnimationKeyframe): TAnimationKeyframe;
       overload;
+    function RemoveKeyFrame(const AValue: TAnimationKeyframe): SizeInt;
+    procedure RemoveKeyFrame(AIndex: SizeInt);
     { Add the value of the current object as a keyframe and return a value indicating success or failure. }
     function AddKeyframeAtTime(const ATime: TFloatTime;
       const ALerpFunc: TLerpFunc = nil): boolean; virtual;
@@ -509,6 +511,17 @@ begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
   Result := AValue;
+end;
+
+function TAnimationTrack.RemoveKeyFrame(const AValue: TAnimationKeyframe): SizeInt;
+begin
+  Result := FKeyframeList.Remove(AValue);
+end;
+
+procedure TAnimationTrack.RemoveKeyFrame(AIndex: SizeInt);
+begin
+  Assert(Between(AIndex, 0, FKeyframeList.Count - 1));
+  RemoveKeyFrame(FKeyframeList[AIndex]);
 end;
 
 function TAnimationTrack.AddKeyframeAtTime(const ATime: TFloatTime;
@@ -1238,8 +1251,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

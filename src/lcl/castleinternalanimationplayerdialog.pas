@@ -127,6 +127,7 @@ type
     procedure SetPlaying(const AValue: boolean);
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
     procedure TrackDesignerUIButtonLerpFuncClick(Sender: TObject);
+    procedure TrackDesignerUIButtonRemoveClick(Sender: TObject);
 
   protected
     FFont: TCastleFont;
@@ -443,6 +444,16 @@ begin
   //no need: PopUpmenuLerpFunc.PopupComponent := ;
   pt := Mouse.CursorPos;
   PopUpmenuLerpFunc.Popup(pt.x, pt.y);
+end;
+
+procedure TAnimationPlayerView.TrackDesignerUIButtonRemoveClick(Sender: TObject);
+begin
+  if MessageDlg('Confirm', Format('Are you sure you want to delete keyframe at %0.00f second?',
+    [TrackDesignerUI.KeyFrame.Time]), TMsgDlgType.mtConfirmation,
+    [mbOK, mbCancel], '') = mrCancel then
+    Exit;
+  TrackDesignerUI.Track.RemoveKeyFrame(TrackDesignerUI.KeyFrame);
+  KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
@@ -950,6 +961,8 @@ begin
   TrackDesignerUI.Exists := False;
   TrackDesignerUI.ButtonLerpFunc.OnClick :=
 {$Ifdef fpc}@{$endif}TrackDesignerUIButtonLerpFuncClick;
+  TrackDesignerUI.ButtonRemove.OnClick :=
+ {$Ifdef fpc}@{$endif}TrackDesignerUIButtonRemoveClick;
   FRoot.InsertFront(TrackDesignerUI);
 end;
 
