@@ -206,6 +206,12 @@ begin
       V2_float := Value2;
       Result := (1 - ALerp) * V1_float + ALerp * V2_float;
     end;
+    {$ifdef FPC}
+    tkSString, tkLString, tkAString:
+    {$else}
+    tkString, tkLString:
+    {$endif}
+      Result := Value1;
     else
       raise Exception.CreateFmt(
         'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
@@ -268,8 +274,9 @@ begin
   if not Assigned(FComponent) then
     Exit(inherited AddKeyframeAtTime(ATime, ALerpFunc));
 
-  AddKeyframe(ATime, GetPropValue(FComponent, FPropertyInfo), ALerpFunc);
-  Result := True;
+  Result := Assigned(FPropertyInfo);
+  if Result then  AddKeyframe(ATime, GetPropValue(FComponent, FPropertyInfo), ALerpFunc)
+  else WritelnWarning('PropertyInfo is nil.');
 end;
 
 function TAnimationPropertyTrack.ObjectName: string;

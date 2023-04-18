@@ -121,7 +121,7 @@
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "X" : -3.8209372758865356E-001,
+              "X" : -4.0000000000000000E+000,
               "Y" : 1.0000000000000000E+000,
               "Z" : -3.5000000000000000E+000
             },
@@ -133,7 +133,6 @@
                   "Playing" : true,
                   "Animation-_Count" : 2,
                   "Animation_0" : "1",
-                  "Animation_0-PlayStyle" : 1,
                   "Animation_0-Track-_Count" : 1,
                   "Animation_0-Track_0-TrackClass" : "TAnimationTranslationTrack",
                   "Animation_0-Track_0-Frame-_Count" : 3,
@@ -168,8 +167,8 @@
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "X" : 1.5959504842758179E+000,
-              "Z" : 1.2053804397583008E+000
+              "X" : 1.5263386070728302E-001,
+              "Z" : 1.9941672086715698E+000
             },
             "$Children" : [
               {
@@ -301,10 +300,10 @@
       "$$ClassName" : "TCastleLabel",
       "ColorPersistent" : {
         "$$ClassName" : "TCastleColorPersistent",
-        "Alpha" : 7.0755434036254883E-001,
+        "Alpha" : 2.3581658303737640E-001,
         "Blue" : 2.0000000298023224E-001,
-        "Green" : 3.0000001192092896E-001,
-        "Red" : 4.1510862112045288E-001
+        "Green" : 2.9803922772407532E-001,
+        "Red" : 9.2836683988571167E-001
       },
       "FontSize" : 6.0000000000000000E+001,
       "HorizontalAnchorParent" : "hpMiddle",
@@ -316,8 +315,8 @@
       ],
       "TranslationPersistent" : {
         "$$ClassName" : "TCastleVector2Persistent",
-        "X" : 2.2558900833129883E+001,
-        "Y" : 6.3655570983886719E+001
+        "X" : 2.6686605453491211E+001,
+        "Y" : 7.0462745666503906E+001
       },
       "$Children" : [
         {
@@ -329,7 +328,7 @@
             "Animation_0" : "1",
             "Animation_0-PlayStyle" : 1,
             "Animation_0-Speed" : 5.0000000000000000E-001,
-            "Animation_0-Track-_Count" : 3,
+            "Animation_0-Track-_Count" : 4,
             "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
             "Animation_0-Track_0-Frame-_Count" : 4,
             "Animation_0-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
@@ -365,6 +364,17 @@
             "Animation_0-Track_2-Frame_3-Time" : 1.0000000000000000E+000,
             "Animation_0-Track_2-Frame_3-Value" : "(20,60)",
             "Animation_0-Track_2-Control" : "Label1",
+            "Animation_0-Track_3-TrackClass" : "TAnimationPropertyTrack",
+            "Animation_0-Track_3-Mode" : 1,
+            "Animation_0-Track_3-Frame-_Count" : 3,
+            "Animation_0-Track_3-Frame_0-Time" : 0.0000000000000000E+000,
+            "Animation_0-Track_3-Frame_0-Value" : "Click <font color=\"#00FF00FF\">Button</font> to shake camera",
+            "Animation_0-Track_3-Frame_1-Time" : 5.0000000000000000E-001,
+            "Animation_0-Track_3-Frame_1-Value" : "Hello world",
+            "Animation_0-Track_3-Frame_2-Time" : 9.9500000476837158E-001,
+            "Animation_0-Track_3-Frame_2-Value" : "Click <font color=\"#00FF00FF\">Button</font> to shake camera",
+            "Animation_0-Track_3-FriendlyObjectName" : "Label1",
+            "Animation_0-Track_3-PropertyName" : "Caption",
             "CurrentAnimation" : "1"
           },
           "Height" : 1.0000000000000000E+000,
