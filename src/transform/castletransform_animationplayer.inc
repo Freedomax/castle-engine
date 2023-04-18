@@ -339,7 +339,8 @@ end;
 { TAnimationRotationTrack --------------------------------------------------------------- }
 procedure TAnimationRotationTrack.SetValue(const AValue: variant);
 begin
-  FTransform.Rotation := VariantToVector4(AValue);
+  if Assigned(FTransform) then
+    FTransform.Rotation := VariantToVector4(AValue);
 end;
 
 constructor TAnimationRotationTrack.Create(ATransform: TCastleTransform);
