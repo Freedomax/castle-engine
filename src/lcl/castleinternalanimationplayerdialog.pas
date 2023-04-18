@@ -61,12 +61,25 @@ type
     property TrackView: TTrackView read FTrackView write SetTrackView;
   end;
 
+  TLerpFuncPreview = class(TCastleRectangleControl)
+  private
+    FLerpFunc: TLerpFunc;
+    FPoints: TVector2List;
+    procedure SetLerpFunc(const AValue: TLerpFunc);
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Render; override;
+    property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
+  end;
+
   TTrackDesignerUI = class(TCastleUserInterface)
   strict private
     FKeyFrame: TAnimationTrack.TAnimationKeyframe;
-    FTimeDragControl: TCastleRectangleControl;
     FTrack: TAnimationTrack;
     FUIContainer: TCastleVerticalGroup;
+    FLerpFuncPreview: TLerpFuncPreview;
+    FFrameValueControl, FFrameTimeControl: TCastleLabel;
     procedure SetKeyFrame(const AValue: TAnimationTrack.TAnimationKeyframe);
     procedure SetTrack(const AValue: TAnimationTrack);
   public
@@ -75,7 +88,10 @@ type
     ButtonHeight = 20;
     ButtonFontSize = 12;
     constructor Create(AOwner: TComponent); override;
-    property TimeDragControl: TCastleRectangleControl read FTimeDragControl;
+    procedure UpdateControls;
+    property LerpFuncPreview: TLerpFuncPreview read FLerpFuncPreview;
+    property FrameValueControl: TCastleLabel read FFrameValueControl;
+    property FrameTimeControl: TCastleLabel read FFrameTimeControl;
     property Track: TAnimationTrack read FTrack write SetTrack;
     property KeyFrame: TAnimationTrack.TAnimationKeyframe
       read FKeyFrame write SetKeyFrame;
@@ -279,6 +295,7 @@ procedure TTrackDesignerUI.SetKeyFrame(
 begin
   if FKeyFrame = AValue then Exit;
   FKeyFrame := AValue;
+  UpdateControls;
 end;
 
 procedure TTrackDesignerUI.SetTrack(const AValue: TAnimationTrack);
@@ -296,11 +313,30 @@ begin
   FUIContainer.AutoSizeToChildren := True;
   InsertFront(FUIContainer);
 
-  FTimeDragControl := TCastleRectangleControl.Create(Self);
-  FTimeDragControl.Width := Width;
-  FTimeDragControl.Height := DragUIHeight;
-  FTimeDragControl.Color := Vector4(1, 1, 1, 0.5);
-  FUIContainer.InsertFront(FTimeDragControl);
+  FLerpFuncPreview := TLerpFuncPreview.Create(Self);
+  FLerpFuncPreview.Width := 60;
+  FLerpFuncPreview.Height := 60;
+  FLerpFuncPreview.Color := Vector4(1, 1, 1, 0.382);
+  FUIContainer.InsertFront(FLerpFuncPreview);
+
+  FFrameTimeControl := TCastleLabel.Create(Self);
+  FFrameTimeControl.Width := Width;
+  FFrameTimeControl.Height := DragUIHeight;
+  FUIContainer.InsertFront(FFrameTimeControl);
+
+  FFrameValueControl := TCastleLabel.Create(Self);
+  FFrameValueControl.Width := Width;
+  FFrameValueControl.Height := DragUIHeight;
+  FUIContainer.InsertFront(FFrameValueControl);
+
+end;
+
+procedure TTrackDesignerUI.UpdateControls;
+begin
+  if not Assigned(FKeyFrame) then Exit;
+  FFrameValueControl.Caption := VariantToString(FKeyFrame.Value);
+  FFrameTimeControl.Caption := FormatDot('%.2f s', [FKeyFrame.Time]);
+  FLerpFuncPreview.LerpFunc := FKeyFrame.LerpFunc;
 end;
 
 function TTrackViewList.FocusedTrackView: TTrackView;
@@ -343,6 +379,65 @@ begin
   if not Assigned(TrackView) then Exit;
   if not TrackView.Selected then Exit;
   DrawRectangleOutline(RenderRect, Vector4(1, 1, 0, 0.5), 2);
+end;
+
+procedure TLerpFuncPreview.SetLerpFunc(const AValue: TLerpFunc);
+begin
+  if FLerpFunc = AValue then Exit;
+  FLerpFunc := AValue;
+  if not Assigned(FLerpFunc) then
+    FLerpFunc := {$Ifdef fpc}@{$endif}LerpFuncLiner;
+end;
+
+constructor TLerpFuncPreview.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FPoints := TVector2List.Create;
+  FLerpFunc := {$Ifdef fpc}@{$endif}LerpFuncLiner;
+end;
+
+destructor TLerpFuncPreview.Destroy;
+begin
+  FreeAndNil(FPoints);
+  inherited Destroy;
+end;
+
+procedure TLerpFuncPreview.Render;
+
+  procedure DrawCurve(const R: TFloatRectangle);
+  var
+    i: integer;
+    x, y: single;
+  begin
+    if (R.Width <= 0) or ((R.Height <= 0)) then exit;
+    FPoints.Count := 0;
+    // 计算曲线上的点
+    for i := 0 to Round(R.Width) div 3 do
+    begin
+      x := i * 3 / R.Width;
+      y := LerpFunc(x);
+
+      x := R.Left + x * R.Width;
+      y := R.Bottom + y * R.Height;
+      FPoints.Add(Vector2(x, y));
+    end;
+    DrawPrimitive2D(pmLineStrip,
+      FPoints.ToArray,
+      CastleColors.Black, bsSrcAlpha, bdOneMinusSrcAlpha, False, 2);
+  end;
+
+var
+  R: TFloatRectangle;
+begin
+  inherited Render;
+  R := RenderRect;
+  DrawCurve(R);
+                 {
+
+  SetLength(pts,10);
+  DrawPrimitive2D(pmLines,
+    pts,
+    CastleColors.Black, bsSrcAlpha, bdOneMinusSrcAlpha, False, 2); }
 end;
 
 procedure TAnimationPlayerView.SetAnimationPlayer(const AValue: TAnimationPlayer);
@@ -948,6 +1043,12 @@ begin
   TrackDesignerUI := TTrackDesignerUI.Create(Self);
   TrackDesignerUI.Height := TrackHeight;
   TrackDesignerUI.Exists := False;
+  TrackDesignerUI.FrameValueControl.FontSize := ItemFontSize;
+  TrackDesignerUI.FrameValueControl.Color := Vector4(1, 1, 1, 0.786);
+  TrackDesignerUI.FrameTimeControl.FontSize := ItemFontSize;
+  TrackDesignerUI.FrameTimeControl.Color := Vector4(1, 1, 0, 0.786);
+
+  FRoot.InsertFront(TrackDesignerUI);
 end;
 
 procedure TAnimationPlayerView.Stop;
