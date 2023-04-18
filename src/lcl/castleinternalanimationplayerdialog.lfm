@@ -135,4 +135,8 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       OnClick = MenuItem2Click
     end
   end
+  object PopupMenuLerpFunc: TPopupMenu
+    Left = 80
+    Top = 80
+  end
 end

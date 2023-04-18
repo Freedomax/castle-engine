@@ -121,7 +121,7 @@
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "X" : 3.4060118198394775E+000,
+              "X" : -3.9633941650390625E+000,
               "Y" : 1.0000000000000000E+000,
               "Z" : -3.5000000000000000E+000
             },
@@ -140,6 +140,7 @@
                   "Animation_0-Track_0-Frame-_Count" : 3,
                   "Animation_0-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
                   "Animation_0-Track_0-Frame_0-Value" : "(-4,1,-3.5)",
+                  "Animation_0-Track_0-Frame_1-LerpFuncType" : 6,
                   "Animation_0-Track_0-Frame_1-Time" : 2.0050001144409180E+000,
                   "Animation_0-Track_0-Frame_1-Value" : "(1,1,-3.5)",
                   "Animation_0-Track_0-Frame_2-Time" : 4.0100002288818359E+000,

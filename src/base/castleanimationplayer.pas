@@ -48,10 +48,12 @@ type
     TAnimationKeyframe = class
     private
       FLerpFunc: TLerpFunc;
+      FLerpFuncType: TLerpFuncType;
       FOnChange: TKeyFrameChangeEvent;
       FTime: TFloatTime;
       FValue: variant;
       procedure SetLerpFunc(const AValue: TLerpFunc);
+      procedure SetLerpFuncType(const AValue: TLerpFuncType);
       procedure SetOnChange(const AValue: TKeyFrameChangeEvent);
       procedure SetTime(const AValue: TFloatTime);
       procedure SetValue(const AValue: variant);
@@ -61,7 +63,7 @@ type
       property OnChange: TKeyFrameChangeEvent read FOnChange write SetOnChange;
     public
       // only for serialize
-      LerpFuncType: TLerpFuncType;
+      property LerpFuncType: TLerpFuncType read FLerpFuncType write SetLerpFuncType;
       property Value: variant read FValue write SetValue;
       property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
       property Time: TFloatTime read FTime write SetTime;
@@ -445,8 +447,6 @@ const
   SFrame = 'Frame';
 begin
   { Track Properties. }
-   { property Mode: TAnimationTrackMode read FMode write FMode;
-    property KeyframeList: TAnimationKeyframeList read FKeyframeList;     }
   Aint := Ord(FMode);
   SerializationProcess.ReadWriteInteger(
     KeyProp(APath, 'Mode'),
@@ -470,10 +470,6 @@ begin
       Frame := KeyframeList[I];
     end;
     { KeyFrame propery }
-    { LerpFuncType: TLerpFuncType;
-      property Value: variant read FValue write SetValue;
-      property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
-      property Time: TFloatTime read FTime write SetTime;    }
     FramePath := KeyItem(KeyProp(APath, SFrame), I);
 
     Aint := Ord(Frame.LerpFuncType);
@@ -481,7 +477,6 @@ begin
       KeyProp(FramePath, 'LerpFuncType'),
       Aint, Aint <> 0);
     Frame.LerpFuncType := TLerpFuncType(Aint);
-    Frame.LerpFunc := TLerpFuncArr[Frame.LerpFuncType];
 
     Afloat := Frame.Time;
     SerializationProcess.ReadWriteSingle(
@@ -893,7 +888,20 @@ procedure TAnimationTrack.TAnimationKeyframe.SetLerpFunc(const AValue: TLerpFunc
 begin
   //delphi fail : if FLerpFunc = AValue then Exit;
   FLerpFunc := AValue;
+  FLerpFuncType := lftCustom;
   Changed(kfcLerpFunc);
+end;
+
+procedure TAnimationTrack.TAnimationKeyframe.SetLerpFuncType(
+  const AValue: TLerpFuncType);
+begin
+  if FLerpFuncType <> AValue then
+  begin
+    FLerpFuncType := AValue;
+    if FLerpFuncType <> lftCustom then
+      FLerpFunc := TLerpFuncArr[FLerpFuncType];
+    Changed(kfcLerpFunc);
+  end;
 end;
 
 function TAnimationTrack.TAnimationKeyframeList.SearchIndex(

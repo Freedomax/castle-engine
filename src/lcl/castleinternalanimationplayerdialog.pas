@@ -28,7 +28,7 @@ uses
 
 type
   TTrackView = class(TCastleRectangleControl)
-  private
+  strict private
   var
     FTrack: TAnimationTrack;
     procedure SetTrack(const AValue: TAnimationTrack);
@@ -43,10 +43,14 @@ type
   end;
 
   TTrackDesignerUI = class(TCastleUserInterface)
-  private
+  strict private
     FButtonRemove, FButtonLerpFunc: TCastleButton;
+    FKeyFrame: TAnimationTrack.TAnimationKeyframe;
     FTimeDragControl: TCastleRectangleControl;
+    FTrack: TAnimationTrack;
     FUIContainer: TCastleVerticalGroup;
+    procedure SetKeyFrame(const AValue: TAnimationTrack.TAnimationKeyframe);
+    procedure SetTrack(const AValue: TAnimationTrack);
   public
   const
     DragUIHeight = 20;
@@ -56,6 +60,9 @@ type
     property ButtonRemove: TCastleButton read FButtonRemove;
     property ButtonLerpFunc: TCastleButton read FButtonLerpFunc;
     property TimeDragControl: TCastleRectangleControl read FTimeDragControl;
+    property Track: TAnimationTrack read FTrack write SetTrack;
+    property KeyFrame: TAnimationTrack.TAnimationKeyframe
+      read FKeyFrame write SetKeyFrame;
   end;
 
   TTrackViewList = class( {$Ifdef fpc}specialize{$endif} TObjectList<TTrackView>)
@@ -64,7 +71,7 @@ type
   end;
 
   TAnimationPlayerView = class(TCastleView)
-  private
+  strict private
     FAnimationPlayerChanged: TNotifyEvent;
     FCurrentAnimationChanged: TNotifyEvent;
     FPixelsPerSceond: single;
@@ -102,11 +109,13 @@ type
     procedure SetPixelsPerSceond(const AValue: single);
     procedure SetPlaying(const AValue: boolean);
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
+    procedure TrackDesignerUIButtonLerpFuncClick(Sender: TObject);
 
   protected
     FFont: TCastleFont;
     ButtonAddKeyFrame: TCastleButton;
     TrackDesignerUI: TTrackDesignerUI;
+    PopUpmenuLerpFunc: TPopupMenu;
     procedure ReloadTracks;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function MousePosToTime(const AMousePos: TVector2): TFloatTime;
@@ -122,6 +131,8 @@ type
     function Motion(const Event: TInputMotion): boolean; override;
 
     procedure AddTrack(const ATrack: TAnimationTrack);
+
+    procedure LerpfuncItemClick(Sender: TObject);
 
     property AnimationPlayer: TAnimationPlayer
       read FAnimationPlayer write SetAnimationPlayer;
@@ -151,6 +162,7 @@ type
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
     Panel1: TPanel;
+    PopupMenuLerpFunc: TPopupMenu;
     PopupMenuAddTrack: TPopupMenu;
     Separator1: TMenuItem;
     Separator2: TMenuItem;
@@ -236,6 +248,19 @@ begin
   if R.Right < Container.Width then
     R.Width := R.Width + Container.Width - R.Right;
   Result := R.Contains(Container.MousePosition);
+end;
+
+procedure TTrackDesignerUI.SetKeyFrame(
+  const AValue: TAnimationTrack.TAnimationKeyframe);
+begin
+  if FKeyFrame = AValue then Exit;
+  FKeyFrame := AValue;
+end;
+
+procedure TTrackDesignerUI.SetTrack(const AValue: TAnimationTrack);
+begin
+  if FTrack = AValue then Exit;
+  FTrack := AValue;
 end;
 
 constructor TTrackDesignerUI.Create(AOwner: TComponent);
@@ -355,6 +380,15 @@ procedure TAnimationPlayerView.SetPlayingChanged(const AValue: TNotifyEvent);
 begin
   if FPlayingChanged <> AValue then
     FPlayingChanged := AValue;
+end;
+
+procedure TAnimationPlayerView.TrackDesignerUIButtonLerpFuncClick(Sender: TObject);
+var
+  pt: TPoint;
+begin
+  //no need: PopUpmenuLerpFunc.PopupComponent := ;
+  pt := Mouse.CursorPos;
+  PopUpmenuLerpFunc.Popup(pt.x, pt.y);
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
@@ -780,6 +814,8 @@ begin
   TrackDesignerUI := TTrackDesignerUI.Create(Self);
   TrackDesignerUI.Height := TrackHeight;
   TrackDesignerUI.Exists := False;
+  TrackDesignerUI.ButtonLerpFunc.OnClick :=
+{$Ifdef fpc}@{$endif}TrackDesignerUIButtonLerpFuncClick;
   FRoot.InsertFront(TrackDesignerUI);
 end;
 
@@ -815,6 +851,9 @@ begin
       Between(AIndex, 0, ATrackView.Track.KeyframeList.Count - 1);
     if TrackDesignerUI.Exists then
     begin
+      TrackDesignerUI.Track := ATrackView.Track;
+      TrackDesignerUI.KeyFrame := ATrackView.Track.KeyframeList[AIndex];
+
       V := ATrackView.LocalToContainerPosition(
         Vector2(ATrackView.Track.KeyframeList[AIndex].Time *
         PixelsPerSceond, 0), True);
@@ -845,6 +884,14 @@ begin
   end;
   CurrentAnimation.AddTrack(ATrack);
   ReloadTracks;
+end;
+
+procedure TAnimationPlayerView.LerpfuncItemClick(Sender: TObject);
+var
+  LerpFuncType: TLerpFuncType;
+begin
+  LerpFuncType := TLerpFuncType((Sender as TMenuItem).Tag);
+  TrackDesignerUI.KeyFrame.LerpFuncType := LerpFuncType;
 end;
 
 { TAnimationPlayerDialog ---------------------------------------------------- }
@@ -1157,6 +1204,28 @@ begin
 end;
 
 procedure TAnimationPlayerDialog.InitView;
+
+  procedure BuildLerpFuncMenu;
+  var
+    LerpFunc: TLerpFuncType;
+    EnumName: string;
+    Item: TMenuItem;
+  begin
+    PopupMenuLerpFunc.Items.Clear;
+    for LerpFunc := Low(TLerpFuncType) to High(TLerpFuncType) do
+    begin
+      EnumName := GetEnumName(TypeInfo(TLerpFuncType), Ord(LerpFunc));
+      EnumName := PrefixRemove('lft', EnumName, True);
+      // PopupMenuLerpFunc.Items.Add(EnumName);
+      Item := TMenuItem.Create(PopupMenuLerpFunc.Items);
+      PopupMenuLerpFunc.Items.Add(Item);
+      Item.Caption := EnumName;
+      Item.Tag := Ord(LerpFunc);
+      Item.OnClick := {$Ifdef fpc}@{$endif}FView.LerpfuncItemClick;
+    end;
+
+  end;
+
 begin
   if not Assigned(FView) then
   begin
@@ -1166,6 +1235,8 @@ begin
     FView.CurrentAnimationChanged := {$Ifdef fpc}@{$endif}FViewCurrentAnimationChanged;
     CastleControl1.Container.View := FView;
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
+    BuildLerpFuncMenu;
+    FView.PopUpmenuLerpFunc := PopUpmenuLerpFunc;
   end;
 end;
 
