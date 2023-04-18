@@ -98,12 +98,13 @@ type
     ItemFontSmallSize = 12;
     ItemSpacing = 2;
     TrackListHeadHeight = 20;
+    ItemKeyFrameWidth = 20;
   var
     FAnimationPlayer: TAnimationPlayer;
     FRoot: TCastleUserInterface;
     FTrackListView: TCastleVerticalGroup;
     FTrackViewList: TTrackViewList;
-    procedure AButtonDeleteClick(Sender: TObject);
+    procedure AButtonDeleteTrackClick(Sender: TObject);
     procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);
     procedure AScrollViewHeaderPress(const Sender: TCastleUserInterface;
@@ -635,7 +636,8 @@ var
 
     if bSelected then
     begin
-      rc := FloatRectangle(FramePos - 10 * UIScale, R.Bottom, 20 * UIScale, R.Height);
+      rc := FloatRectangle(FramePos - ItemKeyFrameWidth * 0.5 * UIScale,
+        R.Bottom, ItemKeyFrameWidth * UIScale, R.Height);
       DrawRectangle(Rc, Vector4(1, 1, 1, 0.382));
 
     end;
@@ -677,8 +679,10 @@ procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
 
   procedure FixSize(const AIndex: integer);
   begin
+    { If there is only one keyframe with time 0, space needs to be provided to display it. }
     FTrackViewList.Items[AIndex].Width :=
-      Max(10, PixelsPerSceond * CurrentAnimation.TrackList.Items[AIndex].Duration);
+      Max(ItemKeyFrameWidth * 0.5, PixelsPerSceond *
+      CurrentAnimation.TrackList.Items[AIndex].Duration);
   end;
 
 var
@@ -709,11 +713,16 @@ begin
     CurrentAnimation.TrackList.Items[AIndex].Mode := tmDiscrete;
 end;
 
-procedure TAnimationPlayerView.AButtonDeleteClick(Sender: TObject);
+procedure TAnimationPlayerView.AButtonDeleteTrackClick(Sender: TObject);
 var
   AIndex: integer;
 begin
   AIndex := (Sender as TCastleButton).Tag;
+  if MessageDlg('Confirm', Format('Are you sure you want to delete track: "%s"?',
+    [CurrentAnimation.TrackList.Items[AIndex].FriendlyObjectName]),
+    TMsgDlgType.mtConfirmation, [mbOK, mbCancel], '') = mrCancel then
+    Exit;
+
   CurrentAnimation.RemoveTrack(CurrentAnimation.TrackList.Items[AIndex]);
   ReloadTracks;
 end;
@@ -803,7 +812,7 @@ begin
 
     AButtonDelete := TCastleButton.Create(Self);
     AButtonDelete.Caption := 'Remove';
-    AButtonDelete.OnClick := {$Ifdef fpc}@{$endif}AButtonDeleteClick;
+    AButtonDelete.OnClick := {$Ifdef fpc}@{$endif}AButtonDeleteTrackClick;
     AButtonDelete.FontSize := ItemFontSize;
     AButtonDelete.Tag := I;
     AHeadItemContainer.InsertFront(AButtonDelete);
