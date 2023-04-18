@@ -105,7 +105,7 @@ type
   strict private
     FAnimationPlayerChanged: TNotifyEvent;
     FCurrentAnimationChanged: TNotifyEvent;
-    FPixelsPerSceond: single;
+    FPixelsPerSecond: single;
     FPlaying: boolean;
     FPlayingChanged: TNotifyEvent;
   const
@@ -124,6 +124,8 @@ type
     procedure AButtonDeleteTrackClick(Sender: TObject);
     procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);
+    procedure AScrollViewHeaderMotion(const Sender: TCastleUserInterface;
+      const Event: TInputMotion; var Handled: boolean);
     procedure AScrollViewHeaderPress(const Sender: TCastleUserInterface;
       const Event: TInputPressRelease; var Handled: boolean);
     procedure AScrollViewHeaderRender(const Sender: TCastleUserInterface);
@@ -142,7 +144,7 @@ type
     procedure SetAnimationPlayerChanged(const AValue: TNotifyEvent);
     procedure SetCurrentAnimationChanged(const AValue: TNotifyEvent);
     procedure SetCurrentTime(const AValue: TFloatTime);
-    procedure SetPixelsPerSceond(const AValue: single);
+    procedure SetPixelsPerSecond(const AValue: single);
     procedure SetPlaying(const AValue: boolean);
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
   protected
@@ -175,7 +177,7 @@ type
       read FAnimationPlayer write SetAnimationPlayer;
     property CurrentAnimation: TAnimation read GetCurrentAnimation;
     property Playing: boolean read FPlaying write SetPlaying;
-    property PixelsPerSceond: single read FPixelsPerSceond write SetPixelsPerSceond;
+    property PixelsPerSecond: single read FPixelsPerSecond write SetPixelsPerSecond;
     property PlayingChanged: TNotifyEvent read FPlayingChanged write SetPlayingChanged;
     property AnimationPlayerChanged: TNotifyEvent
       read FAnimationPlayerChanged write SetAnimationPlayerChanged;
@@ -552,10 +554,10 @@ begin
   end;
 end;
 
-procedure TAnimationPlayerView.SetPixelsPerSceond(const AValue: single);
+procedure TAnimationPlayerView.SetPixelsPerSecond(const AValue: single);
 begin
-  if FPixelsPerSceond = AValue then Exit;
-  FPixelsPerSceond := AValue;
+  if FPixelsPerSecond = AValue then Exit;
+  FPixelsPerSecond := AValue;
 end;
 
 procedure TAnimationPlayerView.SetPlaying(const AValue: boolean);
@@ -622,7 +624,7 @@ procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
     ATrackView: TTrackView;
   begin
     ATrackView := FTrackViewList.First;
-    Result := ATrackView.GetMousePosTime(PixelsPerSceond);
+    Result := ATrackView.GetMousePosTime(PixelsPerSecond);
   end;
 
 var
@@ -653,6 +655,19 @@ begin
     FreeAndNil(slt);
   end;
 
+end;
+
+procedure TAnimationPlayerView.AScrollViewHeaderMotion(
+  const Sender: TCastleUserInterface; const Event: TInputMotion; var Handled: boolean);
+begin
+  if buttonLeft in Event.Pressed then
+  begin
+    if Assigned(CurrentAnimation) then
+    begin
+      CurrentTime := MousePosToTime(Event.Position);
+      CurrentAnimation.ForceUpdate;
+    end;
+  end;
 end;
 
 procedure TAnimationPlayerView.AScrollViewHeaderPress(
@@ -707,7 +722,7 @@ var
     if FTrackViewList.Count = 0 then Exit;
     if not Playing then Exit;
     RTrack := FTrackViewList.First.RenderRect;
-    RenderLine(RTrack.Left + PixelsPerSceond * CurrentAnimation.ActualCurrentTime *
+    RenderLine(RTrack.Left + PixelsPerSecond * CurrentAnimation.ActualCurrentTime *
       UIScale, CastleColors.Green, 2);
   end;
 
@@ -732,7 +747,7 @@ var
     Y2Long := R.Bottom + 2 * HeaderView.UIScale;
     Y2Middle := (R.Top + R.Bottom) / 2;
     DeltaTime := 0.1;
-    DeltaW := DeltaTime * PixelsPerSceond * HeaderView.UIScale * Scale;
+    DeltaW := DeltaTime * PixelsPerSecond * HeaderView.UIScale * Scale;
     for I := 0 to Trunc(R.Width / DeltaW) - 1 do
     begin
       X := R.Left + (TrackHeadViewWidth + ItemSpacing) * UIScale + I * DeltaW;
@@ -805,7 +820,7 @@ var
 
   function TimeRenderPosition(const ATime: TFloatTime): single;
   begin
-    Result := R.Left + ATime * PixelsPerSceond * UIScale;
+    Result := R.Left + ATime * PixelsPerSecond * UIScale;
   end;
 
   procedure RenderLine(const X: single; const LineColor: TCastleColor;
@@ -840,7 +855,7 @@ var
   AIndex, I: integer;
 begin
   ATrackView := Sender as TTrackView;
-  AIndex := ATrackView.GetMousePosFrame(PixelsPerSceond);
+  AIndex := ATrackView.GetMousePosFrame(PixelsPerSecond);
   R := ATrackView.RenderRect;
   for I := 0 to ATrackView.Track.KeyframeList.Count - 1 do
   begin
@@ -874,7 +889,7 @@ procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
     { If there is only one keyframe with time 0, space needs to be provided to display it.
       and handle popupmenu of the last keyframe. }
     FTrackViewList.Items[AIndex].Width :=
-      PixelsPerSceond * CurrentAnimation.TrackList.Items[AIndex].Duration +
+      PixelsPerSecond * CurrentAnimation.TrackList.Items[AIndex].Duration +
       ItemKeyFrameWidth * 0.5;
   end;
 
@@ -1082,14 +1097,14 @@ var
   Pos: TVector2;
 begin
   Pos := ContainerToLocalPosition(AMousePos);
-  Result := (Pos.X - (TrackHeadViewWidth + ItemSpacing)) / PixelsPerSceond;
+  Result := (Pos.X - (TrackHeadViewWidth + ItemSpacing)) / PixelsPerSecond;
 
 end;
 
 constructor TAnimationPlayerView.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FPixelsPerSceond := 200;
+  FPixelsPerSecond := 200;
 end;
 
 { TAnimationPlayerView ---------------------------------------------------- }
@@ -1121,6 +1136,7 @@ begin
   AScrollViewHeader.WidthFraction := 1.0;
   AScrollViewHeader.OnRender := {$Ifdef fpc}@{$endif}AScrollViewHeaderRender;
   AScrollViewHeader.OnPress := {$Ifdef fpc}@{$endif}AScrollViewHeaderPress;
+  AScrollViewHeader.OnMotion := {$Ifdef fpc}@{$endif}AScrollViewHeaderMotion;
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
@@ -1181,7 +1197,7 @@ begin
       Vector2(FRoot.ContainerToLocalPosition(Container.MousePosition).X -
       ButtonAddKeyFrame.EffectiveWidth / 2, -TrackListHeadHeight);
     { TrackDesignerUI }
-    AIndex := ATrackView.GetMousePosFrame(PixelsPerSceond);
+    AIndex := ATrackView.GetMousePosFrame(PixelsPerSecond);
     TrackDesignerUI.Exists :=
       Between(AIndex, 0, ATrackView.Track.KeyframeList.Count - 1);
     if TrackDesignerUI.Exists then
@@ -1196,7 +1212,7 @@ begin
 
       V := ATrackView.LocalToContainerPosition(
         Vector2(ATrackView.Track.KeyframeList[AIndex].Time *
-        PixelsPerSceond, 0), True);
+        PixelsPerSecond, 0), True);
       V := FRoot.ContainerToLocalPosition(V);
       TrackDesignerUI.Translation := V;
     end;
