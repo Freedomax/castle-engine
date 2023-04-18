@@ -762,8 +762,14 @@ var
     b: boolean;
   begin
     if not Assigned(TrackSelections) then Exit;
-    for  ATrackView in FTrackViewList do
-      if TrackSelections.TryGetValue(ATrackView.Track, b) then ATrackView.Selected := b;
+    try
+      for  ATrackView in FTrackViewList do
+        if TrackSelections.TryGetValue(ATrackView.Track, b) then
+          ATrackView.Selected := b;
+    finally
+      FreeAndNil(TrackSelections);
+    end;
+
   end;
 
   function ColorByIndex(const AIndex: integer): TCastleColor;
