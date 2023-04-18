@@ -135,8 +135,14 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       OnClick = MenuItem2Click
     end
   end
-  object PopupMenuLerpFunc: TPopupMenu
+  object PopupMenuKeyFrame: TPopupMenu
     Left = 80
     Top = 80
+    object MenuItemLerpFunc: TMenuItem
+      Caption = 'LerpFunc'
+    end
+    object MenuItemRemoveFrame: TMenuItem
+      Caption = 'RemoveKeyFrame'
+    end
   end
 end

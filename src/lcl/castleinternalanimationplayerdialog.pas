@@ -63,7 +63,6 @@ type
 
   TTrackDesignerUI = class(TCastleUserInterface)
   strict private
-    FButtonRemove, FButtonLerpFunc: TCastleButton;
     FKeyFrame: TAnimationTrack.TAnimationKeyframe;
     FTimeDragControl: TCastleRectangleControl;
     FTrack: TAnimationTrack;
@@ -76,8 +75,6 @@ type
     ButtonHeight = 20;
     ButtonFontSize = 12;
     constructor Create(AOwner: TComponent); override;
-    property ButtonRemove: TCastleButton read FButtonRemove;
-    property ButtonLerpFunc: TCastleButton read FButtonLerpFunc;
     property TimeDragControl: TCastleRectangleControl read FTimeDragControl;
     property Track: TAnimationTrack read FTrack write SetTrack;
     property KeyFrame: TAnimationTrack.TAnimationKeyframe
@@ -112,6 +109,8 @@ type
     procedure AScrollViewHeaderRender(const Sender: TCastleUserInterface);
     procedure ATrackContainerPress(const Sender: TCastleUserInterface;
       const Event: TInputPressRelease; var Handled: boolean);
+    procedure ATrackContainerRelease(const Sender: TCastleUserInterface;
+      const Event: TInputPressRelease; var Handled: boolean);
     procedure ATrackViewRender(const Sender: TCastleUserInterface);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
@@ -126,17 +125,15 @@ type
     procedure SetPixelsPerSceond(const AValue: single);
     procedure SetPlaying(const AValue: boolean);
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
-    procedure TrackDesignerUIButtonLerpFuncClick(Sender: TObject);
-    procedure TrackDesignerUIButtonRemoveClick(Sender: TObject);
-
   protected
     FFont: TCastleFont;
     ButtonAddKeyFrame: TCastleButton;
     TrackDesignerUI: TTrackDesignerUI;
-    PopUpmenuLerpFunc: TPopupMenu;
+    PopupMenuKeyFrame: TPopupMenu;
     procedure ReloadTracks;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function MousePosToTime(const AMousePos: TVector2): TFloatTime;
+    procedure TrackDesignerUIButtonRemoveClick(Sender: TObject);
 
     property CurrentTime: TFloatTime read GetCurrentTime write SetCurrentTime;
   public
@@ -179,8 +176,10 @@ type
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    MenuItemRemoveFrame: TMenuItem;
+    MenuItemLerpFunc: TMenuItem;
     Panel1: TPanel;
-    PopupMenuLerpFunc: TPopupMenu;
+    PopupMenuKeyFrame: TPopupMenu;
     PopupMenuAddTrack: TPopupMenu;
     Separator1: TMenuItem;
     Separator2: TMenuItem;
@@ -302,22 +301,6 @@ begin
   FTimeDragControl.Height := DragUIHeight;
   FTimeDragControl.Color := Vector4(1, 1, 1, 0.5);
   FUIContainer.InsertFront(FTimeDragControl);
-
-  FButtonLerpFunc := TCastleButton.Create(Self);
-  FButtonLerpFunc.AutoSize := False;
-  FButtonLerpFunc.Width := Width;
-  FButtonLerpFunc.Height := ButtonHeight;
-  FButtonLerpFunc.Caption := 'LerpFunc';
-  FButtonLerpFunc.FontSize := ButtonFontSize;
-  FUIContainer.InsertFront(FButtonLerpFunc);
-
-  FButtonRemove := TCastleButton.Create(Self);
-  FButtonRemove.AutoSize := False;
-  FButtonRemove.Width := Width;
-  FButtonRemove.Height := ButtonHeight;
-  FButtonRemove.Caption := 'Remove';
-  FButtonRemove.FontSize := ButtonFontSize;
-  FUIContainer.InsertFront(FButtonRemove);
 end;
 
 function TTrackViewList.FocusedTrackView: TTrackView;
@@ -435,15 +418,6 @@ procedure TAnimationPlayerView.SetPlayingChanged(const AValue: TNotifyEvent);
 begin
   if FPlayingChanged <> AValue then
     FPlayingChanged := AValue;
-end;
-
-procedure TAnimationPlayerView.TrackDesignerUIButtonLerpFuncClick(Sender: TObject);
-var
-  pt: TPoint;
-begin
-  //no need: PopUpmenuLerpFunc.PopupComponent := ;
-  pt := Mouse.CursorPos;
-  PopUpmenuLerpFunc.Popup(pt.x, pt.y);
 end;
 
 procedure TAnimationPlayerView.TrackDesignerUIButtonRemoveClick(Sender: TObject);
@@ -616,6 +590,19 @@ begin
       FTrackViewList.UnSelectAll;
     FTrackViewList[Sender.Tag].Selected := b;
     Handled := True;
+  end;
+end;
+
+procedure TAnimationPlayerView.ATrackContainerRelease(
+  const Sender: TCastleUserInterface;
+  const Event: TInputPressRelease; var Handled: boolean);
+var
+  pt: TPoint;
+begin
+  if Event.IsMouseButton(buttonRight) then
+  begin
+    pt := Mouse.CursorPos;
+    PopupMenuKeyFrame.Popup(pt.x, pt.y);
   end;
 end;
 
@@ -824,6 +811,7 @@ begin
       ATrackContainer.Culling := True;
       ATrackContainer.Tag := I;
       ATrackContainer.OnPress := {$Ifdef fpc}@{$endif}ATrackContainerPress;
+      ATrackContainer.OnRelease := {$Ifdef fpc}@{$endif}ATrackContainerRelease;
       FTrackListView.InsertFront(ATrackContainer);
 
       ATrackHeadView := TCastleRectangleControl.Create(Self);
@@ -959,11 +947,6 @@ begin
   TrackDesignerUI := TTrackDesignerUI.Create(Self);
   TrackDesignerUI.Height := TrackHeight;
   TrackDesignerUI.Exists := False;
-  TrackDesignerUI.ButtonLerpFunc.OnClick :=
-{$Ifdef fpc}@{$endif}TrackDesignerUIButtonLerpFuncClick;
-  TrackDesignerUI.ButtonRemove.OnClick :=
- {$Ifdef fpc}@{$endif}TrackDesignerUIButtonRemoveClick;
-  FRoot.InsertFront(TrackDesignerUI);
 end;
 
 procedure TAnimationPlayerView.Stop;
@@ -1363,14 +1346,14 @@ procedure TAnimationPlayerDialog.InitView;
     EnumName: string;
     Item: TMenuItem;
   begin
-    PopupMenuLerpFunc.Items.Clear;
+    MenuItemLerpFunc.Clear;
     for LerpFunc := Low(TLerpFuncType) to High(TLerpFuncType) do
     begin
       EnumName := GetEnumName(TypeInfo(TLerpFuncType), Ord(LerpFunc));
       EnumName := PrefixRemove('lft', EnumName, True);
-      // PopupMenuLerpFunc.Items.Add(EnumName);
-      Item := TMenuItem.Create(PopupMenuLerpFunc.Items);
-      PopupMenuLerpFunc.Items.Add(Item);
+      // PopupMenuKeyFrame.Items.Add(EnumName);
+      Item := TMenuItem.Create(MenuItemLerpFunc);
+      MenuItemLerpFunc.Add(Item);
       Item.Caption := EnumName;
       Item.Tag := Ord(LerpFunc);
       Item.OnClick := {$Ifdef fpc}@{$endif}FView.LerpfuncItemClick;
@@ -1388,7 +1371,8 @@ begin
     CastleControl1.Container.View := FView;
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
     BuildLerpFuncMenu;
-    FView.PopUpmenuLerpFunc := PopUpmenuLerpFunc;
+    MenuItemRemoveFrame.OnClick := {$Ifdef fpc}@{$endif}FView.TrackDesignerUIButtonRemoveClick;
+    FView.PopUpmenuKeyFrame := PopupMenuKeyFrame;
   end;
 end;
 
