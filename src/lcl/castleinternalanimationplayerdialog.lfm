@@ -130,25 +130,28 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     Left = 80
     Top = 80
     object MenuItemLerpFunc: TMenuItem
-      Caption = 'LerpFunc'
+      Caption = 'Set LerpFunc'
     end
     object MenuItemRemoveFrame: TMenuItem
-      Caption = 'RemoveKeyFrame'
+      Caption = 'Remove KeyFrame'
+    end
+    object MenuItemSetKeyFrameTime: TMenuItem
+      Caption = 'Set Time'
     end
   end
   object PopupMenuAnimation: TPopupMenu
     Left = 205
     Top = 226
     object MenuItemNewAnimation: TMenuItem
-      Caption = 'New'
+      Caption = 'New Animation'
       OnClick = MenuItemNewAnimationClick
     end
     object MenuItemRemoveAnimation: TMenuItem
-      Caption = 'Remove'
+      Caption = 'Remove Animation'
       OnClick = MenuItemRemoveAnimationClick
     end
     object MenuItemRenameAnimation: TMenuItem
-      Caption = 'Rename'
+      Caption = 'Rename Animation'
     end
   end
 end

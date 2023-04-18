@@ -154,6 +154,7 @@ type
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function MousePosToTime(const AMousePos: TVector2): TFloatTime;
     procedure TrackDesignerUIButtonRemoveClick(Sender: TObject);
+    procedure TrackDesignerUISetKeyFrameTimeClick(Sender: TObject);
 
     property CurrentTime: TFloatTime read GetCurrentTime write SetCurrentTime;
   public
@@ -195,6 +196,7 @@ type
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    MenuItemSetKeyFrameTime: TMenuItem;
     MenuItemNewAnimation: TMenuItem;
     MenuItemRemoveAnimation: TMenuItem;
     MenuItemRenameAnimation: TMenuItem;
@@ -587,6 +589,18 @@ begin
     Exit;
   TrackDesignerUI.Track.RemoveKeyFrame(TrackDesignerUI.KeyFrame);
   KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
+end;
+
+procedure TAnimationPlayerView.TrackDesignerUISetKeyFrameTimeClick(Sender: TObject);
+var
+  s: string;
+begin
+  s := FloatToStrDot(TrackDesignerUI.KeyFrame.Time);
+  if InputQuery('set keyframe time', 'Input a new time:', s) then
+  begin
+    TrackDesignerUI.KeyFrame.Time := StrToFloatDot(s);
+    KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
+  end;
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
@@ -1565,7 +1579,10 @@ begin
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
     BuildLerpFuncMenu;
     MenuItemRemoveFrame.OnClick :=
- {$Ifdef fpc}@{$endif}FView.TrackDesignerUIButtonRemoveClick;
+     {$Ifdef fpc}@{$endif}FView.TrackDesignerUIButtonRemoveClick;
+    MenuItemSetKeyFrameTime.OnClick :=
+      {$Ifdef fpc}@{$endif}FView.TrackDesignerUISetKeyFrameTimeClick;
+
     FView.PopUpmenuKeyFrame := PopupMenuKeyFrame;
   end;
 end;
