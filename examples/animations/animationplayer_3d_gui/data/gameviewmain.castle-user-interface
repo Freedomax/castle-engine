@@ -121,9 +121,9 @@
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "X" : -3.9633941650390625E+000,
+              "X" : 1.4647734165191650E+000,
               "Y" : 1.0000000000000000E+000,
-              "Z" : -3.5000000000000000E+000
+              "Z" : -3.4999997615814209E+000
             },
             "$Children" : [
               {
@@ -167,11 +167,46 @@
             "RenderOptions" : {
               "$$ClassName" : "TCastleScene.TSceneRenderOptions"
             },
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : -8.1059932708740234E-002,
+              "Z" : 1.9983566999435425E+000
+            },
             "$Children" : [
               {
                 "$$ClassName" : "TCastleAnimationPlayerTransform",
                 "AnimationPlayer" : {
-                  "$$ClassName" : "TAnimationPlayer"
+                  "$$ClassName" : "TAnimationPlayer",
+                  "Playing" : true,
+                  "Animation-_Count" : 1,
+                  "Animation_0" : "1",
+                  "Animation_0-PlayStyle" : 2,
+                  "Animation_0-Track-_Count" : 2,
+                  "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
+                  "Animation_0-Track_0-Frame-_Count" : 3,
+                  "Animation_0-Track_0-Frame_0-LerpFuncType" : 5,
+                  "Animation_0-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+                  "Animation_0-Track_0-Frame_0-Value" : "-2",
+                  "Animation_0-Track_0-Frame_1-LerpFuncType" : 2,
+                  "Animation_0-Track_0-Frame_1-Time" : 9.9500000476837158E-001,
+                  "Animation_0-Track_0-Frame_1-Value" : "0",
+                  "Animation_0-Track_0-Frame_2-Time" : 2.0000000000000000E+000,
+                  "Animation_0-Track_0-Frame_2-Value" : "2",
+                  "Animation_0-Track_0-FriendlyObjectName" : "Sphere1.TranslationPersistent",
+                  "Animation_0-Track_0-PropertyName" : "X",
+                  "Animation_0-Track_1-TrackClass" : "TAnimationPropertyTrack",
+                  "Animation_0-Track_1-Frame-_Count" : 3,
+                  "Animation_0-Track_1-Frame_0-LerpFuncType" : 2,
+                  "Animation_0-Track_1-Frame_0-Time" : 0.0000000000000000E+000,
+                  "Animation_0-Track_1-Frame_0-Value" : "0",
+                  "Animation_0-Track_1-Frame_1-LerpFuncType" : 5,
+                  "Animation_0-Track_1-Frame_1-Time" : 9.9500000476837158E-001,
+                  "Animation_0-Track_1-Frame_1-Value" : "2",
+                  "Animation_0-Track_1-Frame_2-Time" : 2.0000000000000000E+000,
+                  "Animation_0-Track_1-Frame_2-Value" : "0",
+                  "Animation_0-Track_1-FriendlyObjectName" : "Sphere1.TranslationPersistent",
+                  "Animation_0-Track_1-PropertyName" : "Z",
+                  "CurrentAnimation" : "1"
                 },
                 "Name" : "AnimationPlayerSphere1"
               }
