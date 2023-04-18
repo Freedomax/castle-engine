@@ -155,6 +155,7 @@ type
     function MousePosToTime(const AMousePos: TVector2): TFloatTime;
     procedure TrackDesignerUIButtonRemoveClick(Sender: TObject);
     procedure TrackDesignerUISetKeyFrameTimeClick(Sender: TObject);
+    procedure TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
 
     property CurrentTime: TFloatTime read GetCurrentTime write SetCurrentTime;
   public
@@ -196,6 +197,7 @@ type
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    MenuItemAlignKeyFrameTime: TMenuItem;
     MenuItemSetKeyFrameTime: TMenuItem;
     MenuItemNewAnimation: TMenuItem;
     MenuItemRemoveAnimation: TMenuItem;
@@ -209,6 +211,7 @@ type
     Separator1: TMenuItem;
     Separator2: TMenuItem;
     Separator3: TMenuItem;
+    Separator4: TMenuItem;
     procedure ButtonAnimationClick(Sender: TObject);
     procedure ButtonNewTrackClick(Sender: TObject);
     procedure ButtonPlayStopClick(Sender: TObject);
@@ -601,6 +604,15 @@ begin
     TrackDesignerUI.KeyFrame.Time := StrToFloatDot(s);
     KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
   end;
+end;
+
+procedure TAnimationPlayerView.TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
+var
+  t: TFloatTime;
+begin
+  t := TrackDesignerUI.KeyFrame.Time;
+  TrackDesignerUI.KeyFrame.Time := t - FloatMod(t, 0.1);
+  KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
@@ -1582,6 +1594,8 @@ begin
      {$Ifdef fpc}@{$endif}FView.TrackDesignerUIButtonRemoveClick;
     MenuItemSetKeyFrameTime.OnClick :=
       {$Ifdef fpc}@{$endif}FView.TrackDesignerUISetKeyFrameTimeClick;
+    MenuItemAlignKeyFrameTime.OnClick :=
+      {$Ifdef fpc}@{$endif}FView.TrackDesignerUIAlignKeyFrameTimeClick;
 
     FView.PopUpmenuKeyFrame := PopupMenuKeyFrame;
   end;

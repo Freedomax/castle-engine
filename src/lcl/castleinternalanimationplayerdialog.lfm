@@ -135,8 +135,14 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     object MenuItemRemoveFrame: TMenuItem
       Caption = 'Remove KeyFrame'
     end
+    object Separator4: TMenuItem
+      Caption = '-'
+    end
     object MenuItemSetKeyFrameTime: TMenuItem
       Caption = 'Set Time'
+    end
+    object MenuItemAlignKeyFrameTime: TMenuItem
+      Caption = 'Align Time'
     end
   end
   object PopupMenuAnimation: TPopupMenu
