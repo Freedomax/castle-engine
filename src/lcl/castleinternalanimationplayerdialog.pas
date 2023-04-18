@@ -448,7 +448,7 @@ end;
 
 procedure TAnimationPlayerView.TrackDesignerUIButtonRemoveClick(Sender: TObject);
 begin
-  if MessageDlg('Confirm', Format('Are you sure you want to delete keyframe at %0.00f second?',
+  if MessageDlg('Confirm', Format('Are you sure you want to delete keyframe at %.2f second?',
     [TrackDesignerUI.KeyFrame.Time]), TMsgDlgType.mtConfirmation,
     [mbOK, mbCancel], '') = mrCancel then
     Exit;
