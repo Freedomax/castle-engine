@@ -10,11 +10,16 @@ uses
   RttiUtils;
 
 type
-  TPropertySelectResult = record
+  TPropertySelectResult = class
+  public
     SelectedObject: TPersistent;
     SelectedProperty: string;
     FriendlyObjectName: string;
+
+    constructor Create;
+    procedure Clear;
   end;
+
   TPropertySelectMode = (psmProperty, psmComponent);
 
   TPropertySelectForm = class(TForm)
@@ -25,6 +30,7 @@ type
     ButtonPanel: TButtonPanel;
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure TreeViewControlsSelectionChanged(Sender: TObject);
     procedure TreeViewPropertiesDblClick(Sender: TObject);
   private
@@ -48,6 +54,19 @@ implementation
 uses TypInfo, CastleStringUtils;
 
 {$R *.lfm}
+
+constructor TPropertySelectResult.Create;
+begin
+  inherited;
+
+end;
+
+procedure TPropertySelectResult.Clear;
+begin
+  SelectedObject := nil;
+  SelectedProperty := '';
+  FriendlyObjectName := '';
+end;
 
 procedure TPropertySelectForm.TreeViewControlsSelectionChanged(Sender: TObject);
 
@@ -125,45 +144,43 @@ end;
 procedure TPropertySelectForm.UpdateSelectedResult;
 var
   Node: TTreeNode;
+  ComponentNode, PropertyNode: TTreeNode;
 begin
-  if Assigned(TreeViewControls.Selected) then
+  FSelectResult.Clear;
+
+  ComponentNode := TreeViewControls.Selected;
+  PropertyNode := TreeViewProperties.Selected;
+
+  if Assigned(ComponentNode) then
   begin
-    FSelectResult.SelectedObject := TPersistent(TreeViewControls.Selected.Data);
-    FSelectResult.FriendlyObjectName := TreeViewControls.Selected.Text;
-  end
-  else
-  begin
-    FSelectResult.SelectedObject := nil;
-    FSelectResult.FriendlyObjectName := '';
+    FSelectResult.SelectedObject := TPersistent(ComponentNode.Data);
+    FSelectResult.FriendlyObjectName := ComponentNode.Text;
   end;
-  FSelectResult.SelectedProperty := '';
 
   if Fmode <> psmProperty then Exit;
 
-  if Assigned(TreeViewProperties.Selected) then
+  if Assigned(PropertyNode) then
   begin
-    if Assigned(TreeViewProperties.Selected.Data) then
+    if Assigned(PropertyNode.Data) then
     begin
       //child object, update FSelectedObject
       FSelectResult.SelectedObject := TPersistent(TreeViewProperties.Selected.Data);
-      FSelectResult.SelectedProperty := '';
     end
     else
     begin
       //child object, update FSelectedObject
-      if Assigned(TreeViewProperties.Selected.Parent) then
+      if Assigned(PropertyNode.Parent) then
         FSelectResult.SelectedObject :=
-          TPersistent(TreeViewProperties.Selected.Parent.Data);
-      FSelectResult.SelectedProperty := TreeViewProperties.Selected.Text;
+          TPersistent(PropertyNode.Parent.Data);
+      FSelectResult.SelectedProperty := PropertyNode.Text;
     end;
-  end
-  else
-    FSelectResult.SelectedProperty := '';
+  end;
+
 
   FSelectResult.FriendlyObjectName := '';
-  if Assigned(TreeViewControls.Selected) then
+  if Assigned(ComponentNode) then
   begin
-    Node := TreeViewProperties.Selected;
+    Node := PropertyNode;
     if Assigned(Node) then
     begin
       if not Assigned(Node.Data) then  Node := Node.Parent;
@@ -179,12 +196,12 @@ begin
         end;
       end;
     end;
+
     if FSelectResult.FriendlyObjectName = '' then
-      FSelectResult.FriendlyObjectName := TreeViewControls.Selected.Text
+      FSelectResult.FriendlyObjectName := ComponentNode.Text
     else
       FSelectResult.FriendlyObjectName :=
-        TreeViewControls.Selected.Text + '.' + FSelectResult.FriendlyObjectName;
-    //do not:   SuffixRemove('Persistent', FSelectResult.FriendlyObjectName, True);
+        ComponentNode.Text + '.' + FSelectResult.FriendlyObjectName;
   end;
 
 end;
@@ -216,7 +233,13 @@ end;
 
 procedure TPropertySelectForm.FormCreate(Sender: TObject);
 begin
+  FSelectResult := TPropertySelectResult.Create;
   Mode := psmProperty;
+end;
+
+procedure TPropertySelectForm.FormDestroy(Sender: TObject);
+begin
+  FreeAndNil(FSelectResult);
 end;
 
 procedure TPropertySelectForm.Load(const AControl: TCastleUserInterface;
@@ -277,6 +300,7 @@ procedure TPropertySelectForm.Load(const AControl: TCastleUserInterface;
 var
   ARoot: TCastleUserInterface;
 begin
+  FSelectResult.Clear;
   Mode := AMode;
 
   ARoot := AControl;

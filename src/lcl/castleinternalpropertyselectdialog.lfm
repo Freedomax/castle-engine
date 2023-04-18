@@ -8,8 +8,8 @@ object PropertySelectForm: TPropertySelectForm
   ClientWidth = 772
   OnClose = FormClose
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   Position = poDesktopCenter
-  LCLVersion = '2.3.0.0'
   object ButtonPanel1: TButtonPanel
     Left = 7
     Height = 35

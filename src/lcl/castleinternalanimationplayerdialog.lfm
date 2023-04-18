@@ -124,7 +124,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Caption = '-'
     end
     object MenuItem4: TMenuItem
-      Caption = 'PositionTrack(UI)'
+      Caption = 'PositionTrack(UserInterface)'
       OnClick = MenuItem4Click
     end
     object Separator1: TMenuItem
