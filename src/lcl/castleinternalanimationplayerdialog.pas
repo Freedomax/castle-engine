@@ -46,7 +46,8 @@ type
   public
     function FocusedTrackView: TTrackView;
     procedure SelectAll;
-    procedure UnSelectAll;
+    procedure UnSelectAll(const AExclude: TTrackView = nil);
+    function SelCount: integer;
   end;
 
   TTrackListScrollView = class(TCastleScrollView)
@@ -362,12 +363,21 @@ begin
     TrackView.Selected := True;
 end;
 
-procedure TTrackViewList.UnSelectAll;
+procedure TTrackViewList.UnSelectAll(const AExclude: TTrackView);
 var
   TrackView: TTrackView;
 begin
   for TrackView in self do
-    TrackView.Selected := False;
+    if TrackView <> AExclude then TrackView.Selected := False;
+end;
+
+function TTrackViewList.SelCount: integer;
+var
+  T: TTrackView;
+begin
+  Result := 0;
+  for T in self do
+    if T.Selected then Inc(Result);
 end;
 
 procedure TTrackViewContainer.SetTrackView(const AValue: TTrackView);
@@ -724,14 +734,21 @@ end;
 procedure TAnimationPlayerView.ATrackContainerPress(const Sender: TCastleUserInterface;
   const Event: TInputPressRelease; var Handled: boolean);
 var
-  b: boolean;
+  T: TTrackView;
 begin
   if Event.IsMouseButton(buttonLeft) then
   begin
-    b := not FTrackViewList[Sender.Tag].Selected;
-    if not Container.Pressed.Items[keyCtrl] then
-      FTrackViewList.UnSelectAll;
-    FTrackViewList[Sender.Tag].Selected := b;
+    T := FTrackViewList[Sender.Tag];
+    if Container.Pressed.Items[keyCtrl] then
+    begin
+      if not ((FTrackViewList.SelCount = 1) and (T.Selected)) then
+        T.Selected := not T.Selected;
+    end
+    else
+    begin
+      FTrackViewList.UnSelectAll(T);
+      T.Selected := True;
+    end;
     Handled := True;
   end;
 end;
@@ -903,15 +920,20 @@ var
   var
     b: boolean;
   begin
-    if not Assigned(TrackSelections) then Exit;
-    try
-      for  ATrackView in FTrackViewList do
-        if TrackSelections.TryGetValue(ATrackView.Track, b) then
-          ATrackView.Selected := b;
-    finally
-      FreeAndNil(TrackSelections);
+    if Assigned(TrackSelections) then
+    begin
+      try
+        for  ATrackView in FTrackViewList do
+          if TrackSelections.TryGetValue(ATrackView.Track, b) then
+            ATrackView.Selected := b;
+      finally
+        FreeAndNil(TrackSelections);
+
+      end;
     end;
 
+    if (FTrackViewList.Count > 0) and (FTrackViewList.SelCount = 0) then
+      FTrackViewList.First.Selected := True;
   end;
 
   function ColorByIndex(const AIndex: integer): TCastleColor;
