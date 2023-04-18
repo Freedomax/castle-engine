@@ -31,15 +31,15 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Left = 115
       Height = 27
       Top = 8
-      Width = 105
-      Caption = 'New Animation'
+      Width = 65
+      Caption = 'New'
       OnClick = ButtonNewAnimationClick
       TabOrder = 0
     end
     object ComboBoxAnimation: TComboBox
       Left = 6
       Height = 25
-      Top = 10
+      Top = 8
       Width = 105
       ItemHeight = 17
       OnChange = ComboBoxAnimationChange
@@ -48,16 +48,16 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       TabOrder = 1
     end
     object ButtonRemoveAnimation: TButton
-      Left = 223
+      Left = 182
       Height = 27
       Top = 8
-      Width = 113
-      Caption = 'Remove Animation'
+      Width = 70
+      Caption = 'Remove'
       OnClick = ButtonRemoveAnimationClick
       TabOrder = 2
     end
     object ButtonNewTrack: TButton
-      Left = 472
+      Left = 470
       Height = 27
       Top = 8
       Width = 105
@@ -66,7 +66,7 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       TabOrder = 3
     end
     object ComboBoxPlayStyle: TComboBox
-      Left = 340
+      Left = 256
       Height = 25
       Top = 8
       Width = 118
@@ -84,6 +84,18 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Anchors = [akTop, akRight]
       Caption = 'Start'
       OnClick = ButtonPlayStopClick
+    end
+    object FloatSpinEditSpeed: TFloatSpinEdit
+      Left = 380
+      Height = 25
+      Top = 8
+      Width = 58
+      Increment = 0.1
+      MaxValue = 10000
+      MinValue = 0.01
+      OnChange = FloatSpinEditSpeedChange
+      TabOrder = 5
+      Value = 0.01
     end
   end
   object PopupMenuAddTrack: TPopupMenu

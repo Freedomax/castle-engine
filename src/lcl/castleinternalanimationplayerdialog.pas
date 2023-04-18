@@ -21,7 +21,7 @@ interface
 
 uses
   Generics.Collections, Contnrs, Classes, SysUtils, Forms, Controls, Graphics,
-  Dialogs, ButtonPanel, StdCtrls, ExtCtrls, Menus, ComCtrls, Buttons,
+  Dialogs, ButtonPanel, StdCtrls, ExtCtrls, Menus, ComCtrls, Buttons, Spin,
   CastleAnimationPlayer, CastleControl, CastleControls, CastleUIControls,
   CastleVectors, CastleColors, CastleKeysMouse, RttiUtils, CastleTransform,
   CastleViewport, CastleTimeUtils, Variants, CastleRectangles, CastleFonts;
@@ -143,6 +143,7 @@ type
     CastleControl1: TCastleControl;
     ComboBoxAnimation: TComboBox;
     ComboBoxPlayStyle: TComboBox;
+    FloatSpinEditSpeed: TFloatSpinEdit;
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
@@ -160,6 +161,7 @@ type
     procedure ButtonPlayStopClick(Sender: TObject);
     procedure ComboBoxAnimationChange(Sender: TObject);
     procedure ComboBoxPlayStyleChange(Sender: TObject);
+    procedure FloatSpinEditSpeedChange(Sender: TObject);
     procedure MenuItem1Click(Sender: TObject);
     procedure MenuItem2Click(Sender: TObject);
     procedure MenuItem3Click(Sender: TObject);
@@ -1123,6 +1125,13 @@ begin
       TAnimationPlayStyle(ComboBoxPlayStyle.ItemIndex);
 end;
 
+procedure TAnimationPlayerDialog.FloatSpinEditSpeedChange(Sender: TObject);
+begin
+  if Assigned(CurrentAnimation) then
+    AnimationPlayer.CurrentAnimation.Speed :=
+      FloatSpinEditSpeed.Value;
+end;
+
 procedure TAnimationPlayerDialog.ButtonNewAnimationClick(Sender: TObject);
 var
   AName: string;
@@ -1219,12 +1228,15 @@ begin
   ButtonRemoveAnimation.Enabled := Assigned(CurrentAnimation);
   ButtonNewTrack.Enabled := Assigned(CurrentAnimation);
   ComboBoxPlayStyle.Enabled := Assigned(CurrentAnimation);
+  FloatSpinEditSpeed.Enabled := Assigned(CurrentAnimation);
   if Assigned(CurrentAnimation) then
     ComboBoxPlayStyle.ItemIndex := Ord(AnimationPlayer.CurrentAnimation.PlayStyle);
   if Assigned(CurrentAnimation) then
     FView.Playing := CurrentAnimation.Playing
   else
     FView.Playing := False;
+  if Assigned(CurrentAnimation) then
+    FloatSpinEditSpeed.Value := CurrentAnimation.Speed;
 end;
 
 end.
