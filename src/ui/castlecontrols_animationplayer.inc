@@ -27,6 +27,8 @@
     procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
       const APath: string; const bReading: boolean; const APlayer: TComponent);
       override;
+    function AddKeyframeAtTime(const ATime: TFloatTime;
+     const ALerpFunc: TLerpFunc = nil): boolean; override;
   published
     property Control: TCastleUserInterface read FControl write FControl;
   end;
@@ -79,6 +81,14 @@ begin
   inherited;
   //Get FControl
   ComponentSerialization(SerializationProcess, self, SUserInterface, ObjectName, APath, bReading);
+end;
+
+function TAnimationPositionTrack.AddKeyframeAtTime(const ATime: TFloatTime;
+  const ALerpFunc: TLerpFunc): boolean;
+begin
+  if not Assigned(FControl) then Exit(inherited);
+  AddKeyframe(ATime, FControl.Translation, ALerpFunc);
+  Result :=True;
 end;
 
 { TCastleAnimationPlayer --------------------------------------------------------------- }

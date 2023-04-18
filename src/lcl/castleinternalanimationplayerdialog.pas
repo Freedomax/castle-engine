@@ -562,7 +562,7 @@ procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
   procedure FixSize(const AIndex: integer);
   begin
     FTrackViewList.Items[AIndex].Width :=
-      PixelsPerSceond * CurrentAnimation.TrackList.Items[AIndex].Duration;
+      Max(10, PixelsPerSceond * CurrentAnimation.TrackList.Items[AIndex].Duration);
   end;
 
 var
@@ -576,7 +576,7 @@ begin
   else
   begin
     if not Between(Index, 0, FTrackViewList.Count - 1) then
-      raise Exception.Create('TAnimationPlayerView.KeyFrameListChanged out of range.');
+      raise Exception.Create('argument out of range.');
     FixSize(Index);
   end;
 

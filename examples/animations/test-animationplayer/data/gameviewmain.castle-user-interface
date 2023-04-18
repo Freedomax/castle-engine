@@ -127,9 +127,9 @@
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "X" : -3.6286315917968750E+000,
+              "X" : -3.7888646125793457E+000,
               "Y" : 1.0000000000000000E+000,
-              "Z" : -3.4475893974304199E+000
+              "Z" : -3.5747644901275635E+000
             },
             "$Children" : [
               {
@@ -195,7 +195,7 @@
                   "Animation_2-Track_0-Frame_2-Time" : 2.0050001144409180E+000,
                   "Animation_2-Track_0-Frame_2-Value" : "(3.44266700744629,1,-3.96033811569214)",
                   "Animation_2-Track_0-Transform" : "Box1",
-                  "CurrentAnimation" : "3"
+                  "CurrentAnimation" : "test"
                 },
                 "Name" : "AnimationPlayerBox1"
               }
@@ -317,7 +317,7 @@
         "$$ClassName" : "TCastleColorPersistent",
         "Blue" : 2.0000000298023224E-001,
         "Green" : 3.0000001192092896E-001,
-        "Red" : 1.0000000000000000E+000
+        "Red" : 9.1990792751312256E-001
       },
       "FontSize" : 6.0000000000000000E+001,
       "HorizontalAnchorParent" : "hpMiddle",
@@ -337,7 +337,20 @@
           "$$ClassName" : "TCastleAnimationPlayer",
           "AnimationPlayer" : {
             "$$ClassName" : "TAnimationPlayer",
-            "Playing" : true
+            "Playing" : true,
+            "Animation-_Count" : 1,
+            "Animation_0" : "fade",
+            "Animation_0-PlayStyle" : 2,
+            "Animation_0-Track-_Count" : 1,
+            "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
+            "Animation_0-Track_0-Frame-_Count" : 2,
+            "Animation_0-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+            "Animation_0-Track_0-Frame_0-Value" : "1",
+            "Animation_0-Track_0-Frame_1-Time" : 1.0299999713897705E+000,
+            "Animation_0-Track_0-Frame_1-Value" : "0.200000002980232",
+            "Animation_0-Track_0-FriendlyObjectName" : "Label1.ColorPersistent",
+            "Animation_0-Track_0-PropertyName" : "Red",
+            "CurrentAnimation" : "fade"
           },
           "Height" : 1.0000000000000000E+000,
           "Name" : "AnimationPlayer1",
