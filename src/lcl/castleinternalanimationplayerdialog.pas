@@ -243,8 +243,9 @@ var
   R: TFloatRectangle;
 begin
   if not Assigned(Container) then Exit(False);
-  { Extending the selection range to the entire window allows the last frame to be selected as well. }
+  { Extending the selection width to the entire window allows the last frame to be selected as well. }
   R := RenderRect;
+  R.Left := 0;
   if R.Right < Container.Width then
     R.Width := R.Width + Container.Width - R.Right;
   Result := R.Contains(Container.MousePosition);
@@ -462,13 +463,24 @@ var
         LineColor, bsSrcAlpha, bdOneMinusSrcAlpha, False, LineWidth);
     end;
 
+    procedure DrawVerticalLineAtMousePosition;
+    var
+      X: single;
+    begin
+      X := self.ContainerToLocalPosition(Container.MousePosition).X;
+      X := Max(X, TrackHeadViewWidth + ItemSpacing);
+      RenderLine(X * UIScale, Vector4(1, 1, 1, 0.382), 2);
+    end;
+
   begin
     if not Assigned(CurrentAnimation) then Exit;
+    R := RenderRect;
+    RTrack := FTrackViewList.First.RenderRect;
+    DrawVerticalLineAtMousePosition;
+
     if FTrackViewList.Count = 0 then Exit;
     if not Playing then Exit;
 
-    RTrack := FTrackViewList.First.RenderRect;
-    R := RenderRect;
     RenderLine(RTrack.Left + PixelsPerSceond * CurrentAnimation.ActualCurrentTime *
       UIScale, CastleColors.Green, 2);
   end;
@@ -839,13 +851,15 @@ var
 begin
   inherited Update(SecondsPassed, HandleInput);
 
-  ButtonAddKeyFrame.Translation :=
-    Vector2(ContainerToLocalPosition(Container.MousePosition).X -
-    ButtonAddKeyFrame.EffectiveWidth / 2, -TrackListHeadHeight);
-
   ATrackView := FTrackViewList.FocusedTrackView;
   if Assigned(ATrackView) then
   begin
+    { ButtonAddKeyFrame }
+    ButtonAddKeyFrame.Exists := True;
+    ButtonAddKeyFrame.Translation :=
+      Vector2(FRoot.ContainerToLocalPosition(Container.MousePosition).X -
+      ButtonAddKeyFrame.EffectiveWidth / 2, -TrackListHeadHeight);
+    { TrackDesignerUI }
     AIndex := ATrackView.GetMousePosFrame(PixelsPerSceond);
     TrackDesignerUI.Exists :=
       Between(AIndex, 0, ATrackView.Track.KeyframeList.Count - 1);
@@ -857,12 +871,15 @@ begin
       V := ATrackView.LocalToContainerPosition(
         Vector2(ATrackView.Track.KeyframeList[AIndex].Time *
         PixelsPerSceond, 0), True);
-      V := self.ContainerToLocalPosition(V);
+      V := FRoot.ContainerToLocalPosition(V);
       TrackDesignerUI.Translation := V;
     end;
   end
   else
+  begin
     TrackDesignerUI.Exists := False;
+    ButtonAddKeyFrame.Exists := False;
+  end;
 end;
 
 function TAnimationPlayerView.Press(const Event: TInputPressRelease): boolean;
