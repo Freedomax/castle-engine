@@ -680,10 +680,11 @@ procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
 
   procedure FixSize(const AIndex: integer);
   begin
-    { If there is only one keyframe with time 0, space needs to be provided to display it. }
+    { If there is only one keyframe with time 0, space needs to be provided to display it.
+      and handle popupmenu of the last keyframe. }
     FTrackViewList.Items[AIndex].Width :=
-      Max(ItemKeyFrameWidth * 0.5, PixelsPerSceond *
-      CurrentAnimation.TrackList.Items[AIndex].Duration);
+      PixelsPerSceond * CurrentAnimation.TrackList.Items[AIndex].Duration +
+      ItemKeyFrameWidth * 0.5;
   end;
 
 var
@@ -1371,7 +1372,8 @@ begin
     CastleControl1.Container.View := FView;
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
     BuildLerpFuncMenu;
-    MenuItemRemoveFrame.OnClick := {$Ifdef fpc}@{$endif}FView.TrackDesignerUIButtonRemoveClick;
+    MenuItemRemoveFrame.OnClick :=
+ {$Ifdef fpc}@{$endif}FView.TrackDesignerUIButtonRemoveClick;
     FView.PopUpmenuKeyFrame := PopupMenuKeyFrame;
   end;
 end;
