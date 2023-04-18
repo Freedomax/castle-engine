@@ -449,7 +449,7 @@ procedure TLerpFuncPreview.Render;
   var
     i: integer;
     x, y: single;
-    arr:  {$Ifdef fpc}specialize{$endif}TArray<TVector2>;
+    arr: {$Ifdef fpc}specialize{$endif}TArray<TVector2>;
   begin
     if FPoints.Count <= 0 then Exit;
     SetLength(arr, FPoints.Count);

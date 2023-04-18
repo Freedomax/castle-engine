@@ -225,8 +225,14 @@ procedure TPropertySelectForm.Load(const AControl: TCastleUserInterface;
   procedure TraverseTransforms(ATransform: TCastleTransform; Node: TTreeNode);
   var
     T: TCastleTransform;
+    C: TCastleBehavior;
     ChildNode: TTreeNode;
   begin
+    for C in ATransform.BehaviorsEnumerate do
+    begin
+      if C.Name = '' then Continue;
+      ChildNode := Node.Owner.AddChildObject(Node, C.Name, C);
+    end;
     for T in ATransform do
     begin
       if T.Name = '' then Continue;
