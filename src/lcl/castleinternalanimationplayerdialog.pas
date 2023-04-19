@@ -710,6 +710,7 @@ begin
       CurrentTime := MousePosToTime(Event.Position);
       CurrentAnimation.ForceUpdate;
     end;
+    Handled := true;
   end;
 end;
 
