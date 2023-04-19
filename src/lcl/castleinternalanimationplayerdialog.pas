@@ -115,12 +115,14 @@ type
     ItemFontSmallSize = 12;
     ItemSpacing = 2;
     TrackListHeadHeight = 20;
+    TrackScrollbarHeight = 20;
     ItemKeyFrameWidth = 20;
   var
     FAnimationPlayer: TAnimationPlayer;
     FRoot: TCastleUserInterface;
     FTrackListView: TCastleVerticalGroup;
     FTrackViewList: TTrackViewList;
+    FTrackScrollbar: TCastleScrollBar;
     procedure AButtonDeleteTrackClick(Sender: TObject);
     procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);
@@ -919,6 +921,9 @@ begin
     FixSize(Index);
   end;
 
+  FTrackScrollbar.ContentSize := FTrackListView.Width + 200;
+  FTrackScrollbar.ViewSize := FTrackListView.Width;
+
 end;
 
 procedure TAnimationPlayerView.ACheckBoxChange(Sender: TObject);
@@ -1142,12 +1147,21 @@ begin
   AScrollViewHeader.Anchor(vpTop, vpTop);
   AScrollViewHeader.Anchor(hpLeft, hpLeft);
   AScrollViewHeader.FontSize := Self.ItemFontSize;
-  AScrollView.InsertFront(AScrollViewHeader);
   AScrollViewHeader.Height := TrackListHeadHeight;
   AScrollViewHeader.WidthFraction := 1.0;
   AScrollViewHeader.OnRender := {$Ifdef fpc}@{$endif}AScrollViewHeaderRender;
   AScrollViewHeader.OnPress := {$Ifdef fpc}@{$endif}AScrollViewHeaderPress;
   AScrollViewHeader.OnMotion := {$Ifdef fpc}@{$endif}AScrollViewHeaderMotion;
+  AScrollView.InsertFront(AScrollViewHeader);
+
+  FTrackScrollbar := TCastleScrollBar.Create(Self);
+  FTrackScrollbar.Anchor(vpBottom, vpBottom);
+  FTrackScrollbar.Anchor(hpLeft, hpLeft);
+  FTrackScrollbar.Height := TrackScrollbarHeight;
+  FTrackScrollbar.WidthFraction := 1;
+  AScrollView.InsertFront(FTrackScrollbar);
+  FTrackScrollbar.ContentSize := 0;
+  FTrackScrollbar.ViewSize := 0;
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
