@@ -207,9 +207,9 @@ begin
       Result := (1 - ALerp) * V1_float + ALerp * V2_float;
     end;
     {$ifdef FPC}
-    tkSString, tkLString, tkAString:
+    tkSString, tkLString, tkAString, tkWString:
     {$else}
-    tkString, tkLString, tkUString:
+    tkString, tkLString, tkUString, tkWString:
     {$endif}
       Result := Value1;
     else
@@ -227,9 +227,22 @@ begin
   FComponent := AComponent;
   FProperty := AProperty;
   FPropertyInfo := GetPropInfo(FComponent, FProperty);
+
   if not Assigned(FPropertyInfo) then
     raise Exception.CreateFmt('%s does not exist in %s',
-      [FProperty, FComponent.ClassName]);
+      [FProperty, FComponent.ClassName])
+  else
+  begin
+    case FPropertyInfo^.PropType^.Kind of
+      {$ifdef FPC}
+      tkSString, tkLString, tkAString, tkWString:
+      {$else}
+      tkString, tkLString, tkUString, tkWString:
+      {$endif}
+        FMode := tmDiscrete
+      else;
+    end;
+  end;
 end;
 
 procedure TAnimationPropertyTrack.CustomSerialization(
