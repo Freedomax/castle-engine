@@ -35,8 +35,10 @@ type
     procedure SetSelected(const AValue: boolean);
     procedure SetTrack(const AValue: TAnimationTrack);
   public
-    function GetMousePosTime(const APixelsPerSceond: single): TFloatTime;
-    function GetMousePosFrame(const APixelsPerSceond: single): integer;
+    function GetMousePosTime(const APixelsPerSceond: single;
+      const AScrollTime: TFloatTime): TFloatTime;
+    function GetMousePosFrame(const APixelsPerSceond: single;
+      const AScrollTime: TFloatTime): integer;
     function UnderMouse: boolean;
     property Track: TAnimationTrack read FTrack write SetTrack;
     property Selected: boolean read FSelected write SetSelected;
@@ -108,6 +110,7 @@ type
     FPixelsPerSecond: single;
     FPlaying: boolean;
     FPlayingChanged: TNotifyEvent;
+    FScrollTime: TFloatTime;
   const
     TrackHeight = 100;
     TrackHeadViewWidth = 150;
@@ -138,6 +141,7 @@ type
     procedure ATrackViewRender(const Sender: TCastleUserInterface);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
+    procedure FTrackScrollbarScroll(Sender: TObject);
     function GetCurrentTime: TFloatTime;
     { Track index, "-1" means all changed. }
     procedure KeyFrameListChanged(const Index: integer);
@@ -281,18 +285,21 @@ begin
   FSelected := AValue;
 end;
 
-function TTrackView.GetMousePosTime(const APixelsPerSceond: single): TFloatTime;
+function TTrackView.GetMousePosTime(const APixelsPerSceond: single;
+  const AScrollTime: TFloatTime): TFloatTime;
 var
   AMousePos: TVector2;
 begin
   AMousePos := ContainerToLocalPosition(Container.MousePosition);
-  Result := AMousePos.X / APixelsPerSceond;
+  Result := AScrollTime + (AMousePos.X / APixelsPerSceond);
   if Result < 0 then Result := 0;
 end;
 
-function TTrackView.GetMousePosFrame(const APixelsPerSceond: single): integer;
+function TTrackView.GetMousePosFrame(const APixelsPerSceond: single;
+  const AScrollTime: TFloatTime): integer;
 begin
-  Result := FTrack.KeyframeList.TimeToKeyFrame(GetMousePosTime(APixelsPerSceond));
+  Result := FTrack.KeyframeList.TimeToKeyFrame(
+    GetMousePosTime(APixelsPerSceond, AScrollTime));
 end;
 
 function TTrackView.UnderMouse: boolean;
@@ -637,7 +644,7 @@ procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
     ATrackView: TTrackView;
   begin
     ATrackView := FTrackViewList.First;
-    Result := ATrackView.GetMousePosTime(PixelsPerSecond);
+    Result := ATrackView.GetMousePosTime(PixelsPerSecond, FScrollTime);
   end;
 
 var
@@ -727,6 +734,8 @@ var
       RenderLine(X * UIScale, Vector4(1, 1, 1, 0.382), 2);
     end;
 
+  var
+    ATime: single;
   begin
     if not Assigned(CurrentAnimation) then Exit;
     R := RenderRect;
@@ -734,12 +743,14 @@ var
 
     if FTrackViewList.Count = 0 then Exit;
     if not Playing then Exit;
+    ATime := CurrentAnimation.ActualCurrentTime - FScrollTime;
+    if ATime < 0 then Exit;
     RTrack := FTrackViewList.First.RenderRect;
-    RenderLine(RTrack.Left + PixelsPerSecond * CurrentAnimation.ActualCurrentTime *
-      UIScale, CastleColors.Green, 2);
+    RenderLine(RTrack.Left + PixelsPerSecond * ATime * UIScale,
+      CastleColors.Green, 2);
   end;
 
-  procedure RenderTimeLine(const R: TFloatRectangle; const Scale: single);
+  procedure RenderTimeLine(const R: TFloatRectangle);
 
     procedure RenderLine(const P1, P2: TVector2; const LineColor: TCastleColor;
     const LineWidth: single);
@@ -751,19 +762,21 @@ var
 
   var
     X, Y2, Y1, Y2Long, Y2Middle: single;
-    I: integer;
+    I, StartIndex: integer;
     DeltaTime: TFloatTime;
     Str: string;
-    DeltaW: single;
+    DeltaW, ScrollW: single;
   begin
     Y1 := R.Top;
     Y2Long := R.Bottom + 2 * HeaderView.UIScale;
     Y2Middle := (R.Top + R.Bottom) / 2;
     DeltaTime := 0.1;
-    DeltaW := DeltaTime * PixelsPerSecond * HeaderView.UIScale * Scale;
-    for I := 0 to Trunc(R.Width / DeltaW) - 1 do
+    DeltaW := DeltaTime * PixelsPerSecond * HeaderView.UIScale;
+    ScrollW := FScrollTime * PixelsPerSecond * HeaderView.UIScale;
+    StartIndex := Ceil(FScrollTime / DeltaTime);
+    for I := StartIndex to StartIndex + Trunc(R.Width / DeltaW) - 1 do
     begin
-      X := R.Left + (TrackHeadViewWidth + ItemSpacing) * UIScale + I * DeltaW;
+      X := R.Left - ScrollW + (TrackHeadViewWidth + ItemSpacing) * UIScale + I * DeltaW;
       if (I mod 10) = 0 then
       begin
         Str := FormatFloat('0.#', I * DeltaTime);
@@ -773,7 +786,7 @@ var
       if (I mod 5) = 0 then Y2 := Y2Long
       else
         Y2 := Y2Middle;
-      RenderLine(Vector2(X, Y1), Vector2(X, Y2), Vector4(1, 1, 1, 0.5), Scale * 2);
+      RenderLine(Vector2(X, Y1), Vector2(X, Y2), Vector4(1, 1, 1, 0.5), 2);
     end;
   end;
 
@@ -785,7 +798,7 @@ begin
   RHeader := HeaderView.RenderRect;
   DrawRectangle(RHeader, Vector4(0, 0, 0, 0.618));
   { TimeLine. }
-  RenderTimeLine(RHeader, 1);
+  RenderTimeLine(RHeader);
   { PlaybackLine. }
   RenderPlaybackLine;
 end;
@@ -833,7 +846,7 @@ var
 
   function TimeRenderPosition(const ATime: TFloatTime): single;
   begin
-    Result := R.Left + ATime * PixelsPerSecond * UIScale;
+    Result := R.Left + (ATime - FScrollTime) * PixelsPerSecond * UIScale;
   end;
 
   procedure RenderLine(const X: single; const LineColor: TCastleColor;
@@ -868,7 +881,7 @@ var
   AIndex, I: integer;
 begin
   ATrackView := Sender as TTrackView;
-  AIndex := ATrackView.GetMousePosFrame(PixelsPerSecond);
+  AIndex := ATrackView.GetMousePosFrame(PixelsPerSecond, FScrollTime);
   R := ATrackView.RenderRect;
   for I := 0 to ATrackView.Track.KeyframeList.Count - 1 do
   begin
@@ -886,6 +899,11 @@ procedure TAnimationPlayerView.FAnimationPlayerCurrentAnimationChanged(
   Sender: TObject);
 begin
   if Assigned(FCurrentAnimationChanged) then FCurrentAnimationChanged(Self);
+end;
+
+procedure TAnimationPlayerView.FTrackScrollbarScroll(Sender: TObject);
+begin
+  FScrollTime := (Sender as TCastleScrollBar).Position;
 end;
 
 function TAnimationPlayerView.GetCurrentTime: TFloatTime;
@@ -921,8 +939,9 @@ begin
     FixSize(Index);
   end;
 
-  FTrackScrollbar.ContentSize := FTrackListView.Width + 200;
-  FTrackScrollbar.ViewSize := FTrackListView.Width;
+  FTrackScrollbar.ContentSize := CurrentAnimation.MaxTime;
+  FTrackScrollbar.ViewSize := (FTrackListView.EffectiveWidth -
+    TrackHeadViewWidth - ItemSpacing) / PixelsPerSecond;
 
 end;
 
@@ -1159,9 +1178,11 @@ begin
   FTrackScrollbar.Anchor(hpLeft, hpLeft);
   FTrackScrollbar.Height := TrackScrollbarHeight;
   FTrackScrollbar.WidthFraction := 1;
-  AScrollView.InsertFront(FTrackScrollbar);
   FTrackScrollbar.ContentSize := 0;
   FTrackScrollbar.ViewSize := 0;
+  FTrackScrollbar.OnScroll := {$Ifdef fpc}@{$endif}FTrackScrollbarScroll;
+  AScrollView.InsertFront(FTrackScrollbar);
+
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
@@ -1222,7 +1243,7 @@ begin
       Vector2(FRoot.ContainerToLocalPosition(Container.MousePosition).X -
       ButtonAddKeyFrame.EffectiveWidth / 2, -TrackListHeadHeight);
     { TrackDesignerUI }
-    AIndex := ATrackView.GetMousePosFrame(PixelsPerSecond);
+    AIndex := ATrackView.GetMousePosFrame(PixelsPerSecond, FScrollTime);
     TrackDesignerUI.Exists :=
       Between(AIndex, 0, ATrackView.Track.KeyframeList.Count - 1);
     if TrackDesignerUI.Exists then
