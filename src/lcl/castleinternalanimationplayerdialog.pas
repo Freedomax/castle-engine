@@ -145,6 +145,7 @@ type
     function GetCurrentTime: TFloatTime;
     { Track index, "-1" means all changed. }
     procedure KeyFrameListChanged(const Index: integer);
+    procedure UpdateTimeBar;
     function GetCurrentAnimation: TAnimation;
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
     procedure SetAnimationPlayerChanged(const AValue: TNotifyEvent);
@@ -174,6 +175,7 @@ type
     procedure Update(const SecondsPassed: single; var HandleInput: boolean); override;
     function Press(const Event: TInputPressRelease): boolean; override;
     function Motion(const Event: TInputMotion): boolean; override;
+    procedure Resize; override;
 
     procedure AddTrack(const ATrack: TAnimationTrack);
 
@@ -939,9 +941,23 @@ begin
     FixSize(Index);
   end;
 
-  FTrackScrollbar.ContentSize := CurrentAnimation.MaxTime;
-  FTrackScrollbar.ViewSize := (FTrackListView.EffectiveWidth -
-    TrackHeadViewWidth - ItemSpacing) / PixelsPerSecond;
+  UpdateTimeBar;
+
+end;
+
+procedure TAnimationPlayerView.UpdateTimeBar;
+begin
+  if not Assigned(CurrentAnimation) then
+  begin
+    FTrackScrollbar.ContentSize := 0;
+    FTrackScrollbar.ViewSize := 0;
+  end
+  else
+  begin
+    FTrackScrollbar.ContentSize := CurrentAnimation.MaxTime + 1.0;
+    FTrackScrollbar.ViewSize :=
+      (EffectiveWidth - TrackHeadViewWidth - ItemSpacing) / PixelsPerSecond;
+  end;
 
 end;
 
@@ -1278,6 +1294,12 @@ end;
 function TAnimationPlayerView.Motion(const Event: TInputMotion): boolean;
 begin
   Result := inherited Motion(Event);
+end;
+
+procedure TAnimationPlayerView.Resize;
+begin
+  inherited Resize;
+  UpdateTimeBar;
 end;
 
 procedure TAnimationPlayerView.AddTrack(const ATrack: TAnimationTrack);
