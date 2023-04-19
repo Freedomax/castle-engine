@@ -45,6 +45,9 @@ type
     procedure UpdateVisibility;
     function GetSize:single;
     function GetPos(const APos:TVector2):single;
+    function MouseDown(const  APos: TVector2): Boolean;
+    function MouseMove(const APos: TVector2): Boolean;
+    function MouseUp(const  APos: TVector2): Boolean;
   public
     constructor Create(AOwner: TComponent); override;
     procedure Resize; override;
@@ -52,9 +55,10 @@ type
     function Press(const Event: TInputPressRelease): boolean; override;
     function Release(const Event: TInputPressRelease): boolean; override;
     function Motion(const Event: TInputMotion): boolean; override;
-    function MouseDown(const  APos: TVector2): Boolean;
-    function MouseMove(const APos: TVector2): Boolean;
-    function MouseUp(const  APos: TVector2): Boolean;
+
+
+    procedure SetContentAndViewSize(const AContentSize, AViewSize: Single);
+
     property ViewSize: Single read FViewSize write SetViewSize ;
     property ContentSize: Single read FContentSize write SetContentSize ;
     property Position: Single read FPosition write ScrollTo;
@@ -183,6 +187,19 @@ begin
   Result := MouseMove(APos);
 end;
 
+procedure TCastleScrollBar.SetContentAndViewSize(const AContentSize,
+  AViewSize: Single);
+begin
+  if (FContentSize <> AContentSize) or (FViewSize <> AViewSize) then
+  begin
+    FContentSize := AContentSize;
+    FViewSize := AViewSize;
+    UpdatePosition;
+    UpdateVisibility;
+  end;
+
+end;
+
 function TCastleScrollBar.MouseDown(const APos: TVector2
   ): Boolean;
 var
@@ -298,8 +315,16 @@ begin
 end;
 
 procedure TCastleScrollBar.UpdateVisibility;
+var
+  NewExists: Boolean;
 begin
-  Exists := FViewSize < FContentSize;
+  NewExists := (FViewSize < FContentSize);
+  if NewExists <> Exists then
+  begin
+    if not NewExists then
+      Position := 0;
+    Exists := NewExists;
+  end;
 end;
 
 

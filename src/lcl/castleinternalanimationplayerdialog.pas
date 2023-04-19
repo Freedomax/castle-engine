@@ -833,7 +833,7 @@ procedure TAnimationPlayerView.ATrackContainerRelease(
 var
   pt: TPoint;
 begin
-  if Event.IsMouseButton(buttonRight) then
+  if Event.IsMouseButton(buttonRight) and TrackDesignerUI.Exists then
   begin
     pt := Mouse.CursorPos;
     PopupMenuKeyFrame.Popup(pt.x, pt.y);
@@ -887,6 +887,7 @@ begin
   R := ATrackView.RenderRect;
   for I := 0 to ATrackView.Track.KeyframeList.Count - 1 do
   begin
+    if ATrackView.Track.KeyframeList[i].Time < FScrollTime then Continue;
     FramePos := TimeRenderPosition(ATrackView.Track.KeyframeList[i].Time);
     RenderKeyFrame(I = AIndex);
   end;
@@ -946,17 +947,20 @@ begin
 end;
 
 procedure TAnimationPlayerView.UpdateTimeBar;
+var
+  AViewSize, AContentSize: single;
 begin
   if not Assigned(CurrentAnimation) then
   begin
-    FTrackScrollbar.ContentSize := 0;
     FTrackScrollbar.ViewSize := 0;
+    FTrackScrollbar.ContentSize := 0;
   end
   else
   begin
-    FTrackScrollbar.ContentSize := CurrentAnimation.MaxTime + 1.0;
-    FTrackScrollbar.ViewSize :=
-      (EffectiveWidth - TrackHeadViewWidth - ItemSpacing) / PixelsPerSecond;
+    AViewSize := (EffectiveWidth - TrackHeadViewWidth - ItemSpacing) / PixelsPerSecond;
+    AContentSize := Max(AViewSize, CurrentAnimation.MaxTime) + 10.5;
+    FTrackScrollbar.SetContentAndViewSize(AContentSize, AViewSize);
+    FTrackScrollbar.Position := FScrollTime;
   end;
 
 end;
@@ -1247,6 +1251,7 @@ var
   ATrackView: TTrackView;
   V: TVector2;
   AIndex: integer;
+  AKeyFrame: TAnimationTrack.TAnimationKeyframe;
 begin
   inherited Update(SecondsPassed, HandleInput);
 
@@ -1260,24 +1265,28 @@ begin
       ButtonAddKeyFrame.EffectiveWidth / 2, -TrackListHeadHeight);
     { TrackDesignerUI }
     AIndex := ATrackView.GetMousePosFrame(PixelsPerSecond, FScrollTime);
-    TrackDesignerUI.Exists :=
-      Between(AIndex, 0, ATrackView.Track.KeyframeList.Count - 1);
-    if TrackDesignerUI.Exists then
+    if Between(AIndex, 0, ATrackView.Track.KeyframeList.Count - 1) then
     begin
+      AKeyFrame := ATrackView.Track.KeyframeList[AIndex];
       TrackDesignerUI.Track := ATrackView.Track;
-      TrackDesignerUI.KeyFrame := ATrackView.Track.KeyframeList[AIndex];
+      TrackDesignerUI.KeyFrame := AKeyFrame;
       TrackDesignerUI.LerpFuncPreview.Exists :=
         ATrackView.Track.Mode = TAnimationTrackMode.tmContinuous;
       if TrackDesignerUI.LerpFuncPreview.Exists then
         TrackDesignerUI.LerpFuncPreview.LerpFunc :=
-          ATrackView.Track.KeyframeList[AIndex].LerpFunc;
+          AKeyFrame.LerpFunc;
 
-      V := ATrackView.LocalToContainerPosition(
-        Vector2(ATrackView.Track.KeyframeList[AIndex].Time *
-        PixelsPerSecond, 0), True);
-      V := FRoot.ContainerToLocalPosition(V);
-      TrackDesignerUI.Translation := V;
-    end;
+      TrackDesignerUI.Exists := AKeyFrame.Time >= FScrollTime;
+      if TrackDesignerUI.Exists then
+      begin
+        V := ATrackView.LocalToContainerPosition(Vector2(
+          (AKeyFrame.Time - FScrollTime) * PixelsPerSecond, 0), True);
+        V := FRoot.ContainerToLocalPosition(V);
+        TrackDesignerUI.Translation := V;
+      end;
+    end
+    else
+      TrackDesignerUI.Exists := False;
   end
   else
   begin
