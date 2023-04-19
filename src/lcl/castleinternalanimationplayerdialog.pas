@@ -27,7 +27,7 @@ uses
   CastleViewport, CastleTimeUtils, Variants, CastleRectangles, CastleFonts;
 
 type
-  TTrackView = class(TCastleRectangleControl)
+  TTrackView = class(TCastleUserInterface)
   strict private
     FSelected: boolean;
   var
@@ -154,6 +154,7 @@ type
     procedure SetPixelsPerSecond(const AValue: single);
     procedure SetPlaying(const AValue: boolean);
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
+    procedure CorrectTrackViewWidth(const ATrackView: TTrackView);
   protected
     FFont: TCastleFont;
     ButtonAddKeyFrame: TCastleButton;
@@ -176,6 +177,7 @@ type
     function Press(const Event: TInputPressRelease): boolean; override;
     function Motion(const Event: TInputMotion): boolean; override;
     procedure Resize; override;
+    procedure ResetScrollTime;
 
     procedure AddTrack(const ATrack: TAnimationTrack);
 
@@ -601,6 +603,11 @@ begin
     FPlayingChanged := AValue;
 end;
 
+procedure TAnimationPlayerView.CorrectTrackViewWidth(const ATrackView: TTrackView);
+begin
+  ATrackView.Width := EffectiveWidth - TrackHeadViewWidth - ItemSpacing;
+end;
+
 procedure TAnimationPlayerView.TrackDesignerUIButtonRemoveClick(Sender: TObject);
 begin
   if MessageDlg('Confirm', Format(
@@ -868,7 +875,6 @@ var
     Rc: TFloatRectangle;
   begin
     RenderLine(FramePos, CastleColors.White, 1 * UIScale);
-
     if bSelected then
     begin
       rc := FloatRectangle(FramePos - ItemKeyFrameWidth * 0.5 * UIScale,
@@ -876,7 +882,27 @@ var
       DrawRectangle(Rc, Vector4(1, 1, 1, 0.382));
 
     end;
-    //RenderDetail;
+  end;
+
+  procedure RenderBackground;
+
+    function ColorByIndex(const AIndex: integer): TCastleColor;
+    begin
+      { Always darker than white. Pay attention to prevent float mod}
+      Result.X := (int64((AIndex + 1) * 30) mod 200) / 255;
+      Result.Y := (int64((AIndex + 2) * 30) mod 200) / 255;
+      Result.Z := (int64((AIndex + 3) * 30) mod 200) / 255;
+      Result.W := 0.5;
+    end;
+
+  var
+    RightPos: single;
+    FinalR: TFloatRectangle;
+  begin
+    RightPos := TimeRenderPosition(ATrackView.Track.Duration);
+    if RightPos <= R.Left then Exit;
+    FinalR := FloatRectangle(R.LeftBottom, RightPos - R.Left, R.Height);
+    DrawRectangle(FinalR, ColorByIndex(FTrackViewList.indexof(ATrackView)));
   end;
 
 var
@@ -885,6 +911,8 @@ begin
   ATrackView := Sender as TTrackView;
   AIndex := ATrackView.GetMousePosFrame(PixelsPerSecond, FScrollTime);
   R := ATrackView.RenderRect;
+
+  RenderBackground;
   for I := 0 to ATrackView.Track.KeyframeList.Count - 1 do
   begin
     if ATrackView.Track.KeyframeList[i].Time < FScrollTime then Continue;
@@ -917,33 +945,8 @@ begin
 end;
 
 procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
-
-  procedure FixSize(const AIndex: integer);
-  begin
-    { If there is only one keyframe with time 0, space needs to be provided to display it.
-      and handle popupmenu of the last keyframe. }
-    FTrackViewList.Items[AIndex].Width :=
-      PixelsPerSecond * CurrentAnimation.TrackList.Items[AIndex].Duration +
-      ItemKeyFrameWidth * 0.5;
-  end;
-
-var
-  I: integer;
 begin
-  if Index < 0 then
-  begin
-    Assert(FTrackViewList.Count <= CurrentAnimation.TrackList.Count);
-    for I := 0 to FTrackViewList.Count - 1 do FixSize(I);
-  end
-  else
-  begin
-    if not Between(Index, 0, FTrackViewList.Count - 1) then
-      raise Exception.Create('argument out of range.');
-    FixSize(Index);
-  end;
-
   UpdateTimeBar;
-
 end;
 
 procedure TAnimationPlayerView.UpdateTimeBar;
@@ -1037,15 +1040,6 @@ var
       FTrackViewList.First.Selected := True;
   end;
 
-  function ColorByIndex(const AIndex: integer): TCastleColor;
-  begin
-    { Always darker than white. Pay attention to prevent float mod}
-    Result.X := (int64((AIndex + 1) * 30) mod 200) / 255;
-    Result.Y := (int64((AIndex + 2) * 30) mod 200) / 255;
-    Result.Z := (int64((AIndex + 3) * 30) mod 200) / 255;
-    Result.W := 0.5;
-  end;
-
 var
   I: integer;
   ATrack: TAnimationTrack;
@@ -1121,10 +1115,9 @@ begin
       AHeadItemContainer.InsertFront(AButtonDelete);
       { TrackView. }
       ATrackView := TTrackView.Create(self);
-      ATrackView.Color := ColorByIndex(I);
       ATrackView.Track := ATrack;
       ATrackView.Height := TrackHeight;
-      ATrackView.Width := 1;
+      CorrectTrackViewWidth(ATrackView);
       ATrackView.Tag := I;
       ATrackView.OnRender := {$Ifdef fpc}@{$endif}ATrackViewRender;
       ATrackContainer.TrackView := ATrackView;
@@ -1152,7 +1145,7 @@ var
   Pos: TVector2;
 begin
   Pos := ContainerToLocalPosition(AMousePos);
-  Result := (Pos.X - (TrackHeadViewWidth + ItemSpacing)) / PixelsPerSecond;
+  Result := (Pos.X - (TrackHeadViewWidth + ItemSpacing)) / PixelsPerSecond + FScrollTime;
 
 end;
 
@@ -1180,7 +1173,7 @@ begin
   AScrollView := TTrackListScrollView.Create(Self);
   FRoot.InsertFront(AScrollView);
   AScrollView.FullSize := True;
-  AScrollView.EnableDragging := True;
+  AScrollView.EnableDragging := False;
 
   AScrollViewHeader := TCastleUserInterfaceFont.Create(Self);
   AScrollViewHeader.Anchor(vpTop, vpTop);
@@ -1306,9 +1299,17 @@ begin
 end;
 
 procedure TAnimationPlayerView.Resize;
+var
+  T: TTrackView;
 begin
   inherited Resize;
+  for T in FTrackViewList do CorrectTrackViewWidth(T);
   UpdateTimeBar;
+end;
+
+procedure TAnimationPlayerView.ResetScrollTime;
+begin
+  FTrackScrollbar.Position := 0;
 end;
 
 procedure TAnimationPlayerView.AddTrack(const ATrack: TAnimationTrack);
@@ -1743,6 +1744,7 @@ procedure TAnimationPlayerDialog.CurrentAnimationChanged;
 begin
   UpdateUIControls;
   FView.ReloadTracks;
+  Fview.ResetScrollTime;
 end;
 
 procedure TAnimationPlayerDialog.UpdateUIControls;
