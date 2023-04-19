@@ -263,6 +263,7 @@ begin
 end;
 function TCastleScrollBar.GetSize: single;
 begin
+  Result := 0;
   case FType of
     sbHorizontal:
       Result := EffectiveWidth;
@@ -273,6 +274,7 @@ end;
 
 function TCastleScrollBar.GetPos(const APos: TVector2): single;
 begin
+  Result := 0;
   case FType of
     sbHorizontal:
       Result := APos.X;
