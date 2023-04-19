@@ -4355,11 +4355,11 @@ See https://castle-engine.io/license.php for details.
         <Type Value="Include"/>
       </Item1062>
       <Item1063>
-        <Filename Value="../src/base/castleutils_lerpfunctions.inc"/>
+        <Filename Value="../src/ui/castlecontrols_scrollbar.inc"/>
         <Type Value="Include"/>
       </Item1063>
       <Item1064>
-        <Filename Value="../src/ui/castlecontrols_scrollbar.inc"/>
+        <Filename Value="../src/base/castleinternal_lerpfunctions.inc"/>
         <Type Value="Include"/>
       </Item1064>
     </Files>

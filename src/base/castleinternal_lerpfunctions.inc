@@ -1,5 +1,6 @@
+{%MainUnit castleanimationplayer.pas}
 {
-  Copyright 2002-2021 Michalis Kamburelis.
+  Copyright 2002-2021 Michalis Kamburelis, FreeDomax.
 
   This file is part of "Castle Game Engine".
 

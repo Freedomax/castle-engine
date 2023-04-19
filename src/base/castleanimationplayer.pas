@@ -296,7 +296,7 @@ uses Math, Generics.Defaults, TypInfo;
 
 {$define read_implementation}
 
-{$I castleutils_lerpfunctions.inc}
+{$I castleinternal_lerpfunctions.inc}
 
 {$undef read_implementation}
 const
