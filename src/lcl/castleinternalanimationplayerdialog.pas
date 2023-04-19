@@ -610,10 +610,16 @@ end;
 
 procedure TAnimationPlayerView.TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
 var
-  t: TFloatTime;
+  t, Reminder: TFloatTime;
+const
+  atom: TFloatTime = 0.1;
 begin
   t := TrackDesignerUI.KeyFrame.Time;
-  TrackDesignerUI.KeyFrame.Time := t - FloatMod(t, 0.1);
+  Reminder := FloatMod(t, atom);
+  t := t - Reminder;
+  if Reminder >= 0.5 * atom then
+    t := t + atom;
+  TrackDesignerUI.KeyFrame.Time := t;
   KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
 end;
 
