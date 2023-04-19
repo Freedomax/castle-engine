@@ -209,12 +209,12 @@ begin
     {$ifdef FPC}
     tkSString, tkLString, tkAString:
     {$else}
-    tkString, tkLString:
+    tkString, tkLString, tkUString:
     {$endif}
       Result := Value1;
     else
       raise Exception.CreateFmt(
-        'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
+        'TAnimationPropertyTrack.SetValue: Unsupported value type[%d], Property:%s.',
         [Ord(Tk), FProperty]);
   end;
 
