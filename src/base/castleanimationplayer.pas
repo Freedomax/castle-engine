@@ -27,8 +27,9 @@ type
   TLerpFunc = function(const ALerp: single): single;
 
   TLerpFuncType = (lftCustom, lftLiner, lftSin, lftElastic, lftBack,
-    lftOneMinusCos,
-    lftUniformDeceleration);
+    lftOneMinusCos, lftUniformDeceleration, lftQuad,
+    lftCubic, lftLowWave, lftMiddleWave,
+    lftHighWave, lftBounce, lftCircle);
 
 type
   { Inherit from TPersistent for RegisterClass and de/serilization referenced component. }
@@ -303,7 +304,10 @@ const
     (nil, {$Ifdef fpc}@{$endif}LerpLiner, {$Ifdef fpc}@{$endif}LerpSin,
     {$Ifdef fpc}@{$endif}LerpElastic, {$Ifdef fpc}@{$endif}LerpBack,
     {$Ifdef fpc}@{$endif}LerpOneMinusCos,
-    {$Ifdef fpc}@{$endif}LerpUniformDeceleration);
+    {$Ifdef fpc}@{$endif}LerpUniformDeceleration, {$Ifdef fpc}@{$endif}LerpQuad,
+    {$Ifdef fpc}@{$endif}LerpCubic,{$Ifdef fpc}@{$endif}LerpLowWave,
+    {$Ifdef fpc}@{$endif}LerpMiddleWave,{$Ifdef fpc}@{$endif}LerpHighWave,
+    {$Ifdef fpc}@{$endif}LerpBounce,{$Ifdef fpc}@{$endif}LerpCircle);
 
 function FloatMod(a, b: TFloatTime): TFloatTime;
 begin
@@ -511,8 +515,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -982,7 +986,8 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -999,7 +1004,8 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -1016,7 +1022,8 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -1254,8 +1261,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
