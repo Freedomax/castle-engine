@@ -30,7 +30,6 @@ type
   TTrackView = class(TCastleUserInterface)
   strict private
     FSelected: boolean;
-  var
     FTrack: TAnimationTrack;
     procedure SetSelected(const AValue: boolean);
     procedure SetTrack(const AValue: TAnimationTrack);
@@ -79,7 +78,7 @@ type
     property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
   end;
 
-  TTrackDesignerUI = class(TCastleUserInterface)
+  TKeyFrameDesignerUI = class(TCastleUserInterface)
   strict private
     FKeyFrame: TAnimationTrack.TAnimationKeyframe;
     FTrack: TAnimationTrack;
@@ -157,7 +156,7 @@ type
   protected
     FFont: TCastleFont;
     ButtonAddKeyFrame: TCastleButton;
-    TrackDesignerUI: TTrackDesignerUI;
+    TrackDesignerUI: TKeyFrameDesignerUI;
     PopupMenuKeyFrame: TPopupMenu;
     procedure ReloadTracks;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
@@ -320,7 +319,7 @@ begin
   Result := R.Contains(Container.MousePosition);
 end;
 
-procedure TTrackDesignerUI.SetKeyFrame(
+procedure TKeyFrameDesignerUI.SetKeyFrame(
   const AValue: TAnimationTrack.TAnimationKeyframe);
 begin
   if FKeyFrame = AValue then Exit;
@@ -328,13 +327,13 @@ begin
   UpdateControls;
 end;
 
-procedure TTrackDesignerUI.SetTrack(const AValue: TAnimationTrack);
+procedure TKeyFrameDesignerUI.SetTrack(const AValue: TAnimationTrack);
 begin
   if FTrack = AValue then Exit;
   FTrack := AValue;
 end;
 
-constructor TTrackDesignerUI.Create(AOwner: TComponent);
+constructor TKeyFrameDesignerUI.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   Width := 60;
@@ -361,7 +360,7 @@ begin
 
 end;
 
-procedure TTrackDesignerUI.UpdateControls;
+procedure TKeyFrameDesignerUI.UpdateControls;
 begin
   if not Assigned(FKeyFrame) then Exit;
   FFrameValueControl.Caption := VariantToString(FKeyFrame.Value);
@@ -1222,7 +1221,7 @@ begin
   ButtonAddKeyFrame.Width := TrackListHeadHeight;
   FRoot.InsertFront(ButtonAddKeyFrame);
 
-  TrackDesignerUI := TTrackDesignerUI.Create(Self);
+  TrackDesignerUI := TKeyFrameDesignerUI.Create(Self);
   TrackDesignerUI.Height := TrackHeight;
   TrackDesignerUI.Exists := False;
   TrackDesignerUI.FrameValueControl.FontSize := ItemFontSize;
