@@ -30,10 +30,11 @@ type
   TTrackView = class(TCastleUserInterface)
   strict private
     FSelected: boolean;
-  var
     FTrack: TAnimationTrack;
+    FTrackColor: TCastleColor;
     procedure SetSelected(const AValue: boolean);
     procedure SetTrack(const AValue: TAnimationTrack);
+    procedure SetTrackColor(const AValue: TCastleColor);
   public
     function GetMousePosTime(const APixelsPerSceond: single;
       const AScrollTime: TFloatTime): TFloatTime;
@@ -42,6 +43,7 @@ type
     function UnderMouse: boolean;
     property Track: TAnimationTrack read FTrack write SetTrack;
     property Selected: boolean read FSelected write SetSelected;
+    property TrackColor: TCastleColor read FTrackColor write SetTrackColor;
   end;
 
   TTrackViewList = class( {$Ifdef fpc}specialize{$endif} TObjectList<TTrackView>)
@@ -79,7 +81,7 @@ type
     property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
   end;
 
-  TTrackDesignerUI = class(TCastleUserInterface)
+  TKeyFrameDesignerUI = class(TCastleUserInterface)
   strict private
     FKeyFrame: TAnimationTrack.TAnimationKeyframe;
     FTrack: TAnimationTrack;
@@ -157,7 +159,7 @@ type
   protected
     FFont: TCastleFont;
     ButtonAddKeyFrame: TCastleButton;
-    TrackDesignerUI: TTrackDesignerUI;
+    TrackDesignerUI: TKeyFrameDesignerUI;
     PopupMenuKeyFrame: TPopupMenu;
     procedure ReloadTracks;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
@@ -165,6 +167,8 @@ type
     procedure TrackDesignerUIButtonRemoveClick(Sender: TObject);
     procedure TrackDesignerUISetKeyFrameTimeClick(Sender: TObject);
     procedure TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
+
+    function AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
 
     property CurrentTime: TFloatTime read GetCurrentTime write SetCurrentTime;
   public
@@ -282,6 +286,12 @@ begin
   end;
 end;
 
+procedure TTrackView.SetTrackColor(const AValue: TCastleColor);
+begin
+  if not TVector4.Equals(FTrackColor, AValue) then
+    FTrackColor := AValue;
+end;
+
 procedure TTrackView.SetSelected(const AValue: boolean);
 begin
   if FSelected = AValue then Exit;
@@ -318,7 +328,7 @@ begin
   Result := R.Contains(Container.MousePosition);
 end;
 
-procedure TTrackDesignerUI.SetKeyFrame(
+procedure TKeyFrameDesignerUI.SetKeyFrame(
   const AValue: TAnimationTrack.TAnimationKeyframe);
 begin
   if FKeyFrame = AValue then Exit;
@@ -326,13 +336,13 @@ begin
   UpdateControls;
 end;
 
-procedure TTrackDesignerUI.SetTrack(const AValue: TAnimationTrack);
+procedure TKeyFrameDesignerUI.SetTrack(const AValue: TAnimationTrack);
 begin
   if FTrack = AValue then Exit;
   FTrack := AValue;
 end;
 
-constructor TTrackDesignerUI.Create(AOwner: TComponent);
+constructor TKeyFrameDesignerUI.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   Width := 60;
@@ -359,7 +369,7 @@ begin
 
 end;
 
-procedure TTrackDesignerUI.UpdateControls;
+procedure TKeyFrameDesignerUI.UpdateControls;
 begin
   if not Assigned(FKeyFrame) then Exit;
   FFrameValueControl.Caption := VariantToString(FKeyFrame.Value);
@@ -411,11 +421,14 @@ begin
 end;
 
 procedure TTrackViewContainer.RenderOverChildren;
+const
+  SelectionColor: TCastleColor = (X: 0.580; Y: 1.000; Z: 0.855; W: 0.804);
 begin
   inherited RenderOverChildren;
   if not Assigned(TrackView) then Exit;
   if not TrackView.Selected then Exit;
-  DrawRectangleOutline(RenderRect, Vector4(1, 1, 0, 0.5), 2);
+
+  DrawRectangleOutline(RenderRect.Grow(-1, 0), SelectionColor, 2);
 end;
 
 function LerpLiner(const ALerp: single): single;
@@ -609,11 +622,6 @@ end;
 
 procedure TAnimationPlayerView.TrackDesignerUIButtonRemoveClick(Sender: TObject);
 begin
-  if MessageDlg('Confirm', Format(
-    'Are you sure you want to delete keyframe at %.2f second?',
-    [TrackDesignerUI.KeyFrame.Time]), TMsgDlgType.mtConfirmation,
-    [mbOK, mbCancel], '') = mrCancel then
-    Exit;
   TrackDesignerUI.Track.RemoveKeyFrame(TrackDesignerUI.KeyFrame);
   KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
 end;
@@ -631,18 +639,20 @@ begin
 end;
 
 procedure TAnimationPlayerView.TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
-var
-  t, Reminder: TFloatTime;
-const
-  atom: TFloatTime = 0.1;
 begin
-  t := TrackDesignerUI.KeyFrame.Time;
-  Reminder := FloatMod(t, atom);
-  t := t - Reminder;
-  if Reminder >= 0.5 * atom then
-    t := t + atom;
-  TrackDesignerUI.KeyFrame.Time := t;
+  TrackDesignerUI.KeyFrame.Time := AlignedTime(TrackDesignerUI.KeyFrame.Time, 0.1);
   KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
+end;
+
+function TAnimationPlayerView.AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
+var
+  Reminder: TFloatTime;
+begin
+  Result := ATime;
+  Reminder := FloatMod(Result, atom);
+  Result := Result - Reminder;
+  if Reminder >= 0.5 * atom then
+    Result := Result + atom;
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
@@ -667,6 +677,7 @@ begin
   slt := TStringList.Create;
   try
     ATime := GetMousePosTime;
+    ATime := AlignedTime(ATime, 0.1);
     SelectedCount := 0;
     for TrackView in FTrackViewList do
     begin
@@ -885,16 +896,6 @@ var
   end;
 
   procedure RenderBackground;
-
-    function ColorByIndex(const AIndex: integer): TCastleColor;
-    begin
-      { Always darker than white. Pay attention to prevent float mod}
-      Result.X := (int64((AIndex + 1) * 30) mod 200) / 255;
-      Result.Y := (int64((AIndex + 2) * 30) mod 200) / 255;
-      Result.Z := (int64((AIndex + 3) * 30) mod 200) / 255;
-      Result.W := 0.5;
-    end;
-
   var
     RightPos: single;
     FinalR: TFloatRectangle;
@@ -902,7 +903,7 @@ var
     RightPos := TimeRenderPosition(ATrackView.Track.Duration);
     if RightPos <= R.Left then Exit;
     FinalR := FloatRectangle(R.LeftBottom, RightPos - R.Left, R.Height);
-    DrawRectangle(FinalR, ColorByIndex(FTrackViewList.indexof(ATrackView)));
+    DrawRectangle(FinalR, ATrackView.TrackColor);
   end;
 
 var
@@ -982,14 +983,17 @@ end;
 procedure TAnimationPlayerView.AButtonDeleteTrackClick(Sender: TObject);
 var
   AIndex: integer;
+  ATrack: TAnimationTrack;
 begin
   AIndex := (Sender as TCastleButton).Tag;
-  if MessageDlg('Confirm', Format('Are you sure you want to delete track: "%s"?',
-    [CurrentAnimation.TrackList.Items[AIndex].FriendlyObjectName]),
-    TMsgDlgType.mtConfirmation, [mbOK, mbCancel], '') = mrCancel then
-    Exit;
+  ATrack := CurrentAnimation.TrackList[AIndex];
+  if ATrack.KeyframeList.Count > 0 then
+    if MessageDlg('Confirm', Format('Are you sure you want to delete track: "%s.%s"?',
+      [ATrack.FriendlyObjectName, ATrack.PropName]), TMsgDlgType.mtConfirmation,
+      [mbOK, mbCancel], '') = mrCancel then
+      Exit;
 
-  CurrentAnimation.RemoveTrack(CurrentAnimation.TrackList.Items[AIndex]);
+  CurrentAnimation.RemoveTrack(CurrentAnimation.TrackList[AIndex]);
   ReloadTracks;
 end;
 
@@ -1038,6 +1042,15 @@ var
 
     if (FTrackViewList.Count > 0) and (FTrackViewList.SelCount = 0) then
       FTrackViewList.First.Selected := True;
+  end;
+
+  function ColorByIndex(const AIndex: integer): TCastleColor;
+  begin
+    { Always darker than white. Pay attention to prevent float mod}
+    Result.X := (int64((AIndex + 1) * 30) mod 200) / 255;
+    Result.Y := (int64((AIndex + 2) * 30) mod 200) / 255;
+    Result.Z := (int64((AIndex + 3) * 30) mod 200) / 255;
+    Result.W := 0.5;
   end;
 
 var
@@ -1090,12 +1103,14 @@ begin
       ALabelObjectName.FontSize := ItemFontSmallSize;
       ALabelObjectName.Color := CastleColors.White;
       ALabelObjectName.Caption := ATrack.FriendlyObjectName;
+      ALabelObjectName.Border.AllSides := ItemSpacing;
       AHeadItemContainer.InsertFront(ALabelObjectName);
 
       ALabelPropName := TCastleLabel.Create(self);
       ALabelPropName.FontSize := ItemFontSize;
       ALabelPropName.Color := CastleColors.White;
       ALabelPropName.Caption := ATrack.PropName;
+      ALabelPropName.Border.AllSides := ItemSpacing;
       AHeadItemContainer.InsertFront(ALabelPropName);
 
       ACheckBox := TCastleCheckbox.Create(self);
@@ -1104,7 +1119,8 @@ begin
       ACheckBox.Tag := I;
       ACheckBox.OnChange := {$Ifdef fpc}@{$endif}ACheckBoxChange;
       ACheckBox.TextColor := CastleColors.White;
-      ACheckBox.FontSize := ItemFontSize;
+      ACheckBox.FontSize := ItemFontSmallSize;
+      ACheckBox.Border.AllSides := ItemSpacing;
       AHeadItemContainer.InsertFront(ACheckBox);
 
       AButtonDelete := TCastleButton.Create(Self);
@@ -1112,6 +1128,7 @@ begin
       AButtonDelete.OnClick := {$Ifdef fpc}@{$endif}AButtonDeleteTrackClick;
       AButtonDelete.FontSize := ItemFontSize;
       AButtonDelete.Tag := I;
+      AButtonDelete.Border.Left := ItemSpacing;
       AHeadItemContainer.InsertFront(AButtonDelete);
       { TrackView. }
       ATrackView := TTrackView.Create(self);
@@ -1119,6 +1136,7 @@ begin
       ATrackView.Height := TrackHeight;
       CorrectTrackViewWidth(ATrackView);
       ATrackView.Tag := I;
+      ATrackView.TrackColor := ColorByIndex(I);
       ATrackView.OnRender := {$Ifdef fpc}@{$endif}ATrackViewRender;
       ATrackContainer.TrackView := ATrackView;
       ATrackContainer.InsertFront(ATrackView);
@@ -1201,7 +1219,10 @@ begin
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
-  FTrackListView.Spacing := ItemSpacing;
+  if ItemSpacing > 2 then
+    FTrackListView.Spacing := ItemSpacing
+  else
+    FTrackListView.Spacing := 3; // must bigger than selection linewidth.
   FTrackListView.AutoSizeToChildren := True;
   FTrackListView.Anchor(vpTop, vpTop);
   FTrackListView.Anchor(hpLeft, hpLeft);
@@ -1219,7 +1240,7 @@ begin
   ButtonAddKeyFrame.Width := TrackListHeadHeight;
   FRoot.InsertFront(ButtonAddKeyFrame);
 
-  TrackDesignerUI := TTrackDesignerUI.Create(Self);
+  TrackDesignerUI := TKeyFrameDesignerUI.Create(Self);
   TrackDesignerUI.Height := TrackHeight;
   TrackDesignerUI.Exists := False;
   TrackDesignerUI.FrameValueControl.FontSize := ItemFontSize;

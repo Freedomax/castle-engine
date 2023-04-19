@@ -41,7 +41,7 @@ type
       const AChangeType: TKeyFrameChangeType) of object;
 
     TAnimationKeyframe = class
-    private
+    strict private
       FLerpFunc: TLerpFunc;
       FLerpFuncType: TLerpFuncType;
       FOnChange: TKeyFrameChangeEvent;
@@ -53,11 +53,10 @@ type
       procedure SetTime(const AValue: TFloatTime);
       procedure SetValue(const AValue: variant);
       procedure Changed(const AChangeType: TKeyFrameChangeType);
-
+    private
       //Used by KeyFrameList, donot set it.
       property OnChange: TKeyFrameChangeEvent read FOnChange write SetOnChange;
     public
-      // only for serialize
       property LerpFuncType: TLerpFuncType read FLerpFuncType write SetLerpFuncType;
       property Value: variant read FValue write SetValue;
       property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
@@ -75,7 +74,8 @@ type
   strict private
     FOnChange: TNotifyEvent;
     FKeyframeList: TAnimationKeyframeList;
-    FMode: TAnimationTrackMode;
+    { For mode @link(tmDiscrete), no need to execute every frame, so check the last executed frame. }
+    FLastExecutedKeyFrame: TAnimationKeyFrame;
     procedure KeyFramInTrackChange(ASender: TObject;
       const AChangeType: TKeyFrameChangeType);
     procedure KeyframesNotify(ASender: TObject;
@@ -88,6 +88,7 @@ type
     { This notification is used by @link(TAnimation), please do not use it. }
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
   strict protected
+    FMode: TAnimationTrackMode;
     FFriendlyObjectName: string;
     function GetFriendlyObjectName: string; virtual;
     procedure SetValue(const AValue: variant); virtual; abstract;
@@ -544,21 +545,39 @@ procedure TAnimationTrack.Evaluate(const ATime: TFloatTime);
 var
   AValue: variant;
   Index: SizeInt;
+  AKeyFrame: TAnimationKeyframe;
 begin
   if FKeyframeList.Count = 0 then
     Exit;
 
   if ATime < FKeyframeList.First.Time then
-    AValue := FKeyframeList.First.Value
+  begin
+    AKeyFrame := FKeyframeList.First;
+    AValue := FKeyframeList.First.Value;
+  end
   else
   begin
     Index := FKeyframeList.TimeToKeyFrame(ATime);
     if Between(Index, 0, FKeyframeList.Count - 2) then
-      AValue := Interpolate(FKeyframeList[Index], FKeyframeList[Index + 1], ATime)
+    begin
+      AKeyFrame := FKeyframeList[Index];
+      AValue := Interpolate(FKeyframeList[Index], FKeyframeList[Index + 1], ATime);
+    end
     else
+    begin
       { If the time is before the first frame or after the last frame, it's considered as the last static frame.}
+      AKeyFrame := FKeyframeList.Last;
       AValue := FKeyframeList.Last.Value;
+    end;
   end;
+
+  if (FMode = tmDiscrete) then
+  begin
+    if (FLastExecutedKeyFrame = AKeyFrame) then Exit
+    else
+      FLastExecutedKeyFrame := AKeyFrame;
+  end;
+
   SetValue(AValue);
 end;
 
@@ -866,10 +885,17 @@ end;
 procedure TAnimationTrack.KeyFramInTrackChange(ASender: TObject;
   const AChangeType: TKeyFrameChangeType);
 begin
-  if AChangeType = TKeyFrameChangeType.kfcTime then
-  begin
-    FKeyframeList.Sort;
-    if Assigned(FOnChange) then FOnChange(Self);
+  case AChangeType of
+    TKeyFrameChangeType.kfcTime:
+    begin
+      FKeyframeList.Sort;
+      FLastExecutedKeyFrame := nil;
+      if Assigned(FOnChange) then FOnChange(Self);
+    end;
+    TKeyFrameChangeType.kfcValue:
+      FLastExecutedKeyFrame := nil;
+    TKeyFrameChangeType.kfcLerpFunc: ;
+    else;
   end;
 end;
 
@@ -1261,7 +1287,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

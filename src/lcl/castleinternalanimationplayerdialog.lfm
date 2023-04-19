@@ -48,10 +48,10 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       TabOrder = 1
     end
     object ButtonNewTrack: TButton
-      Left = 470
+      Left = 401
       Height = 27
       Top = 8
-      Width = 105
+      Width = 90
       Caption = 'New Track'
       OnClick = ButtonNewTrackClick
       TabOrder = 2
@@ -93,36 +93,36 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     Left = 332
     Top = 100
     object MenuItem1: TMenuItem
-      Caption = 'PropertyTrack'
+      Caption = 'Property'
       OnClick = MenuItem1Click
     end
     object Separator3: TMenuItem
       Caption = '-'
     end
     object MenuItem3: TMenuItem
-      Caption = 'TranslationTrack(Transform)'
+      Caption = 'Translation (Transform)'
       OnClick = MenuItem3Click
     end
     object MenuItem5: TMenuItem
-      Caption = 'RotationTrack(Transform)'
+      Caption = 'Rotation (Transform)'
       OnClick = MenuItem5Click
     end
     object MenuItem6: TMenuItem
-      Caption = 'ScaleTrack(Transform)'
+      Caption = 'Scale (Transform)'
       OnClick = MenuItem6Click
     end
     object Separator2: TMenuItem
       Caption = '-'
     end
     object MenuItem4: TMenuItem
-      Caption = 'PositionTrack(UserInterface)'
+      Caption = 'Position (UserInterface)'
       OnClick = MenuItem4Click
     end
     object Separator1: TMenuItem
       Caption = '-'
     end
     object MenuItem2: TMenuItem
-      Caption = 'Add 10 tracks(debug)'
+      Caption = 'Add 10 tracks (debug)'
       OnClick = MenuItem2Click
     end
   end
@@ -149,15 +149,15 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     Left = 205
     Top = 226
     object MenuItemNewAnimation: TMenuItem
-      Caption = 'New Animation'
+      Caption = 'New'
       OnClick = MenuItemNewAnimationClick
     end
     object MenuItemRemoveAnimation: TMenuItem
-      Caption = 'Remove Animation'
+      Caption = 'Remove'
       OnClick = MenuItemRemoveAnimationClick
     end
     object MenuItemRenameAnimation: TMenuItem
-      Caption = 'Rename Animation'
+      Caption = 'Rename'
     end
   end
 end
