@@ -166,6 +166,8 @@ type
     procedure TrackDesignerUISetKeyFrameTimeClick(Sender: TObject);
     procedure TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
 
+    function AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
+
     property CurrentTime: TFloatTime read GetCurrentTime write SetCurrentTime;
   public
     constructor Create(AOwner: TComponent); override;
@@ -626,18 +628,20 @@ begin
 end;
 
 procedure TAnimationPlayerView.TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
-var
-  t, Reminder: TFloatTime;
-const
-  atom: TFloatTime = 0.1;
 begin
-  t := TrackDesignerUI.KeyFrame.Time;
-  Reminder := FloatMod(t, atom);
-  t := t - Reminder;
-  if Reminder >= 0.5 * atom then
-    t := t + atom;
-  TrackDesignerUI.KeyFrame.Time := t;
+  TrackDesignerUI.KeyFrame.Time := AlignedTime(TrackDesignerUI.KeyFrame.Time, 0.1);
   KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
+end;
+
+function TAnimationPlayerView.AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
+var
+  Reminder: TFloatTime;
+begin
+  Result := ATime;
+  Reminder := FloatMod(Result, atom);
+  Result := Result - Reminder;
+  if Reminder >= 0.5 * atom then
+    Result := Result + atom;
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
@@ -662,6 +666,7 @@ begin
   slt := TStringList.Create;
   try
     ATime := GetMousePosTime;
+    ATime := AlignedTime(ATime, 0.1);
     SelectedCount := 0;
     for TrackView in FTrackViewList do
     begin
@@ -1196,7 +1201,10 @@ begin
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
-  FTrackListView.Spacing := ItemSpacing;
+  if ItemSpacing > 2 then
+    FTrackListView.Spacing := ItemSpacing
+  else
+    FTrackListView.Spacing := 3; // must bigger than selection linewidth.
   FTrackListView.AutoSizeToChildren := True;
   FTrackListView.Anchor(vpTop, vpTop);
   FTrackListView.Anchor(hpLeft, hpLeft);
