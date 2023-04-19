@@ -96,7 +96,6 @@ uses
 {$I castleutils_filenames.inc}
 {$I castleutils_pointers.inc}
 {$I castleutils_read_write.inc}
-{$I castleutils_lerpfunctions.inc}
 
 {$undef read_interface}
 
@@ -114,7 +113,6 @@ implementation
 {$I castleutils_program_exit.inc}
 {$I castleutils_math.inc}
 {$I castleutils_filenames.inc}
-{$I castleutils_lerpfunctions.inc}
 
 { We cannot just have
   windows/castleutils_os_specific.inc and

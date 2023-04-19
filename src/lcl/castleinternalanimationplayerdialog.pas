@@ -406,6 +406,11 @@ begin
   DrawRectangleOutline(RenderRect, Vector4(1, 1, 0, 0.5), 2);
 end;
 
+function LerpLiner(const ALerp: single): single;
+begin
+  Result := ALerp;
+end;
+
 procedure TLerpFuncPreview.SetLerpFunc(const AValue: TLerpFunc);
 begin
   if FLerpFunc = AValue then Exit;
@@ -428,7 +433,7 @@ begin
   FLimitMinY := 0;
   MaxY := 1;
   MinY := 0;
-  // 计算曲线上的点
+
   for i := 0 to Floor(w) div 3 do
   begin
     x := i * 3 / w;
