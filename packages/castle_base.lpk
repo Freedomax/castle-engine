@@ -74,7 +74,7 @@ This is the same license as used by Lazarus LCL and FPC RTL.
 See https://castle-engine.io/license.php for details.
 "/>
     <Version Major="6" Minor="92"/>
-    <Files Count="1078">
+    <Files Count="1083">
       <Item1>
         <Filename Value="../src/audio/castleinternalabstractsoundbackend.pas"/>
         <UnitName Value="CastleInternalAbstractSoundBackend"/>
@@ -4418,6 +4418,27 @@ See https://castle-engine.io/license.php for details.
         <Filename Value="../src/vampyre_imaginglib/src/Extensions/ImagingExtFileFormats.pas"/>
         <UnitName Value="ImagingExtFileFormats"/>
       </Item1078>
+	  =========
+      <Item1079>
+		<Filename Value="../src/ui/castlecontrols_animationplayer.inc"/>
+		<Type Value="Include"/>
+      </Item1079>
+	  <Item1080>
+		<Filename Value="../src/base/castleanimationplayer.pas"/>
+		<UnitName Value="CastleAnimationPlayer"/>
+		</Item1080>
+	  <Item1081>
+		<Filename Value="../src/transform/castletransform_animationplayer.inc"/>
+		<Type Value="Include"/>
+      </Item1081>
+	  <Item1082>
+        <Filename Value="../src/ui/castlecontrols_scrollbar.inc"/>
+		<Type Value="Include"/>
+      </Item1082>
+	  <Item1083>
+        <Filename Value="../src/base/castleinternal_lerpfunctions.inc"/>
+		<Type Value="Include"/>
+      </Item1083>
     </Files>
     <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="1">

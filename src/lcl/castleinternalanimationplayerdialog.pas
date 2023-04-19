@@ -118,7 +118,6 @@ type
     ItemFontSmallSize = 12;
     ItemSpacing = 2;
     TrackListHeadHeight = 20;
-    TrackScrollbarHeight = 20;
     ItemKeyFrameWidth = 20;
   var
     FAnimationPlayer: TAnimationPlayer;
@@ -710,7 +709,7 @@ begin
       CurrentTime := MousePosToTime(Event.Position);
       CurrentAnimation.ForceUpdate;
     end;
-    Handled := true;
+    Handled := True;
   end;
 end;
 
@@ -1175,6 +1174,7 @@ begin
   FRoot.InsertFront(AScrollView);
   AScrollView.FullSize := True;
   AScrollView.EnableDragging := False;
+  AScrollView.ScrollbarVerticalMargin := TrackListHeadHeight;
 
   AScrollViewHeader := TCastleUserInterfaceFont.Create(Self);
   AScrollViewHeader.Anchor(vpTop, vpTop);
@@ -1190,13 +1190,14 @@ begin
   FTrackScrollbar := TCastleScrollBar.Create(Self);
   FTrackScrollbar.Anchor(vpBottom, vpBottom);
   FTrackScrollbar.Anchor(hpLeft, hpLeft);
-  FTrackScrollbar.Height := TrackScrollbarHeight;
+  FTrackScrollbar.Height := TrackListHeadHeight;
   FTrackScrollbar.WidthFraction := 1;
-  FTrackScrollbar.ContentSize := 0;
-  FTrackScrollbar.ViewSize := 0;
+  FTrackScrollbar.SetContentAndViewSize(0, 0);
   FTrackScrollbar.OnScroll := {$Ifdef fpc}@{$endif}FTrackScrollbarScroll;
   AScrollView.InsertFront(FTrackScrollbar);
 
+  AScrollView.ScrollArea.Border.Top := TrackListHeadHeight;
+  AScrollView.ScrollArea.Border.Bottom := TrackListHeadHeight;
 
   FTrackListView := TCastleVerticalGroup.Create(self);
   FTrackListView.FullSize := False;
@@ -1204,8 +1205,9 @@ begin
   FTrackListView.AutoSizeToChildren := True;
   FTrackListView.Anchor(vpTop, vpTop);
   FTrackListView.Anchor(hpLeft, hpLeft);
-  FTrackListView.Translation := Vector2(0, -TrackListHeadHeight);
   AScrollView.ScrollArea.InsertFront(FTrackListView);
+
+
 
   ButtonAddKeyFrame := TCastleButton.Create(self);
   ButtonAddKeyFrame.OnClick :={$IFDEF FPC}@{$ENDIF}AddKeyFrameButtonClick;
