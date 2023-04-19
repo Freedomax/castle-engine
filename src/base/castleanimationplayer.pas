@@ -41,7 +41,7 @@ type
       const AChangeType: TKeyFrameChangeType) of object;
 
     TAnimationKeyframe = class
-    private
+    strict private
       FLerpFunc: TLerpFunc;
       FLerpFuncType: TLerpFuncType;
       FOnChange: TKeyFrameChangeEvent;
@@ -53,11 +53,10 @@ type
       procedure SetTime(const AValue: TFloatTime);
       procedure SetValue(const AValue: variant);
       procedure Changed(const AChangeType: TKeyFrameChangeType);
-
+    private
       //Used by KeyFrameList, donot set it.
       property OnChange: TKeyFrameChangeEvent read FOnChange write SetOnChange;
     public
-      // only for serialize
       property LerpFuncType: TLerpFuncType read FLerpFuncType write SetLerpFuncType;
       property Value: variant read FValue write SetValue;
       property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
