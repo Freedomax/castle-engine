@@ -142,6 +142,11 @@ begin
   RegisterPropertyEditor(TypeInfo(Single), TCastleVector4RotationPersistent, 'W',
     TCastleFloatRotationPropertyEditor);
 
+  { Register before registering for TBorder and any name
+    (not tested if it's really necessary). }
+  RegisterPropertyEditor(TypeInfo(TBorder), nil, 'ProtectedSides',
+    TCastleProtectedSidesEditor);
+
   { Properties that simply use TSubPropertiesEditor.
     Registering properties that use TSubPropertiesEditor
     (not any descendant of it) is still necessary to expand them
@@ -149,7 +154,7 @@ begin
   RegisterPropertyEditor(TypeInfo(TCastleRootTransform), TCastleViewport, 'Items',
     TSubPropertiesEditor);
   RegisterPropertyEditor(TypeInfo(TBorder), nil, '',
-    TCastleProtectedSidesEditor);
+    TSubPropertiesEditor);
 
   { Other properties }
   RegisterPropertyEditor(TypeInfo(TCastleImagePersistent), nil, '',

@@ -172,7 +172,7 @@ begin
       So we have to check also for tga here.
       E.g. tremulous-unpacked-data/models/players/human_base/head }
     if URIFileExists(TexturePath + ChangeURIExt(Result, '.tga')) then
-      Result := ChangeURIExt(Result, '.tga') else
+      Result := ChangeURIExt(Result, '.tga');
   end;
 end;
 
@@ -576,7 +576,7 @@ var
     IntSequencer.ForceContinuousValue_Changed := true;
     IntSequencer.FdKey.Count := NumFramesInAnimation;
     IntSequencer.FdKeyValue.Count := NumFramesInAnimation;
-    for I := 0 to NumFramesInAnimation - 1 do
+    for I := 0 to Integer(NumFramesInAnimation) - 1 do
     begin
       IntSequencer.FdKey.Items[I] := I / NumFramesInAnimation;
       IntSequencer.FdKeyValue.Items[I] := FirstFrame + I;
