@@ -1,0 +1,460 @@
+{
+  "$$ClassName" : "TCastleUserInterface",
+  "FullSize" : true,
+  "Name" : "Group1",
+  "$Children" : [
+    {
+      "$$ClassName" : "TCastleLabel",
+      "ColorPersistent" : {
+        "$$ClassName" : "TCastleColorPersistent",
+        "Blue" : 1.7647059261798859E-001,
+        "Green" : 6.1176472902297974E-001,
+        "Red" : 9.8823529481887817E-001
+      },
+      "FontSize" : 2.0000000000000000E+001,
+      "HorizontalAnchorParent" : "hpRight",
+      "HorizontalAnchorSelf" : "hpRight",
+      "Name" : "LabelFps",
+      "Text" : [
+        "FPS: xxx"
+      ],
+      "TranslationPersistent" : {
+        "$$ClassName" : "TCastleVector2Persistent",
+        "X" : -2.0000000000000000E+001,
+        "Y" : -2.0000000000000000E+001
+      },
+      "VerticalAnchorParent" : "vpTop",
+      "VerticalAnchorSelf" : "vpTop"
+    },
+    {
+      "$$ClassName" : "TCastleViewport",
+      "Background" : "Background1",
+      "Camera" : "Camera1",
+      "FullSize" : true,
+      "Height" : 6.6000000000000000E+002,
+      "Items" : {
+        "$$ClassName" : "TCastleRootTransform",
+        "PhysicsProperties" : {
+          "$$ClassName" : "TPhysicsProperties",
+          "LayerCollisions" : {
+            "$$ClassName" : "TCastleLayerCollisions"
+          },
+          "LayerNames" : {
+            "$$ClassName" : "TCastleLayerNames"
+          }
+        },
+        "$Children" : [
+          {
+            "$$ClassName" : "TCastleCamera",
+            "Name" : "Camera1",
+            "Orthographic" : {
+              "$$ClassName" : "TCastleOrthographic"
+            },
+            "Perspective" : {
+              "$$ClassName" : "TCastlePerspective",
+              "FieldOfView" : 1.0000000000000000E+000
+            },
+            "RotationPersistent" : {
+              "$$ClassName" : "TCastleVector4RotationPersistent",
+              "W" : 1.2999999523162842E+000,
+              "X" : -1.0000000000000000E+000
+            },
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "Y" : 9.0000000000000000E+000,
+              "Z" : 3.2000000476837158E+000
+            },
+            "$Children" : [
+              {
+                "$$ClassName" : "TCastleAnimationPlayerTransform",
+                "AnimationPlayer" : {
+                  "$$ClassName" : "TAnimationPlayer",
+                  "Animation-_Count" : 1,
+                  "Animation_0" : "1",
+                  "Animation_0-Speed" : 5.0000000000000000E+000,
+                  "Animation_0-Track-_Count" : 1,
+                  "Animation_0-Track_0-TrackClass" : "TAnimationRotationTrack",
+                  "Animation_0-Track_0-Frame-_Count" : 5,
+                  "Animation_0-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+                  "Animation_0-Track_0-Frame_0-Value" : "(-1,0,0,1.29999995231628)",
+                  "Animation_0-Track_0-Frame_1-Time" : 3.3500000834465027E-001,
+                  "Animation_0-Track_0-Frame_1-Value" : "(-1,0.0500000007450581,0.0399999991059303,1.25)",
+                  "Animation_0-Track_0-Frame_2-Time" : 5.0000000000000000E-001,
+                  "Animation_0-Track_0-Frame_2-Value" : "(-1,0,0,1.20000004768372)",
+                  "Animation_0-Track_0-Frame_3-Time" : 6.5499997138977051E-001,
+                  "Animation_0-Track_0-Frame_3-Value" : "(-1,-0.0500000007450581,-0.0299999993294477,1.25)",
+                  "Animation_0-Track_0-Frame_4-Time" : 9.9500000476837158E-001,
+                  "Animation_0-Track_0-Frame_4-Value" : "(-1,0,0,1.29999995231628)",
+                  "Animation_0-Track_0-Transform" : "Camera1",
+                  "CurrentAnimation" : "1"
+                },
+                "Name" : "AnimationPlayerTransform1",
+                "RotationPersistent" : {
+                  "$$ClassName" : "TCastleVector4RotationPersistent",
+                  "W" : 1.2999999523162842E+000,
+                  "X" : -1.0000000000000000E+000
+                }
+              }
+            ]
+          },
+          {
+            "$$ClassName" : "TCastlePointLight",
+            "Intensity" : 1.0000000000000000E+001,
+            "Name" : "PointLight1",
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : 6.4161138534545898E+000,
+              "Y" : 3.1747901439666748E+000,
+              "Z" : 2.3748314380645752E+000
+            }
+          },
+          {
+            "$$ClassName" : "TCastlePlane",
+            "Name" : "Plane1",
+            "RenderOptions" : {
+              "$$ClassName" : "TCastleScene.TSceneRenderOptions"
+            },
+            "SizePersistent" : {
+              "$$ClassName" : "TCastleVector2Persistent",
+              "X" : 1.0000000000000000E+001,
+              "Y" : 1.0000000000000000E+001
+            }
+          },
+          {
+            "$$ClassName" : "TCastleBox",
+            "ColorPersistent" : {
+              "$$ClassName" : "TCastleColorPersistent",
+              "Blue" : 1.7254902422428131E-001,
+              "Green" : 6.8235296010971069E-001,
+              "Red" : 2.0784313976764679E-001
+            },
+            "Name" : "Box1",
+            "RenderOptions" : {
+              "$$ClassName" : "TCastleScene.TSceneRenderOptions"
+            },
+            "RotationPersistent" : {
+              "$$ClassName" : "TCastleVector4RotationPersistent",
+              "Y" : 1.0000000000000000E+000
+            },
+            "SizePersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : 1.0000000000000000E+000,
+              "Y" : 5.0000000000000000E-001,
+              "Z" : 5.0000000000000000E-001
+            },
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : 3.5000000000000000E+000,
+              "Y" : 1.0000000000000000E+000,
+              "Z" : -3.5000000000000000E+000
+            },
+            "$Children" : [
+              {
+                "$$ClassName" : "TCastleAnimationPlayerTransform",
+                "AnimationPlayer" : {
+                  "$$ClassName" : "TAnimationPlayer",
+                  "Playing" : true,
+                  "Animation-_Count" : 3,
+                  "Animation_0" : "box3",
+                  "Animation_0-PlayStyle" : 3,
+                  "Animation_0-Track-_Count" : 1,
+                  "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
+                  "Animation_0-Track_0-Frame-_Count" : 3,
+                  "Animation_0-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+                  "Animation_0-Track_0-Frame_0-Value" : "-3.5",
+                  "Animation_0-Track_0-Frame_1-LerpFuncType" : 6,
+                  "Animation_0-Track_0-Frame_1-Time" : 2.0000000000000000E+000,
+                  "Animation_0-Track_0-Frame_1-Value" : "1.5",
+                  "Animation_0-Track_0-Frame_2-Time" : 4.0000000000000000E+000,
+                  "Animation_0-Track_0-Frame_2-Value" : "4",
+                  "Animation_0-Track_0-FriendlyObjectName" : "Box1.TranslationPersistent",
+                  "Animation_0-Track_0-PropertyName" : "Z",
+                  "Animation_1" : "box2",
+                  "Animation_1-Track-_Count" : 1,
+                  "Animation_1-Track_0-TrackClass" : "TAnimationPropertyTrack",
+                  "Animation_1-Track_0-Frame-_Count" : 2,
+                  "Animation_1-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+                  "Animation_1-Track_0-Frame_0-Value" : "0",
+                  "Animation_1-Track_0-Frame_1-Time" : 1.0049999952316284E+000,
+                  "Animation_1-Track_0-Frame_1-Value" : "-1.57000005245209",
+                  "Animation_1-Track_0-FriendlyObjectName" : "Box1.RotationPersistent",
+                  "Animation_1-Track_0-PropertyName" : "W",
+                  "Animation_2" : "box1",
+                  "Animation_2-Track-_Count" : 1,
+                  "Animation_2-Track_0-TrackClass" : "TAnimationTranslationTrack",
+                  "Animation_2-Track_0-Frame-_Count" : 3,
+                  "Animation_2-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+                  "Animation_2-Track_0-Frame_0-Value" : "(-4,1,-3.5)",
+                  "Animation_2-Track_0-Frame_1-LerpFuncType" : 6,
+                  "Animation_2-Track_0-Frame_1-Time" : 2.0050001144409180E+000,
+                  "Animation_2-Track_0-Frame_1-Value" : "(1,1,-3.5)",
+                  "Animation_2-Track_0-Frame_2-Time" : 4.0100002288818359E+000,
+                  "Animation_2-Track_0-Frame_2-Value" : "(3.5,1,-3.5)",
+                  "Animation_2-Track_0-Transform" : "Box1",
+                  "CurrentAnimation" : "box1"
+                },
+                "Name" : "AnimationPlayerBox1"
+              }
+            ]
+          },
+          {
+            "$$ClassName" : "TCastleSphere",
+            "CollisionSphereRadius" : 2.0000000298023224E-001,
+            "ColorPersistent" : {
+              "$$ClassName" : "TCastleColorPersistent",
+              "Blue" : 8.0000001192092896E-001,
+              "Green" : 3.8823530077934265E-001,
+              "Red" : 2.7058824896812439E-001
+            },
+            "Name" : "Sphere1",
+            "Radius" : 2.0000000298023224E-001,
+            "RenderOptions" : {
+              "$$ClassName" : "TCastleScene.TSceneRenderOptions"
+            },
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : 1.9604996442794800E+000,
+              "Z" : 3.9552617073059082E-001
+            },
+            "$Children" : [
+              {
+                "$$ClassName" : "TCastleAnimationPlayerTransform",
+                "AnimationPlayer" : {
+                  "$$ClassName" : "TAnimationPlayer",
+                  "Playing" : true,
+                  "Animation-_Count" : 1,
+                  "Animation_0" : "1",
+                  "Animation_0-PlayStyle" : 2,
+                  "Animation_0-Track-_Count" : 2,
+                  "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
+                  "Animation_0-Track_0-Frame-_Count" : 3,
+                  "Animation_0-Track_0-Frame_0-LerpFuncType" : 5,
+                  "Animation_0-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+                  "Animation_0-Track_0-Frame_0-Value" : "-2",
+                  "Animation_0-Track_0-Frame_1-LerpFuncType" : 2,
+                  "Animation_0-Track_0-Frame_1-Time" : 1.0000000000000000E+000,
+                  "Animation_0-Track_0-Frame_1-Value" : "0",
+                  "Animation_0-Track_0-Frame_2-Time" : 2.0000000000000000E+000,
+                  "Animation_0-Track_0-Frame_2-Value" : "2",
+                  "Animation_0-Track_0-FriendlyObjectName" : "Sphere1.TranslationPersistent",
+                  "Animation_0-Track_0-PropertyName" : "X",
+                  "Animation_0-Track_1-TrackClass" : "TAnimationPropertyTrack",
+                  "Animation_0-Track_1-Frame-_Count" : 3,
+                  "Animation_0-Track_1-Frame_0-LerpFuncType" : 2,
+                  "Animation_0-Track_1-Frame_0-Time" : 0.0000000000000000E+000,
+                  "Animation_0-Track_1-Frame_0-Value" : "0",
+                  "Animation_0-Track_1-Frame_1-LerpFuncType" : 5,
+                  "Animation_0-Track_1-Frame_1-Time" : 1.0000000000000000E+000,
+                  "Animation_0-Track_1-Frame_1-Value" : "2",
+                  "Animation_0-Track_1-Frame_2-Time" : 2.0000000000000000E+000,
+                  "Animation_0-Track_1-Frame_2-Value" : "0",
+                  "Animation_0-Track_1-FriendlyObjectName" : "Sphere1.TranslationPersistent",
+                  "Animation_0-Track_1-PropertyName" : "Z",
+                  "CurrentAnimation" : "1"
+                },
+                "Name" : "AnimationPlayerSphere1"
+              }
+            ]
+          }
+        ]
+      },
+      "Name" : "Viewport1",
+      "TranslationPersistent" : {
+        "$$ClassName" : "TCastleVector2Persistent",
+        "X" : 3.4000006103515625E+002,
+        "Y" : 9.9197509765625000E+001
+      },
+      "VerticalAnchorParent" : "vpMiddle",
+      "VerticalAnchorSelf" : "vpMiddle",
+      "Width" : 9.7000000000000000E+002,
+      "$NonVisualComponents" : [
+        {
+          "$$ClassName" : "TCastleBackground",
+          "Name" : "Background1"
+        }
+      ],
+      "InternalDesignCamera" : {
+        "$$ClassName" : "TCastleCamera",
+        "Name" : "",
+        "Orthographic" : {
+          "$$ClassName" : "TCastleOrthographic"
+        },
+        "Perspective" : {
+          "$$ClassName" : "TCastlePerspective"
+        },
+        "RotationPersistent" : {
+          "$$ClassName" : "TCastleVector4RotationPersistent",
+          "W" : 1.2872312068939209E+000,
+          "X" : -9.9988579750061035E-001,
+          "Y" : -1.2491125613451004E-002,
+          "Z" : -8.5178399458527565E-003
+        },
+        "ScalePersistent" : {
+          "$$ClassName" : "TCastleVector3Persistent",
+          "Z" : 1.0000001192092896E+000
+        },
+        "TranslationPersistent" : {
+          "$$ClassName" : "TCastleVector3Persistent",
+          "X" : -8.7143361568450928E-002,
+          "Y" : 1.1257323265075684E+001,
+          "Z" : 3.7658195495605469E+000
+        }
+      },
+      "InternalDesignNavigations[dnFly]" : {
+        "$$ClassName" : "TCastleWalkNavigationDesign",
+        "Name" : ""
+      },
+      "InternalDesignNavigations[dnExamine]" : {
+        "$$ClassName" : "TCastleExamineNavigationDesign",
+        "Exists" : false,
+        "Name" : ""
+      },
+      "InternalDesignNavigations[dn2D]" : {
+        "$$ClassName" : "TCastle2DNavigationDesign",
+        "Exists" : false,
+        "Name" : ""
+      }
+    },
+    {
+      "$$ClassName" : "TCastleButton",
+      "Caption" : "Shake Camera",
+      "CustomBackgroundDisabled" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "CustomBackgroundFocused" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "CustomBackgroundNormal" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "CustomBackgroundPressed" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "HorizontalAnchorParent" : "hpMiddle",
+      "HorizontalAnchorSelf" : "hpMiddle",
+      "Image" : {
+        "$$ClassName" : "TCastleImagePersistent"
+      },
+      "Name" : "Button1",
+      "TranslationPersistent" : {
+        "$$ClassName" : "TCastleVector2Persistent",
+        "X" : -1.7500000000000000E+001,
+        "Y" : 1.7000000000000000E+002
+      }
+    },
+    {
+      "$$ClassName" : "TCastleLabel",
+      "ColorPersistent" : {
+        "$$ClassName" : "TCastleColorPersistent",
+        "Alpha" : 3.5854193568229675E-001,
+        "Blue" : 2.0000000298023224E-001,
+        "Green" : 2.9803922772407532E-001,
+        "Red" : 6.8291616439819336E-001
+      },
+      "FontSize" : 6.0000000000000000E+001,
+      "HorizontalAnchorParent" : "hpMiddle",
+      "HorizontalAnchorSelf" : "hpMiddle",
+      "Html" : true,
+      "Name" : "Label1",
+      "Text" : [
+        "Click <font color=\"#00FF00FF\">Button</font> to shake camera"
+      ],
+      "TranslationPersistent" : {
+        "$$ClassName" : "TCastleVector2Persistent",
+        "X" : 2.5612758636474609E+001,
+        "Y" : 6.8621871948242188E+001
+      },
+      "$Children" : [
+        {
+          "$$ClassName" : "TCastleAnimationPlayer",
+          "AnimationPlayer" : {
+            "$$ClassName" : "TAnimationPlayer",
+            "Playing" : true,
+            "Animation-_Count" : 1,
+            "Animation_0" : "1",
+            "Animation_0-PlayStyle" : 1,
+            "Animation_0-Speed" : 5.0000000000000000E-001,
+            "Animation_0-Track-_Count" : 4,
+            "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
+            "Animation_0-Track_0-Frame-_Count" : 4,
+            "Animation_0-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+            "Animation_0-Track_0-Frame_0-Value" : "1",
+            "Animation_0-Track_0-Frame_1-Time" : 2.5499999523162842E-001,
+            "Animation_0-Track_0-Frame_1-Value" : "0.200000002980232",
+            "Animation_0-Track_0-Frame_2-Time" : 5.0000000000000000E-001,
+            "Animation_0-Track_0-Frame_2-Value" : "1",
+            "Animation_0-Track_0-Frame_3-Time" : 1.0000000000000000E+000,
+            "Animation_0-Track_0-Frame_3-Value" : "1",
+            "Animation_0-Track_0-FriendlyObjectName" : "Label1.ColorPersistent",
+            "Animation_0-Track_0-PropertyName" : "Red",
+            "Animation_0-Track_1-TrackClass" : "TAnimationPropertyTrack",
+            "Animation_0-Track_1-Frame-_Count" : 4,
+            "Animation_0-Track_1-Frame_0-Time" : 0.0000000000000000E+000,
+            "Animation_0-Track_1-Frame_0-Value" : "1",
+            "Animation_0-Track_1-Frame_1-Time" : 2.5499999523162842E-001,
+            "Animation_0-Track_1-Frame_1-Value" : "0.600000023841858",
+            "Animation_0-Track_1-Frame_2-Time" : 5.0000000000000000E-001,
+            "Animation_0-Track_1-Frame_2-Value" : "0.200000002980232",
+            "Animation_0-Track_1-Frame_3-Time" : 1.0000000000000000E+000,
+            "Animation_0-Track_1-Frame_3-Value" : "1",
+            "Animation_0-Track_1-FriendlyObjectName" : "Label1.ColorPersistent",
+            "Animation_0-Track_1-PropertyName" : "Alpha",
+            "Animation_0-Track_2-TrackClass" : "TAnimationPositionTrack",
+            "Animation_0-Track_2-Frame-_Count" : 4,
+            "Animation_0-Track_2-Frame_0-Time" : 0.0000000000000000E+000,
+            "Animation_0-Track_2-Frame_0-Value" : "(20,60)",
+            "Animation_0-Track_2-Frame_1-Time" : 2.5499999523162842E-001,
+            "Animation_0-Track_2-Frame_1-Value" : "(23.5,65)",
+            "Animation_0-Track_2-Frame_2-Time" : 5.0000000000000000E-001,
+            "Animation_0-Track_2-Frame_2-Value" : "(27,71)",
+            "Animation_0-Track_2-Frame_3-Time" : 1.0000000000000000E+000,
+            "Animation_0-Track_2-Frame_3-Value" : "(20,60)",
+            "Animation_0-Track_2-Control" : "Label1",
+            "Animation_0-Track_3-TrackClass" : "TAnimationPropertyTrack",
+            "Animation_0-Track_3-Mode" : 1,
+            "Animation_0-Track_3-Frame-_Count" : 3,
+            "Animation_0-Track_3-Frame_0-Time" : 0.0000000000000000E+000,
+            "Animation_0-Track_3-Frame_0-Value" : "Click <font color=\"#00FF00FF\">Button</font> to shake camera",
+            "Animation_0-Track_3-Frame_1-Time" : 5.0000000000000000E-001,
+            "Animation_0-Track_3-Frame_1-Value" : "Hello world",
+            "Animation_0-Track_3-Frame_2-Time" : 9.9500000476837158E-001,
+            "Animation_0-Track_3-Frame_2-Value" : "Click <font color=\"#00FF00FF\">Button</font> to shake camera",
+            "Animation_0-Track_3-FriendlyObjectName" : "Label1",
+            "Animation_0-Track_3-PropertyName" : "Caption",
+            "CurrentAnimation" : "1"
+          },
+          "Height" : 1.0000000000000000E+000,
+          "Name" : "AnimationPlayer1",
+          "TranslationPersistent" : {
+            "$$ClassName" : "TCastleVector2Persistent",
+            "X" : -2.8000003051757812E+002,
+            "Y" : 4.2799996948242188E+002
+          },
+          "VerticalAnchorParent" : "vpTop",
+          "VerticalAnchorSelf" : "vpTop",
+          "Width" : 1.0000000000000000E+000
+        }
+      ]
+    },
+    {
+      "$$ClassName" : "TCastleLabel",
+      "ColorPersistent" : {
+        "$$ClassName" : "TCastleColorPersistent",
+        "Blue" : 9.2549020051956177E-001,
+        "Green" : 9.2549020051956177E-001,
+        "Red" : 9.2549020051956177E-001
+      },
+      "Name" : "LabelLog",
+      "Text" : [
+        "log:"
+      ],
+      "TranslationPersistent" : {
+        "$$ClassName" : "TCastleVector2Persistent",
+        "X" : 1.0000000000000000E+001,
+        "Y" : -2.1604980468750000E+001
+      },
+      "VerticalAnchorParent" : "vpTop",
+      "VerticalAnchorSelf" : "vpTop"
+    }
+  ]
+}

@@ -311,6 +311,8 @@ type
         procedure ReadWriteList(const Key: String;
           const ListEnumerate: TSerializationProcess.TListEnumerateEvent; const ListAdd: TSerializationProcess.TListAddEvent;
           const ListClear: TSerializationProcess.TListClearEvent); override;
+        procedure RequireComponent(const AObject: TObject; const APropInfo: PPropInfo;
+          const AComponentName:string); override;
       end;
       TSerializationProcessReaderList = {$ifdef FPC}specialize{$endif} TObjectList<TSerializationProcessReader>;
 
@@ -479,6 +481,19 @@ begin
       ListAdd(Child);
     end;
   end;
+end;
+
+procedure TCastleJsonReader.TSerializationProcessReader.RequireComponent(
+  const AObject: TObject; const APropInfo: PPropInfo;
+  const AComponentName: string);
+var
+  R: TResolveObjectProperty;
+begin
+  R := TResolveObjectProperty.Create;
+  R.Instance := AObject;
+  R.InstanceProperty := APropInfo;
+  R.PropertyValue := AComponentName;
+  Reader.ResolveObjectProperties.Add(R);
 end;
 
 procedure TCastleJsonReader.BeforeReadObject(
@@ -940,6 +955,8 @@ type
           const ListEnumerate: TSerializationProcess.TListEnumerateEvent;
           const ListAdd: TSerializationProcess.TListAddEvent;
           const ListClear: TSerializationProcess.TListClearEvent); override;
+        procedure RequireComponent(const AObject: TObject; const APropInfo: PPropInfo;
+          const AComponentName: string); overload; override;
       end;
       TSerializationProcessWriterList = {$ifdef FPC}specialize{$endif} TObjectList<TSerializationProcessWriter>;
 
@@ -1024,6 +1041,13 @@ begin
   CurrentlyWritingArray := nil; // will be created on-demand
   Key := AKey;
   ListEnumerate({$ifdef FPC}@{$endif}WriteItem);
+end;
+
+procedure TCastleJsonWriter.TSerializationProcessWriter.RequireComponent(
+  const AObject: TObject; const APropInfo: PPropInfo;
+  const AComponentName: string);
+begin
+  //Avoid delphi warning
 end;
 
 constructor TCastleJsonWriter.Create;

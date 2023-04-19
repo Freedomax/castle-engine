@@ -991,7 +991,7 @@ begin
   inherited;
   {$ifdef CASTLE_CONTROL_UPDATE_TIMER}
   UpdatingTimer := TCustomTimer.Create(nil);
-  UpdatingTimer.Interval := 16;
+  UpdatingTimer.Interval := 17;
   UpdatingTimer.OnTimer := {$ifdef FPC}@{$endif} UpdatingTimerEvent;
   {$else}
   Application.AddOnIdleHandler({$ifdef FPC}@{$endif} UpdatingIdleEvent);

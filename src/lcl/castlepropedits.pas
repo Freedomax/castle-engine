@@ -52,7 +52,8 @@ uses // FPC and LCL units
   CastleInternalExposeTransformsDialog, CastleInternalTiledLayersDialog,CastleInternalRegionDialog,
   CastleSoundEngine, CastleFonts,
   CastleScriptParser, CastleInternalLclDesign, CastleTerrain, CastleLog,
-  CastleEditorAccess, CastleRenderOptions, CastleThirdPersonNavigation;
+  CastleEditorAccess, CastleRenderOptions, CastleThirdPersonNavigation, CastleAnimationPlayer,
+  CastleInternalAnimationPlayerDialog;
 
 {$define read_implementation}
 {$I castlepropedits_url.inc}
@@ -77,6 +78,7 @@ uses // FPC and LCL units
 {$I castlepropedits_component_design.inc}
 {$I castlepropedits_component_joints.inc}
 {$I castlepropedits_abstracttwobodiesjoint.inc}
+{$I castlepropedits_animation_player.inc}
 
 procedure Register;
 begin
@@ -140,6 +142,11 @@ begin
   RegisterPropertyEditor(TypeInfo(Single), TCastleVector4RotationPersistent, 'W',
     TCastleFloatRotationPropertyEditor);
 
+  { Register before registering for TBorder and any name
+    (not tested if it's really necessary). }
+  RegisterPropertyEditor(TypeInfo(TBorder), nil, 'ProtectedSides',
+    TCastleProtectedSidesEditor);
+
   { Properties that simply use TSubPropertiesEditor.
     Registering properties that use TSubPropertiesEditor
     (not any descendant of it) is still necessary to expand them
@@ -174,6 +181,7 @@ begin
     TExposeTransformsPropertyEditor);
   RegisterPropertyEditor(TypeInfo(TCastleTiledMap.TLayers), TCastleTiledMap, 'Layers',
     TTiledLayersPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TAnimationPlayer), nil, '', TAnimationPlayerEditor);
 
   RegisterPropertyEditor(TypeInfo(TCastleTransform), TCastleMeshCollider, 'Mesh',
     TMeshColliderMeshPropertyEditor);

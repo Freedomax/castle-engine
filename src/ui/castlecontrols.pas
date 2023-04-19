@@ -52,6 +52,7 @@ type
   {$I castlecontrols_groups.inc}
   {$I castlecontrols_design.inc}
   {$I castlecontrols_mask.inc}
+  {$I castlecontrols_scrollbar.inc}
   // Add more UI controls include files here.
 
   // Keep the following (uifont...) at the end, as they end the "type" clause.
@@ -91,6 +92,7 @@ uses SysUtils, Math, CastleTextureFont_DjvSans_20,
 {$I castlecontrols_design.inc}
 {$I castlecontrols_mask.inc}
 {$I castlecontrols_clipboard.inc}
+{$I castlecontrols_scrollbar.inc}
 {$undef read_implementation}
 
 var
@@ -124,6 +126,8 @@ initialization
   R.Caption := ['Switch'];
   R.IsDeprecated := true;
   RegisterSerializableComponent(R);
+
+  RegisterClasses([TAnimationPositionTrack]);
 finalization
   FinalizationUIFonts;
   FinalizationClipboard;

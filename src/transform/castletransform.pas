@@ -23,7 +23,8 @@ uses SysUtils, Classes, Math, Generics.Collections, Contnrs, Kraft,
   CastleVectors, CastleFrustum, CastleBoxes, CastleClassUtils, CastleKeysMouse,
   CastleRectangles, CastleUtils, CastleTimeUtils, CastleComponentSerialize,
   CastleSoundEngine, CastleTriangles, CastleRenderOptions, CastleProjection,
-  CastleUIControls, CastleQuaternions, CastleColors, CastleInternalClassUtils, CastleAnimationPlayer;
+  CastleUIControls, CastleQuaternions, CastleColors, CastleInternalClassUtils,
+  CastleAnimationPlayer, TypInfo;
 
 type
   {$define read_interface}
@@ -52,7 +53,7 @@ implementation
 uses CastleLog, CastleApplicationProperties, CastleURIUtils, CastleInternalRays,
   CastleRenderContext,
   // TODO: this breaks unit dependencies, transform->scene
-  X3DNodes, CastleScene, CastleInternalPhysicsVisualization;
+  X3DNodes, CastleScene, CastleInternalPhysicsVisualization, RttiUtils;
 
 {$define read_implementation}
 {$I castletransform_initial_types.inc}
@@ -77,6 +78,7 @@ uses CastleLog, CastleApplicationProperties, CastleURIUtils, CastleInternalRays,
 
 var
   R: TRegisteredComponent;
+
 initialization
   TCastleTransform.DefaultOrientation := otUpYDirectionZ;
   TCastleCollider.AutoSizeMinThickness := 0.01;
@@ -85,8 +87,10 @@ initialization
   GlobalIdentityMatrix := TMatrix4.Identity;
 
   RegisterSerializableComponent(TCastleTransform, 'Transform');
-  RegisterSerializableComponent(TCastleTransformDesign, 'Transform Design (Use Another castle-transform File)');
-  RegisterSerializableComponent(TCastleTransformReference, 'Reference Another Transform');
+  RegisterSerializableComponent(TCastleTransformDesign,
+    'Transform Design (Use Another castle-transform File)');
+  RegisterSerializableComponent(TCastleTransformReference,
+    'Reference Another Transform');
   RegisterSerializableComponent(TCastleCamera, 'Camera');
   RegisterSerializableComponent(TCastleAnimationPlayerTransform, 'AnimationPlayer');
 
@@ -106,7 +110,8 @@ initialization
   R.OnCreate := {$ifdef FPC}@{$endif}TCastleBoxCollider.CreateComponent2D;
   RegisterSerializableComponent(R);
 
-  RegisterSerializableComponent(TCastleCapsuleCollider, ['Physics', 'Collider', 'Capsule']);
+  RegisterSerializableComponent(TCastleCapsuleCollider,
+    ['Physics', 'Collider', 'Capsule']);
 
   R := TRegisteredComponent.Create;
   R.ComponentClass := TCastleCapsuleCollider;
@@ -122,7 +127,8 @@ initialization
   R.OnCreate := {$ifdef FPC}@{$endif}TCastlePlaneCollider.CreateComponent2D;
   RegisterSerializableComponent(R);
 
-  RegisterSerializableComponent(TCastleSphereCollider, ['Physics', 'Collider', 'Sphere']);
+  RegisterSerializableComponent(TCastleSphereCollider,
+    ['Physics', 'Collider', 'Sphere']);
 
   R := TRegisteredComponent.Create;
   R.ComponentClass := TCastleSphereCollider;
@@ -149,4 +155,7 @@ initialization
   RegisterSerializableComponent(TCastleWorldPlaneDistanceJoint, ['Physics', 'Joint', 'World Plane Distance']);
   RegisterSerializableComponent(TCastleSliderJoint, ['Physics', 'Joint', 'Slider']);
   {$endif CASTLE_EXPERIMENTAL_JOINTS}
+
+  RegisterClasses([TAnimationPropertyTrack, TAnimationTranslationTrack, TAnimationScaleTrack,
+    TAnimationRotationTrack]);
 end.

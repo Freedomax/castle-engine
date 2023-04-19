@@ -1,0 +1,61 @@
+object PropertySelectForm: TPropertySelectForm
+  Left = 461
+  Height = 550
+  Top = 250
+  Width = 772
+  Caption = 'Select Property'
+  ClientHeight = 550
+  ClientWidth = 772
+  OnClose = FormClose
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  Position = poDesktopCenter
+  object ButtonPanel1: TButtonPanel
+    Left = 7
+    Height = 35
+    Top = 508
+    Width = 758
+    BorderSpacing.Around = 7
+    OKButton.Name = 'OKButton'
+    OKButton.DefaultCaption = True
+    HelpButton.Name = 'HelpButton'
+    HelpButton.DefaultCaption = True
+    CloseButton.Name = 'CloseButton'
+    CloseButton.DefaultCaption = True
+    CancelButton.Name = 'CancelButton'
+    CancelButton.DefaultCaption = True
+    TabOrder = 0
+    ShowButtons = [pbOK, pbCancel]
+    ShowGlyphs = [pbOK, pbCancel, pbClose]
+  end
+  object TreeViewControls: TTreeView
+    Left = 0
+    Height = 501
+    Top = 0
+    Width = 408
+    Align = alLeft
+    ReadOnly = True
+    ShowSeparators = False
+    TabOrder = 1
+    OnSelectionChanged = TreeViewControlsSelectionChanged
+    Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
+  end
+  object TreeViewProperties: TTreeView
+    Left = 413
+    Height = 501
+    Top = 0
+    Width = 359
+    Align = alClient
+    ReadOnly = True
+    ShowSeparators = False
+    TabOrder = 2
+    OnDblClick = TreeViewPropertiesDblClick
+    Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
+  end
+  object Splitter1: TSplitter
+    Left = 408
+    Height = 501
+    Top = 0
+    Width = 5
+  end
+end

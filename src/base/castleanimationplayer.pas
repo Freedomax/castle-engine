@@ -20,84 +20,123 @@ interface
 
 uses
   Classes, SysUtils, CastleClassUtils, CastleUtils,
-  Generics.Collections, CastleTimeUtils, CastleLog, TypInfo, Variants, CastleVectors;
+  Generics.Collections, CastleTimeUtils, CastleLog, Variants, CastleVectors;
 
 type
-  TAnimationTrackMode = (amDiscrete, amContinuous);
+  TAnimationTrackMode = (tmContinuous, tmDiscrete);
   TLerpFunc = function(const ALerp: single): single;
 
-  TAnimationTrack = class abstract
+  TLerpFuncType = (lftCustom, lftLiner, lftSin, lftElastic, lftBack,
+    lftOneMinusCos, lftUniformDeceleration, lftQuad,
+    lftCubic, lftLowWave, lftMiddleWave,
+    lftHighWave, lftBounce, lftCircle);
+
+type
+  { Inherit from TPersistent for RegisterClass and de/serilization referenced component. }
+  TAnimationTrack = class abstract(TPersistent)
   public
   type
-    TAnimationKeyframe = record
-      Time: TFloatTime;
-      Value: variant;
-      LerpFunc: TLerpFunc;
+    TKeyFrameChangeType = (kfcTime, kfcValue, kfcLerpFunc);
+    TKeyFrameChangeEvent = procedure(ASender: TObject;
+      const AChangeType: TKeyFrameChangeType) of object;
+
+    TAnimationKeyframe = class
+    private
+      FLerpFunc: TLerpFunc;
+      FLerpFuncType: TLerpFuncType;
+      FOnChange: TKeyFrameChangeEvent;
+      FTime: TFloatTime;
+      FValue: variant;
+      procedure SetLerpFunc(const AValue: TLerpFunc);
+      procedure SetLerpFuncType(const AValue: TLerpFuncType);
+      procedure SetOnChange(const AValue: TKeyFrameChangeEvent);
+      procedure SetTime(const AValue: TFloatTime);
+      procedure SetValue(const AValue: variant);
+      procedure Changed(const AChangeType: TKeyFrameChangeType);
+
+      //Used by KeyFrameList, donot set it.
+      property OnChange: TKeyFrameChangeEvent read FOnChange write SetOnChange;
+    public
+      // only for serialize
+      property LerpFuncType: TLerpFuncType read FLerpFuncType write SetLerpFuncType;
+      property Value: variant read FValue write SetValue;
+      property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
+      property Time: TFloatTime read FTime write SetTime;
     end;
 
     TAnimationKeyframeList = class(
-      {$IFDEF FPC}specialize{$ENDIF} TList<TAnimationKeyframe>)
-    protected
-      function SearchIndex(const AValue: TAnimationKeyframe): SizeInt;
-
+      {$IFDEF FPC}specialize{$ENDIF} TObjectList<TAnimationKeyframe>)
+    strict private
+      function SearchIndex(const ATime: TFloatTime): SizeInt;
+    public
+      function TimeToKeyFrame(const ATime: TFloatTime): SizeInt;
     end;
 
   strict private
     FOnChange: TNotifyEvent;
-    FKeyframes: TAnimationKeyframeList;
+    FKeyframeList: TAnimationKeyframeList;
     FMode: TAnimationTrackMode;
+    procedure KeyFramInTrackChange(ASender: TObject;
+      const AChangeType: TKeyFrameChangeType);
     procedure KeyframesNotify(ASender: TObject;
       {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
     function Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
       const Time: TFloatTime): variant;
     procedure SetOnChange(const AValue: TNotifyEvent);
   private
+    procedure SetFriendlyObjectName(const AValue: string);
     { This notification is used by @link(TAnimation), please do not use it. }
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
   strict protected
+    FFriendlyObjectName: string;
+    function GetFriendlyObjectName: string; virtual;
     procedure SetValue(const AValue: variant); virtual; abstract;
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       virtual;
   public
     constructor Create; overload; virtual;
     destructor Destroy; override;
+    function ObjectName: string; virtual;
+    function PropName: string; virtual;
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
+      const APath: string; const bReading: boolean; const APlayer: TComponent); virtual;
     { Add a keyframe. The time is calculated in seconds, with the time when the animation
       starts running as the zero second. LerpFunc represents the equation for modifying the
       original Lerp, if it's nil, it means that Lerp is not modified. Lerp always ranges from 0 to 1. }
-    procedure AddKeyframe(const ATime: TFloatTime; const AValue: variant;
-      const ALerpFunc: TLerpFunc = nil);
+    function AddKeyframe(const ATime: TFloatTime; const AValue: variant;
+      const ALerpFunc: TLerpFunc = nil): TAnimationKeyframe; overload;
+    function AddKeyframe(const AValue: TAnimationKeyframe): TAnimationKeyframe;
+      overload;
+    function RemoveKeyFrame(const AValue: TAnimationKeyframe): SizeInt; overload;
+    procedure RemoveKeyFrame(AIndex: SizeInt); overload;
+    { Add the value of the current object as a keyframe and return a value indicating success or failure. }
+    function AddKeyframeAtTime(const ATime: TFloatTime;
+      const ALerpFunc: TLerpFunc = nil): boolean; virtual;
     { Calculate the value corresponding to the time and execute it. }
     procedure Evaluate(const ATime: TFloatTime);
-    { The duration of this animation track is determined by the interval between
-      the first and last frames. }
+    { The duration of this animation track is determined by the sorted last frame. }
     function Duration: TFloatTime;
+    { The names of some sub-controls are empty, so you can manually set the names
+      with hierarchical structures here. For example, Box1.XX. }
+    property FriendlyObjectName: string read GetFriendlyObjectName
+      write SetFriendlyObjectName;
     { Interpolation mode, there are two types: discrete or continuous.
       If it is continuous, you can define an interpolation calculation equation
       for some keyframes by yourself (see @link(AddKeyframe)). If it is in the discrete mode,
       this equation will be ignored. }
     property Mode: TAnimationTrackMode read FMode write FMode;
+    property KeyframeList: TAnimationKeyframeList read FKeyframeList;
   end;
 
-  TAnimationPropertyTrack = class(TAnimationTrack)
-  strict private
-    FComponent: TPersistent;
-    FProperty: string;
-    FPropertyInfo: PPropInfo;
-  strict protected
-    procedure SetValue(const AValue: variant); override;
-    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
-      override;
-  public
-    constructor Create(AComponent: TPersistent; const AProperty: string); overload;
-  end;
+  TAnimationTrackClass = class of TAnimationTrack;
 
   TAnimationVector2Track = class abstract(TAnimationTrack)
   strict protected
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
   public
-    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector2;
-      const ALerpFunc: TLerpFunc = nil);
+    function AddKeyframe(const ATime: TFloatTime; const AValue: TVector2;
+      const ALerpFunc: TLerpFunc = nil): TAnimationTrack.TAnimationKeyframe;
   end;
 
   TAnimationVector3Track = class abstract(TAnimationTrack)
@@ -105,8 +144,8 @@ type
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
   public
-    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector3;
-      const ALerpFunc: TLerpFunc = nil);
+    function AddKeyframe(const ATime: TFloatTime; const AValue: TVector3;
+      const ALerpFunc: TLerpFunc = nil): TAnimationTrack.TAnimationKeyframe;
   end;
 
   TAnimationVector4Track = class abstract(TAnimationTrack)
@@ -114,8 +153,8 @@ type
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
   public
-    procedure AddKeyframe(const ATime: TFloatTime; const AValue: TVector4;
-      const ALerpFunc: TLerpFunc = nil);
+    function AddKeyframe(const ATime: TFloatTime; const AValue: TVector4;
+      const ALerpFunc: TLerpFunc = nil): TAnimationTrack.TAnimationKeyframe;
   end;
 
   TAnimationTrackList = class(
@@ -133,6 +172,7 @@ type
     FCurrentTime: TFloatTime;
     FPlaying: boolean;
     FSpeed: single;
+    procedure SetActualCurrentTime(const AValue: TFloatTime);
     procedure SetOnComplete(const AValue: TNotifyEvent);
     procedure SetPlayStyle(const AValue: TAnimationPlayStyle);
     procedure TrackListNotify(ASender: TObject;
@@ -140,14 +180,17 @@ type
     procedure SetPlaying(const Value: boolean);
     procedure SetSpeed(const Value: single);
     function Loop: boolean;
+    { Whenever KeyFrameList or TrackList changes, this function will be triggered.
+      Then we update the value of FMaxTime.}
     procedure Changed;
     procedure TrackChange(Sender: TObject);
     function GetPingPongEvalTime: TFloatTime;
   protected
     procedure Update(const DeltaTime: TFloatTime);
+    procedure UpdateByCurrentTime(out bCompleted: boolean);
+    procedure UpdateByTime(const ATime: TFloatTime);
 
     property OnComplete: TNotifyEvent read FOnComplete write SetOnComplete;
-    property Playing: boolean read FPlaying write SetPlaying default False;
   public
     constructor Create;
     destructor Destroy; override;
@@ -156,6 +199,14 @@ type
     procedure ClearTracks;
     procedure Start(const ResetTime: boolean = True);
     procedure Stop(const ResetTime: boolean = True);
+    procedure ForceUpdate; overload;
+    procedure ForceUpdate(const ATime: TFloatTime); overload;
+    function IsEmpty: boolean;
+
+    { FCurrentTime in PingPong mode needs to be corrected. }
+    function GetActualCurrentTime: TFloatTime;
+    property ActualCurrentTime: TFloatTime read GetActualCurrentTime
+      write SetActualCurrentTime;
     { The maximum duration among all tracks. }
     property MaxTime: TFloatTime read FMaxTime;
     { apsOnce: The animation plays only once and stops when it finishes.
@@ -165,26 +216,30 @@ type
     property PlayStyle: TAnimationPlayStyle
       read FPlayStyle write SetPlayStyle default apsOnce;
     property Speed: single read FSpeed write SetSpeed {$IFDEF FPC}default 1{$ENDIF};
+    property TrackList: TAnimationTrackList read FTrackList;
+    property Playing: boolean read FPlaying write SetPlaying default False;
   end;
 
-  TAnimationList = {$IFDEF FPC}specialize{$ENDIF} TObjectDictionary<string, TAnimation>;
-
-
   TAnimationPlayer = class(TCastleComponent)
-  private
+  public
+  type
+    TAnimationList = {$IFDEF FPC}specialize{$ENDIF} TObjectDictionary<string, TAnimation>;
+  strict private
     FAnimation: string;
     FCurrentAnimation: TAnimation;
     FAnimationList: TAnimationList;
     FOnAnimationComplete: TNotifyEvent;
+    FOnCurrentAnimationChanged: TNotifyEvent;
     FPlaying: boolean;
     procedure SetOnAnimationComplete(const AValue: TNotifyEvent);
+    procedure SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
     procedure UpdateAnimation;
     procedure SetAnimation(const AValue: string);
     procedure SetPlaying(const AValue: boolean);
     procedure EnsureAnimationNameUnique(const AName: string);
     procedure AddAnimationNoCheck(const AName: string; const AAnimation: TAnimation);
-
     procedure InternalAnimationComplete(Sender: TObject);
+  protected
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -198,12 +253,19 @@ type
     procedure Start(const ResetTime: boolean = True);
     procedure Stop(const ResetTime: boolean = True);
 
-    property Animation: string read FAnimation write SetAnimation;
-  published
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess);
+      override;
 
+    { Not published, otherwise it will deserialize earlier than @link(CustomSerialization).}
+    property Animation: string read FAnimation write SetAnimation;
+    property AnimationList: TAnimationList read FAnimationList;
+    property CurrentAnimation: TAnimation read FCurrentAnimation;
+  published
     property Playing: boolean read FPlaying write SetPlaying default False;
     property OnAnimationComplete: TNotifyEvent
       read FOnAnimationComplete write SetOnAnimationComplete;
+    property OnCurrentAnimationChanged: TNotifyEvent
+      read FOnCurrentAnimationChanged write SetOnCurrentAnimationChanged;
   end;
 
 function FloatMod(a, b: TFloatTime): TFloatTime;
@@ -215,17 +277,58 @@ function VariantFromVector3(const V: TVector3): variant;
 function VariantToVector4(const V: variant): TVector4;
 function VariantFromVector4(const V: TVector4): variant;
 
+function VariantLen(const V: variant): integer;
+function VariantToString(const V: variant): string;
+function VariantFromString(const S: string): variant;
+
+
+function KeyProp(const SObject, SPropName: string): string;
+function KeyItem(const SObject: string; const AIndex: integer): string;
+function KeyCount(const SObject: string): string;
+
+procedure ComponentSerialization(const SerializationProcess: TSerializationProcess;
+  const AObject: TObject; const APropName, AComponentName, APath: string;
+  const bReading: boolean);
+
 implementation
 
-uses Math, Generics.Defaults;
+uses Math, Generics.Defaults, TypInfo;
+
+{$define read_implementation}
+
+{$I castleinternal_lerpfunctions.inc}
+
+{$undef read_implementation}
+const
+  TLerpFuncArr: array[TLerpFuncType] of TLerpFunc =
+    (nil, {$Ifdef fpc}@{$endif}LerpLiner, {$Ifdef fpc}@{$endif}LerpSin,
+    {$Ifdef fpc}@{$endif}LerpElastic, {$Ifdef fpc}@{$endif}LerpBack,
+    {$Ifdef fpc}@{$endif}LerpOneMinusCos,
+    {$Ifdef fpc}@{$endif}LerpUniformDeceleration, {$Ifdef fpc}@{$endif}LerpQuad,
+    {$Ifdef fpc}@{$endif}LerpCubic,{$Ifdef fpc}@{$endif}LerpLowWave,
+    {$Ifdef fpc}@{$endif}LerpMiddleWave,{$Ifdef fpc}@{$endif}LerpHighWave,
+    {$Ifdef fpc}@{$endif}LerpBounce,{$Ifdef fpc}@{$endif}LerpCircle);
 
 function FloatMod(a, b: TFloatTime): TFloatTime;
 begin
+  if b <= 0 then Exit(0);
   Result := a - b * Floor(a / b);
+end;
+
+function VariantLen(const V: variant): integer;
+begin
+  if VarIsNull(v) then Exit(0);
+  if VarIsArray(V) then
+    Result := VarArrayHighBound(V, 1) - VarArrayLowBound(V, 1) + 1
+  else
+    Result := 1;
 end;
 
 function VariantToVector2(const V: variant): TVector2;
 begin
+  if VariantLen(v) <> 2 then
+    raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
+      [2, VariantLen(v)]);
   Result := Vector2(V[0], V[1]);
 end;
 
@@ -236,6 +339,9 @@ end;
 
 function VariantToVector3(const V: variant): TVector3;
 begin
+  if VariantLen(v) <> 3 then
+    raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
+      [3, VariantLen(v)]);
   Result := Vector3(V[0], V[1], V[2]);
 end;
 
@@ -246,6 +352,9 @@ end;
 
 function VariantToVector4(const V: variant): TVector4;
 begin
+  if VariantLen(v) <> 4 then
+    raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
+      [4, VariantLen(v)]);
   Result := Vector4(V[0], V[1], V[2], V[3]);
 end;
 
@@ -254,50 +363,209 @@ begin
   Result := VarArrayOf([V.X, V.Y, V.Z, V.W]);
 end;
 
+function VariantToString(const V: variant): string;
+var
+  I: integer;
+  Len: integer;
+  ArrPtr: Pointer;
+begin
+  if VarIsNull(v) then Exit('');
+  if VarIsArray(V) then
+  begin
+    Len := VarArrayHighBound(V, 1) - VarArrayLowBound(V, 1) + 1;
+    case Len of
+      2: Result := Format('(%s,%s)', [V[0], V[1]]);
+      3: Result := Format('(%s,%s,%s)', [V[0], V[1], V[2]]);
+      4: Result := Format('(%s,%s,%s,%s)', [V[0], V[1], V[2], V[3]]);
+      else
+        Result := '';
+    end;
+  end
+  else
+    Result := VarToStr(V);
+end;
+
+function VariantFromString(const S: string): variant;
+var
+  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  Len: integer;
+begin
+  Tokens := S.Trim(['(', ')']).Split([',']);
+  Len := Length(Tokens);
+  case Len of
+    2: Result := VarArrayOf([StrToFloat(Tokens[0]), StrToFloat(Tokens[1])]);
+    3: Result := VarArrayOf([StrToFloat(Tokens[0]), StrToFloat(Tokens[1]),
+        StrToFloat(Tokens[2])]);
+    4: Result := VarArrayOf([StrToFloat(Tokens[0]), StrToFloat(Tokens[1]),
+        StrToFloat(Tokens[2]), StrToFloat(Tokens[3])]);
+    else
+      Result := S;
+  end;
+end;
+
+
+function KeyProp(const SObject, SPropName: string): string;
+begin
+  Result := SObject + '-' + SPropName;
+end;
+
+function KeyItem(const SObject: string; const AIndex: integer): string;
+begin
+  Result := SObject + '_' + AIndex.ToString;
+end;
+
+function KeyCount(const SObject: string): string;
+begin
+  Result := SObject + '-_Count';
+end;
+
+procedure ComponentSerialization(const SerializationProcess: TSerializationProcess;
+  const AObject: TObject; const APropName, AComponentName, APath: string;
+  const bReading: boolean);
+var
+  s: string;
+begin
+  s := AComponentName;
+  SerializationProcess.ReadWriteString(KeyProp(APath, APropName), s, s <> '');
+  if bReading and (s <> '') then
+    SerializationProcess.RequireComponent(AObject, GetPropInfo(AObject, APropName), s);
+end;
+
 destructor TAnimationTrack.Destroy;
 begin
-  FKeyframes.Free;
+  FKeyframeList.Free;
   inherited Destroy;
 end;
 
-procedure TAnimationTrack.AddKeyframe(const ATime: TFloatTime;
-  const AValue: variant; const ALerpFunc: TLerpFunc);
-var
-  Keyframe: TAnimationKeyframe;
+function TAnimationTrack.ObjectName: string;
 begin
-  Keyframe.Time := ATime;
-  Keyframe.Value := AValue;
-  Keyframe.LerpFunc := ALerpFunc;
-  FKeyframes.Add(Keyframe);
+  Result := '';
+end;
+
+function TAnimationTrack.PropName: string;
+begin
+  Result := '';
+end;
+
+procedure TAnimationTrack.CustomSerialization(
+  const SerializationProcess: TSerializationProcess; const APath: string;
+  const bReading: boolean; const APlayer: TComponent);
+var
+  Aint, I, KeyFrameCount: integer;
+  FramePath, s: string;
+  Frame: TAnimationKeyframe;
+  Afloat: single;
+const
+  SFrame = 'Frame';
+begin
+  { Track Properties. }
+  Aint := Ord(FMode);
+  SerializationProcess.ReadWriteInteger(
+    KeyProp(APath, 'Mode'),
+    Aint, Aint <> 0);
+  Mode := TAnimationTrackMode(Aint);
+  { KeyFrameList }
+  KeyFrameCount := KeyframeList.Count;
+  SerializationProcess.ReadWriteInteger(KeyCount(KeyProp(APath, SFrame)),
+    KeyFrameCount, KeyFrameCount > 0);
+  if KeyFrameCount = 0 then Exit;
+
+  for i := 0 to KeyFrameCount - 1 do
+  begin
+    if bReading then
+    begin
+      Frame := TAnimationKeyframe.Create;
+      AddKeyframe(Frame);
+    end
+    else
+    begin
+      Frame := KeyframeList[I];
+    end;
+    { KeyFrame propery }
+    FramePath := KeyItem(KeyProp(APath, SFrame), I);
+
+    Aint := Ord(Frame.LerpFuncType);
+    SerializationProcess.ReadWriteInteger(
+      KeyProp(FramePath, 'LerpFuncType'),
+      Aint, Aint <> 0);
+    Frame.LerpFuncType := TLerpFuncType(Aint);
+
+    Afloat := Frame.Time;
+    SerializationProcess.ReadWriteSingle(
+      KeyProp(FramePath, 'Time'),
+      Afloat, True);
+    Frame.Time := Afloat;
+
+    s := VariantToString(Frame.Value);
+    SerializationProcess.ReadWriteString(
+      KeyProp(FramePath, 'Value'),
+      s, s <> '');
+    Frame.Value := VariantFromString(s);
+  end;
+
+end;
+
+function TAnimationTrack.AddKeyframe(const ATime: TFloatTime;
+  const AValue: variant; const ALerpFunc: TLerpFunc): TAnimationKeyframe;
+begin
+  Result := TAnimationKeyframe.Create;
+  Result.Time := ATime;
+  Result.Value := AValue;
+  Result.LerpFunc := ALerpFunc;
+  AddKeyframe(Result);
+end;
+
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
+begin
+  AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
+  FKeyframeList.Add(AValue);
+  Result := AValue;
+end;
+
+function TAnimationTrack.RemoveKeyFrame(const AValue: TAnimationKeyframe): SizeInt;
+begin
+  Result := FKeyframeList.Remove(AValue);
+end;
+
+procedure TAnimationTrack.RemoveKeyFrame(AIndex: SizeInt);
+begin
+  Assert(Between(AIndex, 0, FKeyframeList.Count - 1));
+  RemoveKeyFrame(FKeyframeList[AIndex]);
+end;
+
+function TAnimationTrack.AddKeyframeAtTime(const ATime: TFloatTime;
+  const ALerpFunc: TLerpFunc): boolean;
+begin
+  Result := False;
 end;
 
 procedure TAnimationTrack.Evaluate(const ATime: TFloatTime);
 var
   AValue: variant;
   Index: SizeInt;
-  Keyframe: TAnimationKeyframe;
 begin
-  if FKeyframes.Count = 0 then
+  if FKeyframeList.Count = 0 then
     Exit;
 
-  if ATime < FKeyframes.First.Time then
-    AValue := FKeyframes.First.Value
+  if ATime < FKeyframeList.First.Time then
+    AValue := FKeyframeList.First.Value
   else
   begin
-    Keyframe.Time := ATime;
-    Index := FKeyframes.SearchIndex(Keyframe) - 1;
-    if Between(Index, 0, FKeyframes.Count - 2) then
-      AValue := Interpolate(FKeyframes[Index], FKeyframes[Index + 1], ATime)
+    Index := FKeyframeList.TimeToKeyFrame(ATime);
+    if Between(Index, 0, FKeyframeList.Count - 2) then
+      AValue := Interpolate(FKeyframeList[Index], FKeyframeList[Index + 1], ATime)
     else
-      AValue := FKeyframes.Last.Value;
+      { If the time is before the first frame or after the last frame, it's considered as the last static frame.}
+      AValue := FKeyframeList.Last.Value;
   end;
   SetValue(AValue);
 end;
 
 function TAnimationTrack.Duration: TFloatTime;
 begin
-  if FKeyframes.Count < 2 then Exit(0);
-  Result := FKeyframes.Last.Time - FKeyframes.First.Time;
+  if FKeyframeList.Count = 0 then Exit(0);
+  Result := FKeyframeList.Last.Time;
 end;
 
 procedure TAnimation.SetPlaying(const Value: boolean);
@@ -319,6 +587,17 @@ procedure TAnimation.SetOnComplete(const AValue: TNotifyEvent);
 begin
   if not SameMethods(TMethod(FOnComplete), TMethod(AValue)) then
     FOnComplete := AValue;
+end;
+
+procedure TAnimation.SetActualCurrentTime(const AValue: TFloatTime);
+begin
+  if ActualCurrentTime <> AValue then
+  begin
+    if AValue >= 0 then
+      FCurrentTime := AValue
+    else
+      FCurrentTime := 0;
+  end;
 end;
 
 procedure TAnimation.SetPlayStyle(const AValue: TAnimationPlayStyle);
@@ -380,18 +659,33 @@ end;
 
 procedure TAnimation.Update(const DeltaTime: TFloatTime);
 var
-  I: integer;
-  Track: TAnimationTrack;
-  EvalTime: TFloatTime;
   bCompleted: boolean;
 begin
   if not FPlaying then  Exit;
-  if MaxTime <= 0 then Exit;
-  //if CastleDesignMode then Exit;
+  if IsEmpty then
+  begin
+    bCompleted := not Loop;
+  end
+  else
+  begin
+    FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
+    UpdateByCurrentTime(bCompleted);
+  end;
+  { Execute finally to ensure the last frame is completed. }
+  if bCompleted then
+  begin
+    Stop(False);
+    if Assigned(FOnComplete) then FOnComplete(Self);
+  end;
+end;
 
+procedure TAnimation.UpdateByCurrentTime(out bCompleted: boolean);
+var
+  EvalTime: TFloatTime;
+  I: integer;
+begin
+  EvalTime := 0;
   bCompleted := False;
-  FCurrentTime := FCurrentTime + DeltaTime * FSpeed;
-
   //delphi not support: FCurrentTime := FCurrentTime mod MaxTime
   case FPlayStyle of
     apsLoop:
@@ -412,20 +706,44 @@ begin
     begin
       bCompleted := FCurrentTime >= MaxTime;
       EvalTime := FCurrentTime;
-    end;//no others
+    end;
+  end;
+
+  for I := 0 to FTrackList.Count - 1 do
+  begin
+    FTrackList[I].Evaluate(EvalTime);
+  end;
+end;
+
+procedure TAnimation.UpdateByTime(const ATime: TFloatTime);
+var
+  EvalTime: TFloatTime;
+  I: integer;
+  Track: TAnimationTrack;
+begin
+  EvalTime := 0;
+  //delphi not support: FCurrentTime := FCurrentTime mod MaxTime
+  case FPlayStyle of
+    apsLoop:
+    begin
+      EvalTime := FloatMod(ATime, MaxTime);
+    end;
+    apsPingPong, apsPingPongOnce:
+    begin
+      EvalTime := FloatMod(ATime, 2 * MaxTime);
+      if EvalTime >= MaxTime then
+        EvalTime := 2 * MaxTime - EvalTime;
+    end;
+    apsOnce:
+    begin
+      EvalTime := ATime;
+    end;
   end;
 
   for I := 0 to FTrackList.Count - 1 do
   begin
     Track := TAnimationTrack(FTrackList[I]);
     Track.Evaluate(EvalTime);
-  end;
-
-  { Execute finally to ensure the last frame is completed. }
-  if bCompleted then
-  begin
-    Stop(False);
-    if Assigned(FOnComplete) then FOnComplete(Self);
   end;
 end;
 
@@ -467,10 +785,17 @@ var
   ALerp: single;
 begin
   case self.Mode of
-    amDiscrete: Result := Keyframe1.Value;
-    amContinuous:
+    tmDiscrete: Result := Keyframe1.Value;
+    tmContinuous:
     begin
-      ALerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
+      if Keyframe2.Time = Keyframe1.Time then
+        ALerp := 0
+      else
+        ALerp := (Time - Keyframe1.Time) / (Keyframe2.Time - Keyframe1.Time);
+
+      if IsNan(ALerp) or IsInfinite(ALerp) then
+        raise Exception.Create('Floating point error');
+
       if Assigned(Keyframe1.LerpFunc) then ALerp := Keyframe1.LerpFunc(ALerp);
       Result := CalcValue(Keyframe1.Value, Keyframe2.Value, ALerp);
     end;
@@ -481,6 +806,17 @@ procedure TAnimationTrack.SetOnChange(const AValue: TNotifyEvent);
 begin
   if not SameMethods(TMethod(FOnChange), TMethod(AValue)) then
     FOnChange := AValue;
+end;
+
+function TAnimationTrack.GetFriendlyObjectName: string;
+begin
+  Result := FFriendlyObjectName;
+  if Result = '' then Result := ObjectName;
+end;
+
+procedure TAnimationTrack.SetFriendlyObjectName(const AValue: string);
+begin
+  if FFriendlyObjectName <> AValue then FFriendlyObjectName := AValue;
 end;
 
 function TAnimationTrack.CalcValue(const Value1, Value2: variant;
@@ -520,30 +856,89 @@ type
     {$IFDEF FPC}specialize{$ENDIF}TComparer<TAnimationKeyframe>;
 begin
   inherited Create;
-  FKeyframes := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
-    {$Ifdef fpc}@{$endif}CompareKeyframe));
-  FKeyframes.OnNotify :=
+  FMode := TAnimationTrackMode.tmContinuous;
+  FKeyframeList := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
+    {$Ifdef fpc}@{$endif}CompareKeyframe), True);
+  FKeyframeList.OnNotify :=
     {$Ifdef fpc}@{$endif}KeyframesNotify;
+end;
+
+procedure TAnimationTrack.KeyFramInTrackChange(ASender: TObject;
+  const AChangeType: TKeyFrameChangeType);
+begin
+  if AChangeType = TKeyFrameChangeType.kfcTime then
+  begin
+    FKeyframeList.Sort;
+    if Assigned(FOnChange) then FOnChange(Self);
+  end;
 end;
 
 procedure TAnimationTrack.KeyframesNotify(ASender: TObject;
   {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationKeyframe; AAction: TCollectionNotification);
 begin
-  FKeyframes.Sort;
+  FKeyframeList.Sort;
   if Assigned(FOnChange) then FOnChange(Self);
 end;
 
-function TAnimationTrack.TAnimationKeyframeList.SearchIndex(
-  const AValue: TAnimationKeyframe): SizeInt;
-var
-  {$IFDEF fpc}
-  L, H: Integer;
-  mid, cmp: Integer;
-   {$ELSE}
-  Index: integer;
-  {$endif}
+procedure TAnimationTrack.TAnimationKeyframe.SetTime(const AValue: TFloatTime);
 begin
-  {$IFDEF fpc}
+  if FTime = AValue then Exit;
+  FTime := AValue;
+  Changed(kfcTime);
+end;
+
+procedure TAnimationTrack.TAnimationKeyframe.SetValue(const AValue: variant);
+begin
+  //variant not support: if FValue = AValue then Exit;
+  FValue := AValue;
+  Changed(kfcValue);
+end;
+
+procedure TAnimationTrack.TAnimationKeyframe.Changed(
+  const AChangeType: TKeyFrameChangeType);
+begin
+  if Assigned(FOnChange) then FOnChange(Self, AChangeType);
+end;
+
+procedure TAnimationTrack.TAnimationKeyframe.SetOnChange(
+  const AValue: TKeyFrameChangeEvent);
+begin
+  if not SameMethods(TMethod(FOnChange), TMethod(AValue)) then
+    FOnChange := AValue;
+end;
+
+procedure TAnimationTrack.TAnimationKeyframe.SetLerpFunc(const AValue: TLerpFunc);
+begin
+  //delphi fail : if FLerpFunc = AValue then Exit;
+  FLerpFunc := AValue;
+  FLerpFuncType := lftCustom;
+  Changed(kfcLerpFunc);
+end;
+
+procedure TAnimationTrack.TAnimationKeyframe.SetLerpFuncType(
+  const AValue: TLerpFuncType);
+begin
+  if FLerpFuncType <> AValue then
+  begin
+    FLerpFuncType := AValue;
+    if FLerpFuncType <> lftCustom then
+      FLerpFunc := TLerpFuncArr[FLerpFuncType];
+    Changed(kfcLerpFunc);
+  end;
+end;
+
+function TAnimationTrack.TAnimationKeyframeList.SearchIndex(
+  const ATime: TFloatTime): SizeInt;
+
+  function Compare(const A, B: TFloatTime): integer;
+  begin
+    Result := Sign(A - B);
+  end;
+
+var
+  L, H: integer;
+  mid, cmp: integer;
+begin
   //from delphi
   if Count = 0 then
   begin
@@ -555,7 +950,7 @@ begin
   while L <= H do
   begin
     mid := L + (H - L) shr 1;
-    cmp := FComparer.Compare(FItems[mid], AValue);
+    cmp := Compare(Items[mid].Time, ATime);
     if cmp < 0 then
       L := mid + 1
     else if cmp > 0 then
@@ -564,63 +959,19 @@ begin
     begin
       repeat
         Dec(mid);
-      until (mid < 0) or (FComparer.Compare(FItems[mid], AValue) <> 0);
-      Result := mid + 1;
+      until (mid < 0) or (Compare(Items[mid].Time, ATime) <> 0);
+      //Founded, not "Result := mid + 1;", increase by 1
+      Result := mid + 2;
       Exit;
     end;
   end;
   Result := L;
-   {$ELSE}
-  BinarySearch(AValue, Index);
-  Result := Index;
-  {$endif}
 end;
 
-procedure TAnimationPropertyTrack.SetValue(const AValue: variant);
+function TAnimationTrack.TAnimationKeyframeList.TimeToKeyFrame(
+  const ATime: TFloatTime): SizeInt;
 begin
-  SetPropValue(FComponent, FPropertyInfo, AValue);
-end;
-
-function TAnimationPropertyTrack.CalcValue(const Value1, Value2: variant;
-  const ALerp: single): variant;
-var
-  V1_int, V2_int: int64;
-  V1_float, V2_float: extended;
-  Tk: TTypeKind;
-begin
-  Tk := FPropertyInfo^.PropType^.Kind;
-  case Tk of
-    tkInteger, tkInt64, tkEnumeration,
-    tkSet, tkChar, tkWChar:
-    begin
-      V1_int := Value1;
-      V2_int := Value2;
-      Result := Round((1 - ALerp) * V1_int + ALerp * V2_int);
-    end;
-    tkFloat:
-    begin
-      V1_float := Value1;
-      V2_float := Value2;
-      Result := (1 - ALerp) * V1_float + ALerp * V2_float;
-    end;
-    else
-      raise Exception.CreateFmt(
-        'TAnimationTrack.Interpolate: Unsupported value type[%d], Property:%s.',
-        [Ord(Tk), FProperty]);
-  end;
-
-end;
-
-constructor TAnimationPropertyTrack.Create(AComponent: TPersistent;
-  const AProperty: string);
-begin
-  Create;
-  FComponent := AComponent;
-  FProperty := AProperty;
-  FPropertyInfo := GetPropInfo(FComponent, FProperty);
-  if not Assigned(FPropertyInfo) then
-    raise Exception.CreateFmt('%s does not exist in %s',
-      [FProperty, FComponent.ClassName]);
+  Result := SearchIndex(ATime) - 1;
 end;
 
 function TAnimationVector2Track.CalcValue(const Value1, Value2: variant;
@@ -634,10 +985,11 @@ begin
   Result := VariantFromVector2(V3);
 end;
 
-procedure TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc);
+function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
-  inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
+  Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
 
 function TAnimationVector3Track.CalcValue(const Value1, Value2: variant;
@@ -651,10 +1003,11 @@ begin
   Result := VariantFromVector3(V3);
 end;
 
-procedure TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc);
+function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
-  inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
+  Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
 
 function TAnimationVector4Track.CalcValue(const Value1, Value2: variant;
@@ -668,10 +1021,11 @@ begin
   Result := VariantFromVector4(V3);
 end;
 
-procedure TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc);
+function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
-  inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
+  Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
 
 procedure TAnimation.Stop(const ResetTime: boolean);
@@ -679,9 +1033,34 @@ begin
   if ResetTime then
   begin
     FCurrentTime := 0;
-    Update(0.0);
+    ForceUpdate;
   end;
   if FPlaying then FPlaying := False;
+end;
+
+procedure TAnimation.ForceUpdate;
+var
+  b: boolean;
+begin
+  UpdateByCurrentTime(b);
+end;
+
+procedure TAnimation.ForceUpdate(const ATime: TFloatTime);
+begin
+  UpdateByTime(ATime);
+end;
+
+function TAnimation.IsEmpty: boolean;
+begin
+  Result := (FTrackList.Count = 0) or (MaxTime <= 0);
+end;
+
+function TAnimation.GetActualCurrentTime: TFloatTime;
+begin
+  if FPlayStyle in [apsPingPong, apsPingPongOnce] then
+    Result := GetPingPongEvalTime
+  else
+    Result := FCurrentTime;
 end;
 
 procedure TAnimationPlayer.UpdateAnimation;
@@ -698,18 +1077,27 @@ begin
     FOnAnimationComplete := AValue;
 end;
 
+procedure TAnimationPlayer.SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
+begin
+  if not SameMethods(TMethod(FOnCurrentAnimationChanged), TMethod(AValue)) then
+    FOnCurrentAnimationChanged := AValue;
+end;
+
 procedure TAnimationPlayer.SetAnimation(const AValue: string);
 begin
   if FAnimation <> AValue then
   begin
     FAnimation := AValue;
     FCurrentAnimation := nil;
-    if not FAnimationList.TryGetValue(FAnimation, FCurrentAnimation) then
+    if (FAnimation <> '') and not FAnimationList.TryGetValue(FAnimation,
+      FCurrentAnimation) then
     begin
       FAnimation := '';
       WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
     end;
     UpdateAnimation;
+
+    if Assigned(FOnCurrentAnimationChanged) then FOnCurrentAnimationChanged(Self);
   end;
 
 end;
@@ -745,6 +1133,122 @@ begin
       FOnAnimationComplete(Self);
 end;
 
+procedure TAnimationPlayer.CustomSerialization(
+  const SerializationProcess: TSerializationProcess);
+
+  function CreateTrackByClassName(const AClassName: string): TAnimationTrack;
+  var
+    AClass: TPersistentClass;
+  begin
+    AClass := GetClass(AClassName);
+    if Assigned(AClass) then Result := TAnimationTrackClass(AClass).Create
+    else
+      Result := nil;
+  end;
+
+const
+  SAni = 'Animation';
+  STrack = 'Track';
+var
+  AniCount, TrackCount, I, J, Aint: integer;
+  AFloat: single;
+  Ani: TAnimation;
+  Track: TAnimationTrack;
+  s, AniKeyPath, TrackKeyPath: string;
+  bReading: boolean;
+  AniKeys:{$Ifdef fpc}specialize{$endif}TArray<string>;
+begin
+  inherited CustomSerialization(SerializationProcess);
+  bReading := IsLoading;
+
+  AniCount := AnimationList.Keys.Count;
+  SerializationProcess.ReadWriteInteger(KeyCount(SAni), AniCount, AniCount > 0);
+  if AniCount = 0 then Exit;
+
+  if not bReading then
+  begin
+    AniKeys := AnimationList.Keys.ToArray;
+    if length(AniKeys) = 0 then Exit;
+  end;
+  for  I := 0 to AniCount - 1 do
+  begin
+    AniKeyPath := KeyItem(SAni, I);
+    { Get Animation. }
+    if bReading then s := ''
+    else
+      s := AniKeys[i];
+    SerializationProcess.ReadWriteString(AniKeyPath, s, s <> '');
+
+    Ani := nil;
+    if bReading then
+    begin
+      if not AnimationExists(S) then Ani := NewAnimation(S)
+      else
+      begin
+        WritelnWarning(
+          'CustomSerialization:animation "%s" already exist', [S]);
+        Continue;
+      end;
+    end
+    else
+    if not AnimationList.TryGetValue(S, Ani) then
+    begin
+      WritelnWarning(
+        'CustomSerialization:animation "%s" not exist', [S]);
+      Continue;
+    end;
+
+    { Animation Properties. }
+    Aint := Ord(Ani.PlayStyle);
+    SerializationProcess.ReadWriteInteger(KeyProp(AniKeyPath, 'PlayStyle'),
+      Aint, Aint <> 0);
+    if bReading then  Ani.PlayStyle := TAnimationPlayStyle(Aint);
+
+    AFloat := Ani.Speed;
+    SerializationProcess.ReadWriteSingle(KeyProp(AniKeyPath, 'Speed'),
+      AFloat, not SameValue(AFloat, 1));
+    if bReading then  Ani.Speed := AFloat;
+    { TrackList }
+    TrackCount := Ani.TrackList.Count;
+    SerializationProcess.ReadWriteInteger(KeyCount(KeyProp(AniKeyPath, STrack)),
+      TrackCount, TrackCount > 0);
+    if TrackCount = 0 then Continue;
+
+    for  J := 0 to TrackCount - 1 do
+    begin
+      TrackKeyPath := KeyItem(KeyProp(KeyItem(SAni, I), STrack), J);
+      { Get Track. }
+      if bReading then  s := ''
+      else
+        s := Ani.TrackList[J].ClassName;
+      SerializationProcess.ReadWriteString(
+        KeyProp(TrackKeyPath, 'TrackClass'),
+        s, s <> '');
+      if s = '' then Continue;
+      if bReading then
+      begin
+        Track := CreateTrackByClassName(s);
+        Ani.AddTrack(Track);
+      end
+      else
+      begin
+        Track := ani.TrackList[J];
+      end;
+      if not Assigned(Track) then
+      begin
+        WritelnWarning('CustomSerialization:Track is nil. Track id: %d TrackClass: "%s"',
+          [J, s]);
+        Continue;
+      end;
+      Track.CustomSerialization(SerializationProcess, TrackKeyPath, bReading, Self);
+    end;
+  end;
+
+  s := Animation;
+  SerializationProcess.ReadWriteString('CurrentAnimation', s, s <> '');
+  if bReading then Animation := s;
+end;
+
 constructor TAnimationPlayer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -757,8 +1261,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
@@ -798,10 +1301,16 @@ end;
 
 procedure TAnimationPlayer.RemoveAnimation(const AName: string);
 begin
-  if FAnimation = AName then
-    Animation := '';
-
-  FAnimationList.Remove(AName);
+  if AnimationExists(AName) then
+  begin
+    if Animation = AName then
+      Animation := '';
+    FAnimationList.Remove(AName);
+    //if FAnimationList.ContainsKey(AName) then
+    //  WritelnWarning('RemoveAnimation: failed to remove animation "%s"', [AName]);
+  end
+  else
+    WritelnWarning('RemoveAnimation: animation "%s" not exist.', [AName]);
 end;
 
 procedure TAnimationPlayer.ClearAnimations;
@@ -821,6 +1330,5 @@ begin
   if FPlaying then FPlaying := False;
   if Assigned(FCurrentAnimation) then FCurrentAnimation.Stop(ResetTime);
 end;
-
 
 end.

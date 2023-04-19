@@ -1,0 +1,163 @@
+object AnimationPlayerDialog: TAnimationPlayerDialog
+  Left = 713
+  Height = 428
+  Top = 316
+  Width = 803
+  Caption = 'AnimationPlayer'
+  ClientHeight = 428
+  ClientWidth = 803
+  FormStyle = fsStayOnTop
+  Position = poMainFormCenter
+  ShowInTaskBar = stAlways
+  object CastleControl1: TCastleControl
+    Left = 0
+    Height = 386
+    Top = 42
+    Width = 803
+    Align = alClient
+    Options = []
+    TabOrder = 0
+  end
+  object Panel1: TPanel
+    Left = 0
+    Height = 42
+    Top = 0
+    Width = 803
+    Align = alTop
+    ClientHeight = 42
+    ClientWidth = 803
+    TabOrder = 1
+    object ButtonAnimation: TButton
+      Left = 115
+      Height = 27
+      Top = 8
+      Width = 85
+      Caption = 'Animation'
+      OnClick = ButtonAnimationClick
+      TabOrder = 0
+    end
+    object ComboBoxAnimation: TComboBox
+      Left = 6
+      Height = 25
+      Top = 8
+      Width = 105
+      ItemHeight = 17
+      OnChange = ComboBoxAnimationChange
+      ReadOnly = True
+      Style = csDropDownList
+      TabOrder = 1
+    end
+    object ButtonNewTrack: TButton
+      Left = 470
+      Height = 27
+      Top = 8
+      Width = 105
+      Caption = 'New Track'
+      OnClick = ButtonNewTrackClick
+      TabOrder = 2
+    end
+    object ComboBoxPlayStyle: TComboBox
+      Left = 205
+      Height = 25
+      Top = 8
+      Width = 118
+      ItemHeight = 17
+      OnChange = ComboBoxPlayStyleChange
+      ReadOnly = True
+      Style = csDropDownList
+      TabOrder = 3
+    end
+    object ButtonPlayStop: TSpeedButton
+      Left = 742
+      Height = 27
+      Top = 8
+      Width = 49
+      Anchors = [akTop, akRight]
+      Caption = 'Start'
+      OnClick = ButtonPlayStopClick
+    end
+    object FloatSpinEditSpeed: TFloatSpinEdit
+      Left = 329
+      Height = 25
+      Top = 8
+      Width = 58
+      Increment = 0.1
+      MaxValue = 10000
+      MinValue = 0.01
+      OnChange = FloatSpinEditSpeedChange
+      TabOrder = 4
+      Value = 0.01
+    end
+  end
+  object PopupMenuAddTrack: TPopupMenu
+    Left = 332
+    Top = 100
+    object MenuItem1: TMenuItem
+      Caption = 'PropertyTrack'
+      OnClick = MenuItem1Click
+    end
+    object Separator3: TMenuItem
+      Caption = '-'
+    end
+    object MenuItem3: TMenuItem
+      Caption = 'TranslationTrack(Transform)'
+      OnClick = MenuItem3Click
+    end
+    object MenuItem5: TMenuItem
+      Caption = 'RotationTrack(Transform)'
+      OnClick = MenuItem5Click
+    end
+    object MenuItem6: TMenuItem
+      Caption = 'ScaleTrack(Transform)'
+      OnClick = MenuItem6Click
+    end
+    object Separator2: TMenuItem
+      Caption = '-'
+    end
+    object MenuItem4: TMenuItem
+      Caption = 'PositionTrack(UserInterface)'
+      OnClick = MenuItem4Click
+    end
+    object Separator1: TMenuItem
+      Caption = '-'
+    end
+    object MenuItem2: TMenuItem
+      Caption = 'Add 10 tracks(debug)'
+      OnClick = MenuItem2Click
+    end
+  end
+  object PopupMenuKeyFrame: TPopupMenu
+    Left = 80
+    Top = 80
+    object MenuItemLerpFunc: TMenuItem
+      Caption = 'Set LerpFunc'
+    end
+    object MenuItemRemoveFrame: TMenuItem
+      Caption = 'Remove KeyFrame'
+    end
+    object Separator4: TMenuItem
+      Caption = '-'
+    end
+    object MenuItemSetKeyFrameTime: TMenuItem
+      Caption = 'Set Time'
+    end
+    object MenuItemAlignKeyFrameTime: TMenuItem
+      Caption = 'Align Time'
+    end
+  end
+  object PopupMenuAnimation: TPopupMenu
+    Left = 205
+    Top = 226
+    object MenuItemNewAnimation: TMenuItem
+      Caption = 'New Animation'
+      OnClick = MenuItemNewAnimationClick
+    end
+    object MenuItemRemoveAnimation: TMenuItem
+      Caption = 'Remove Animation'
+      OnClick = MenuItemRemoveAnimationClick
+    end
+    object MenuItemRenameAnimation: TMenuItem
+      Caption = 'Rename Animation'
+    end
+  end
+end

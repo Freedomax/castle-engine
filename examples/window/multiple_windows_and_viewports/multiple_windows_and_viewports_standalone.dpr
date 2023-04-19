@@ -15,7 +15,7 @@
 { Do not specify program name below.
   It is not used anyway, and this way allows developer
   to change standalone_source in CastleEngineManifest.xml easier. }
-// program test_animationplayer_standalone;
+// program multiple_windows_and_viewports_standalone;
 
 {$ifdef MSWINDOWS} {$apptype GUI} {$endif}
 
@@ -63,8 +63,5 @@ uses
 {$ifend}
 
 begin
-  {$if declared(UseHeapTrace)}
-  GlobalSkipIfNoLeaks := True; // supported as of debugger version 3.2.0
-  {$endIf}
   Application.MainWindow.OpenAndRun;
 end.
