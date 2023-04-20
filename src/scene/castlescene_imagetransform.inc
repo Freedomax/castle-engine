@@ -35,14 +35,11 @@ type
 
     { private fields reflecting public properties }
     FUrl: String;
-    FPivot, FSize, FRepeatImage, FShift: TVector2;
     FColor: TCastleColor;
     FSmoothScaling: Boolean;
     FAlphaChannel: TAutoAlphaChannel;
     FMipmaps: Boolean;
 
-    { Update X3D TCoordinateNode, TTextureCoordinateNode. }
-    procedure UpdateCoordinateNodes;
     procedure SetPivot(const Value: TVector2);
     procedure SetSize(const Value: TVector2);
     procedure SetRepeatImage(const Value: TVector2);
@@ -52,6 +49,10 @@ type
     procedure SetAlphaChannel(const Value: TAutoAlphaChannel);
     procedure SetUrl(const Value: String);
     procedure SetMipmaps(const Value: Boolean);
+  protected
+    FPivot, FSize, FRepeatImage, FShift: TVector2;
+   { Update X3D TCoordinateNode, TTextureCoordinateNode. }
+    procedure UpdateCoordinateNodes;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
