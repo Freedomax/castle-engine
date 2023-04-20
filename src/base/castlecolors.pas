@@ -34,6 +34,7 @@ type
     function RGB: TCastleColorRGB;
     { Return color converted into grayscale. Alpha is left unchanged. }
     function Grayscale: TCastleColor;
+    function Alpha(const Value: Single): TCastleColor;
   end;
 
   TCastleColorRGBHelper = record helper for TVector3
@@ -206,6 +207,11 @@ end;
 function TCastleColorHelper.Grayscale: TCastleColor;
 begin
   Result := CastleColors.Grayscale(Self);
+end;
+
+function TCastleColorHelper.Alpha(const Value: Single): TCastleColor;
+begin
+  Result := Vector4(RGB, Value);
 end;
 
 { TCastleColorRGBHelper ------------------------------------------------------------ }

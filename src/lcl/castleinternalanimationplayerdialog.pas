@@ -278,6 +278,9 @@ uses Math,
 
 {$R *.lfm}
 
+const
+  SelectionColor: TCastleColor = (X: 0.580; Y: 1.000; Z: 0.855; W: 0.804);
+
 procedure TTrackView.SetTrack(const AValue: TAnimationTrack);
 begin
   if FTrack <> AValue then
@@ -354,7 +357,7 @@ begin
   FLerpFuncPreview := TLerpFuncPreview.Create(Self);
   FLerpFuncPreview.Width := 60;
   FLerpFuncPreview.Height := 60;
-  FLerpFuncPreview.Color := Vector4(1, 1, 1, 0.382);
+  FLerpFuncPreview.Color := SelectionColor.Alpha(0.382);
   FUIContainer.InsertFront(FLerpFuncPreview);
 
   FFrameTimeControl := TCastleLabel.Create(Self);
@@ -421,8 +424,6 @@ begin
 end;
 
 procedure TTrackViewContainer.RenderOverChildren;
-const
-  SelectionColor: TCastleColor = (X: 0.580; Y: 1.000; Z: 0.855; W: 0.804);
 begin
   inherited RenderOverChildren;
   if not Assigned(TrackView) then Exit;
@@ -888,8 +889,8 @@ var
     RenderLine(FramePos, CastleColors.White, 1 * UIScale);
     if bSelected then
     begin
-      rc := FloatRectangle(FramePos - ItemKeyFrameWidth * 0.5 * UIScale,
-        R.Bottom, ItemKeyFrameWidth * UIScale, R.Height);
+      rc := FloatRectangle(FramePos, R.Bottom, ItemKeyFrameWidth *
+        UIScale, R.Height);
       DrawRectangle(Rc, Vector4(1, 1, 1, 0.382));
 
     end;
