@@ -241,7 +241,6 @@ type
     MenuItemSetKeyFrameTime: TMenuItem;
     MenuItemNewAnimation: TMenuItem;
     MenuItemRemoveAnimation: TMenuItem;
-    MenuItemRenameAnimation: TMenuItem;
     MenuItemRemoveFrame: TMenuItem;
     MenuItemLerpFunc: TMenuItem;
     Panel1: TPanel;
@@ -701,6 +700,7 @@ end;
 procedure TAnimationPlayerView.TrackDesignerUIButtonRemoveClick(Sender: TObject);
 begin
   TrackDesignerUI.Track.RemoveKeyFrame(TrackDesignerUI.KeyFrame);
+  TrackDesignerUI.KeyFrame := nil;
   KeyFrameListChanged;
 end;
 
@@ -1075,7 +1075,7 @@ end;
 procedure TAnimationPlayerView.KeyFrameListChanged;
 begin
   UpdateTimeBar;
-  if TrackDesignerUI.Exists then TrackDesignerUI.UpdateControls;
+  TrackDesignerUI.UpdateControls;
 end;
 
 procedure TAnimationPlayerView.UpdateTimeBar;
@@ -1909,7 +1909,6 @@ begin
   ButtonAnimation.Enabled := Assigned(AnimationPlayer);
   MenuItemNewAnimation.Enabled := Assigned(AnimationPlayer);
   MenuItemRemoveAnimation.Enabled := Assigned(CurrentAnimation);
-  MenuItemRenameAnimation.Enabled := Assigned(CurrentAnimation);
   ButtonNewTrack.Enabled := Assigned(CurrentAnimation);
   ComboBoxPlayStyle.Enabled := Assigned(CurrentAnimation);
   FloatSpinEditSpeed.Enabled := Assigned(CurrentAnimation);
