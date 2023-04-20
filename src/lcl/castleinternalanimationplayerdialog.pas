@@ -32,18 +32,39 @@ type
     FSelected: boolean;
     FTrack: TAnimationTrack;
     FTrackColor: TCastleColor;
+    FIsDragingKeyFrame: boolean;
+    FDragingKeyFrame: TAnimationTrack.TAnimationKeyframe;
     procedure SetSelected(const AValue: boolean);
     procedure SetTrack(const AValue: TAnimationTrack);
     procedure SetTrackColor(const AValue: TCastleColor);
   public
+  const
+    ItemKeyFrameWidth = 20;
+    function TimeToLocalPos(const ATime: TFloatTime; const APixelsPerSceond: single;
+      const AScrollTime: TFloatTime): single;
+    function SelectFrame(const APos: TVector2; const APixelsPerSceond: single;
+      const AScrollTime: TFloatTime): TAnimationTrack.TAnimationKeyframe;
+    { APos is in final device pixels. }
+    function PosToTime(const APos: TVector2; const APixelsPerSceond: single;
+      const AScrollTime: TFloatTime): TFloatTime;
     function GetMousePosTime(const APixelsPerSceond: single;
       const AScrollTime: TFloatTime): TFloatTime;
     function GetMousePosFrame(const APixelsPerSceond: single;
       const AScrollTime: TFloatTime): integer;
+    { AMousePos is in final device pixels. }
+    function GetFrame(const AMousePos: TVector2; const APixelsPerSceond: single;
+      const AScrollTime: TFloatTime): integer;
     function UnderMouse: boolean;
+
+    function BeginDragKeyFrame(
+      const AFrame: TAnimationTrack.TAnimationKeyframe): boolean;
+    function EndDragKeyFrame: boolean;
+
     property Track: TAnimationTrack read FTrack write SetTrack;
     property Selected: boolean read FSelected write SetSelected;
     property TrackColor: TCastleColor read FTrackColor write SetTrackColor;
+    property IsDragingKeyFrame: boolean read FIsDragingKeyFrame;
+    property DragingKeyFrame: TAnimationTrack.TAnimationKeyframe read FDragingKeyFrame;
   end;
 
   TTrackViewList = class( {$Ifdef fpc}specialize{$endif} TObjectList<TTrackView>)
@@ -120,7 +141,6 @@ type
     ItemFontSmallSize = 12;
     ItemSpacing = 2;
     TrackListHeadHeight = 20;
-    ItemKeyFrameWidth = 20;
   var
     FAnimationPlayer: TAnimationPlayer;
     FRoot: TCastleUserInterface;
@@ -139,13 +159,18 @@ type
       const Event: TInputPressRelease; var Handled: boolean);
     procedure ATrackContainerRelease(const Sender: TCastleUserInterface;
       const Event: TInputPressRelease; var Handled: boolean);
+    procedure ATrackViewMotion(const Sender: TCastleUserInterface;
+      const Event: TInputMotion; var Handled: boolean);
+    procedure ATrackViewPress(const Sender: TCastleUserInterface;
+      const Event: TInputPressRelease; var Handled: boolean);
+    procedure ATrackViewRelease(const Sender: TCastleUserInterface;
+      const Event: TInputPressRelease; var Handled: boolean);
     procedure ATrackViewRender(const Sender: TCastleUserInterface);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
     procedure FTrackScrollbarScroll(Sender: TObject);
     function GetCurrentTime: TFloatTime;
-    { Track index, "-1" means all changed. }
-    procedure KeyFrameListChanged(const Index: integer);
+    procedure KeyFrameListChanged;
     procedure UpdateTimeBar;
     function GetCurrentAnimation: TAnimation;
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
@@ -278,6 +303,9 @@ uses Math,
 
 {$R *.lfm}
 
+const
+  SelectionColor: TCastleColor = (X: 0.580; Y: 1.000; Z: 0.855; W: 0.804);
+
 procedure TTrackView.SetTrack(const AValue: TAnimationTrack);
 begin
   if FTrack <> AValue then
@@ -292,6 +320,38 @@ begin
     FTrackColor := AValue;
 end;
 
+function TTrackView.TimeToLocalPos(const ATime: TFloatTime;
+  const APixelsPerSceond: single; const AScrollTime: TFloatTime): single;
+begin
+  Result := (ATime - AScrollTime) * APixelsPerSceond;
+end;
+
+function TTrackView.SelectFrame(const APos: TVector2; const APixelsPerSceond: single;
+  const AScrollTime: TFloatTime): TAnimationTrack.TAnimationKeyframe;
+var
+  AIndex: integer;
+  X, XFrame: single;
+begin
+  Result := nil;
+  AIndex := GetFrame(APos, APixelsPerSceond, AScrollTime);
+  if not Between(AIndex, 0, FTrack.KeyframeList.Count - 1) then Exit;
+  X := ContainerToLocalPosition(APos).X;
+  XFrame := TimeToLocalPos(FTrack.KeyframeList[AIndex].Time, APixelsPerSceond,
+    AScrollTime);
+  if Between(X, XFrame, XFrame + ItemKeyFrameWidth) then
+    Result := FTrack.KeyframeList[AIndex];
+end;
+
+function TTrackView.PosToTime(const APos: TVector2; const APixelsPerSceond: single;
+  const AScrollTime: TFloatTime): TFloatTime;
+var
+  AMousePos: TVector2;
+begin
+  AMousePos := ContainerToLocalPosition(APos);
+  Result := AScrollTime + (AMousePos.X / APixelsPerSceond);
+  if Result < 0 then Result := 0;
+end;
+
 procedure TTrackView.SetSelected(const AValue: boolean);
 begin
   if FSelected = AValue then Exit;
@@ -300,12 +360,8 @@ end;
 
 function TTrackView.GetMousePosTime(const APixelsPerSceond: single;
   const AScrollTime: TFloatTime): TFloatTime;
-var
-  AMousePos: TVector2;
 begin
-  AMousePos := ContainerToLocalPosition(Container.MousePosition);
-  Result := AScrollTime + (AMousePos.X / APixelsPerSceond);
-  if Result < 0 then Result := 0;
+  Result := PosToTime(Container.MousePosition, APixelsPerSceond, AScrollTime);
 end;
 
 function TTrackView.GetMousePosFrame(const APixelsPerSceond: single;
@@ -313,6 +369,13 @@ function TTrackView.GetMousePosFrame(const APixelsPerSceond: single;
 begin
   Result := FTrack.KeyframeList.TimeToKeyFrame(
     GetMousePosTime(APixelsPerSceond, AScrollTime));
+end;
+
+function TTrackView.GetFrame(const AMousePos: TVector2;
+  const APixelsPerSceond: single; const AScrollTime: TFloatTime): integer;
+begin
+  Result := FTrack.KeyframeList.TimeToKeyFrame(
+    PosToTime(AMousePos, APixelsPerSceond, AScrollTime));
 end;
 
 function TTrackView.UnderMouse: boolean;
@@ -326,6 +389,23 @@ begin
   if R.Right < Container.Width then
     R.Width := R.Width + Container.Width - R.Right;
   Result := R.Contains(Container.MousePosition);
+end;
+
+function TTrackView.BeginDragKeyFrame(
+  const AFrame: TAnimationTrack.TAnimationKeyframe): boolean;
+begin
+  Result := Assigned(AFrame);
+  if not Result then exit;
+  FIsDragingKeyFrame := True;
+  FDragingKeyFrame := AFrame;
+end;
+
+function TTrackView.EndDragKeyFrame: boolean;
+begin
+  Result := FIsDragingKeyFrame;
+  if FIsDragingKeyFrame then
+    FIsDragingKeyFrame := False;
+  FDragingKeyFrame := nil;
 end;
 
 procedure TKeyFrameDesignerUI.SetKeyFrame(
@@ -354,7 +434,7 @@ begin
   FLerpFuncPreview := TLerpFuncPreview.Create(Self);
   FLerpFuncPreview.Width := 60;
   FLerpFuncPreview.Height := 60;
-  FLerpFuncPreview.Color := Vector4(1, 1, 1, 0.382);
+  FLerpFuncPreview.Color := SelectionColor.Alpha(0.382);
   FUIContainer.InsertFront(FLerpFuncPreview);
 
   FFrameTimeControl := TCastleLabel.Create(Self);
@@ -421,8 +501,6 @@ begin
 end;
 
 procedure TTrackViewContainer.RenderOverChildren;
-const
-  SelectionColor: TCastleColor = (X: 0.580; Y: 1.000; Z: 0.855; W: 0.804);
 begin
   inherited RenderOverChildren;
   if not Assigned(TrackView) then Exit;
@@ -623,7 +701,7 @@ end;
 procedure TAnimationPlayerView.TrackDesignerUIButtonRemoveClick(Sender: TObject);
 begin
   TrackDesignerUI.Track.RemoveKeyFrame(TrackDesignerUI.KeyFrame);
-  KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
+  KeyFrameListChanged;
 end;
 
 procedure TAnimationPlayerView.TrackDesignerUISetKeyFrameTimeClick(Sender: TObject);
@@ -634,14 +712,14 @@ begin
   if InputQuery('set keyframe time', 'Input a new time:', s) then
   begin
     TrackDesignerUI.KeyFrame.Time := StrToFloatDot(s);
-    KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
+    KeyFrameListChanged;
   end;
 end;
 
 procedure TAnimationPlayerView.TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
 begin
   TrackDesignerUI.KeyFrame.Time := AlignedTime(TrackDesignerUI.KeyFrame.Time, 0.1);
-  KeyFrameListChanged(CurrentAnimation.TrackList.IndexOf(TrackDesignerUI.Track));
+  KeyFrameListChanged;
 end;
 
 function TAnimationPlayerView.AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
@@ -688,7 +766,7 @@ begin
     end;
     if SelectedCount = 0 then slt.Add('Please select some tracks(mouse click) first.')
     else
-      KeyFrameListChanged(-1);
+      KeyFrameListChanged;
     if slt.Count > 0 then ShowMessage(slt.Text);
   finally
     FreeAndNil(slt);
@@ -858,6 +936,55 @@ begin
   end;
 end;
 
+procedure TAnimationPlayerView.ATrackViewMotion(const Sender: TCastleUserInterface;
+  const Event: TInputMotion; var Handled: boolean);
+var
+  ATrackView: TTrackView;
+begin
+  ATrackView := (Sender as TTrackView);
+  {
+  if ATrackView.IsDragingKeyFrame or (ATrackView.SelectFrame(
+    Event.Position, PixelsPerSecond, FScrollTime) <> nil) then
+    Cursor := TMouseCursor.mcHand
+  else
+    Cursor := TMouseCursor.mcDefault;
+  }
+  if ATrackView.IsDragingKeyFrame then
+  begin
+    ATrackView.DragingKeyFrame.Time :=
+      ATrackView.PosToTime(Event.Position, PixelsPerSecond, FScrollTime);
+    KeyFrameListChanged;
+    Handled := True;
+  end;
+end;
+
+procedure TAnimationPlayerView.ATrackViewPress(const Sender: TCastleUserInterface;
+  const Event: TInputPressRelease; var Handled: boolean);
+var
+  ATrackView: TTrackView;
+  AFrame: TAnimationTrack.TAnimationKeyframe;
+begin
+  if Event.IsMouseButton(buttonLeft) then
+  begin
+    ATrackView := (Sender as TTrackView);
+    AFrame := ATrackView.SelectFrame(Event.Position, PixelsPerSecond, FScrollTime);
+    if AFrame = nil then Exit;
+    Handled := ATrackView.BeginDragKeyFrame(AFrame);
+  end;
+end;
+
+procedure TAnimationPlayerView.ATrackViewRelease(const Sender: TCastleUserInterface;
+  const Event: TInputPressRelease; var Handled: boolean);
+var
+  ATrackView: TTrackView;
+begin
+  if Event.IsMouseButton(buttonLeft) then
+  begin
+    ATrackView := (Sender as TTrackView);
+    Handled := ATrackView.EndDragKeyFrame;
+  end;
+end;
+
 procedure TAnimationPlayerView.ATrackViewRender(const Sender: TCastleUserInterface);
 var
   ATrackView: TTrackView;
@@ -888,8 +1015,8 @@ var
     RenderLine(FramePos, CastleColors.White, 1 * UIScale);
     if bSelected then
     begin
-      rc := FloatRectangle(FramePos - ItemKeyFrameWidth * 0.5 * UIScale,
-        R.Bottom, ItemKeyFrameWidth * UIScale, R.Height);
+      rc := FloatRectangle(FramePos, R.Bottom, TTrackView.ItemKeyFrameWidth *
+        UIScale, R.Height);
       DrawRectangle(Rc, Vector4(1, 1, 1, 0.382));
 
     end;
@@ -945,9 +1072,10 @@ begin
     Result := -1;
 end;
 
-procedure TAnimationPlayerView.KeyFrameListChanged(const Index: integer);
+procedure TAnimationPlayerView.KeyFrameListChanged;
 begin
   UpdateTimeBar;
+  if TrackDesignerUI.Exists then TrackDesignerUI.UpdateControls;
 end;
 
 procedure TAnimationPlayerView.UpdateTimeBar;
@@ -1138,11 +1266,14 @@ begin
       ATrackView.Tag := I;
       ATrackView.TrackColor := ColorByIndex(I);
       ATrackView.OnRender := {$Ifdef fpc}@{$endif}ATrackViewRender;
+      ATrackView.OnPress := {$Ifdef fpc}@{$endif}ATrackViewPress;
+      ATrackView.OnMotion := {$Ifdef fpc}@{$endif}ATrackViewMotion;
+      ATrackView.OnRelease := {$Ifdef fpc}@{$endif}ATrackViewRelease;
       ATrackContainer.TrackView := ATrackView;
       ATrackContainer.InsertFront(ATrackView);
       FTrackViewList.Add(ATrackView);
     end;
-    KeyFrameListChanged(-1);
+    KeyFrameListChanged;
 
   finally
     { Restore trackview selections. }
