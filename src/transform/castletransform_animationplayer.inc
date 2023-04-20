@@ -198,7 +198,7 @@ begin
     begin
       V1_int := Value1;
       V2_int := Value2;
-      Result := Round((1 - ALerp) * V1_int + ALerp * V2_int);
+      Result := Floor((1 - ALerp) * V1_int + ALerp * V2_int);
     end;
     tkFloat:
     begin
