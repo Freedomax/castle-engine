@@ -156,5 +156,9 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Caption = 'Remove'
       OnClick = MenuItemRemoveAnimationClick
     end
+    object MenuItemRenameAnimation: TMenuItem
+      Caption = 'Rename'
+      OnClick = MenuItemRenameAnimationClick
+    end
   end
 end
