@@ -262,7 +262,7 @@ type
     property AnimationList: TAnimationList read FAnimationList;
     property CurrentAnimation: TAnimation read FCurrentAnimation;
   published
-    property Playing: boolean read FPlaying write SetPlaying default False;
+    property Playing: boolean read FPlaying write SetPlaying default True;
     property OnAnimationComplete: TNotifyEvent
       read FOnAnimationComplete write SetOnAnimationComplete;
     property OnCurrentAnimationChanged: TNotifyEvent
@@ -1279,6 +1279,7 @@ constructor TAnimationPlayer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FAnimationList := TAnimationList.Create([doOwnsValues]);
+  FPlaying := True;
 end;
 
 destructor TAnimationPlayer.Destroy;
