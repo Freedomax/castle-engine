@@ -250,6 +250,7 @@ type
     function NewAnimation(const AName: string): TAnimation;
     function AnimationExists(const AName: string): boolean;
     procedure RemoveAnimation(const AName: string);
+    procedure RenameAnimation(const AOldName, ANewName: string);
     procedure ClearAnimations;
     procedure Start(const ResetTime: boolean = True);
     procedure Stop(const ResetTime: boolean = True);
@@ -1275,17 +1276,20 @@ end;
 constructor TAnimationPlayer.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FAnimationList := TAnimationList.Create([doOwnsValues]);
+  { not ownvalues. wo need rename animation. }
+  FAnimationList := TAnimationList.Create([]);
   FPlaying := True;
 end;
 
 destructor TAnimationPlayer.Destroy;
 begin
+  ClearAnimations;
   FreeAndNil(FAnimationList);
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
@@ -1324,12 +1328,15 @@ begin
 end;
 
 procedure TAnimationPlayer.RemoveAnimation(const AName: string);
+var
+  Ani: TAnimation;
 begin
-  if AnimationExists(AName) then
+  if FAnimationList.TryGetValue(AName, Ani) then
   begin
     if Animation = AName then
       Animation := '';
     FAnimationList.Remove(AName);
+    FreeAndNil(Ani);
     //if FAnimationList.ContainsKey(AName) then
     //  WritelnWarning('RemoveAnimation: failed to remove animation "%s"', [AName]);
   end
@@ -1337,9 +1344,31 @@ begin
     WritelnWarning('RemoveAnimation: animation "%s" not exist.', [AName]);
 end;
 
+procedure TAnimationPlayer.RenameAnimation(const AOldName, ANewName: string);
+var
+  Ani: TAnimation;
+  bCurrent: boolean;
+begin
+  if AOldName = ANewName then
+    WritelnWarning('RenameAnimation: same names "%s", ignored.', [AOldName])
+  else
+  if AnimationList.TryGetValue(AOldName, Ani) then
+  begin
+    bCurrent := Animation = AOldName;
+    FAnimationList.Remove(AOldName);
+    AddAnimation(ANewName, Ani);
+    if bCurrent then Animation := ANewName;
+  end
+  else
+    WritelnWarning('RenameAnimation: animation "%s" not exist.', [AOldName]);
+end;
+
 procedure TAnimationPlayer.ClearAnimations;
+var
+  Ani: TAnimation;
 begin
   Animation := '';
+  for Ani in FAnimationList.Values do Ani.Free;
   FAnimationList.Clear;
 end;
 

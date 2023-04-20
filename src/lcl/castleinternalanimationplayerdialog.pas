@@ -237,6 +237,7 @@ type
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    MenuItemRenameAnimation: TMenuItem;
     MenuItemAlignKeyFrameTime: TMenuItem;
     MenuItemSetKeyFrameTime: TMenuItem;
     MenuItemNewAnimation: TMenuItem;
@@ -265,6 +266,7 @@ type
     procedure MenuItem6Click(Sender: TObject);
     procedure MenuItemNewAnimationClick(Sender: TObject);
     procedure MenuItemRemoveAnimationClick(Sender: TObject);
+    procedure MenuItemRenameAnimationClick(Sender: TObject);
   private
     FView: TAnimationPlayerView;
 
@@ -1654,6 +1656,18 @@ begin
   AnimationListChanged;
 end;
 
+procedure TAnimationPlayerDialog.MenuItemRenameAnimationClick(Sender: TObject);
+var
+  AName: string;
+begin
+  AName := AnimationPlayer.Animation;
+  if InputQuery('Rename Animation', 'Input new name:', AName) then
+  begin
+    AnimationPlayer.RenameAnimation(AnimationPlayer.Animation, AName);
+    AnimationListChanged;
+  end;
+end;
+
 function TAnimationPlayerDialog.GetCurrentAnimation: TAnimation;
 begin
   Result := FView.CurrentAnimation;
@@ -1909,6 +1923,7 @@ begin
   ButtonAnimation.Enabled := Assigned(AnimationPlayer);
   MenuItemNewAnimation.Enabled := Assigned(AnimationPlayer);
   MenuItemRemoveAnimation.Enabled := Assigned(CurrentAnimation);
+  MenuItemRenameAnimation.Enabled := Assigned(CurrentAnimation);
   ButtonNewTrack.Enabled := Assigned(CurrentAnimation);
   ComboBoxPlayStyle.Enabled := Assigned(CurrentAnimation);
   FloatSpinEditSpeed.Enabled := Assigned(CurrentAnimation);

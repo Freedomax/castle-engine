@@ -70,6 +70,7 @@ end;
 
 procedure TViewMain.Button1Click(Sender: TObject);
 begin
+  AnimationPlayerTransform1.AnimationPlayer.Animation := '1';
   AnimationPlayerTransform1.AnimationPlayer.Start;
 end;
 
