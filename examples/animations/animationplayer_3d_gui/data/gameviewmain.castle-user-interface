@@ -180,13 +180,11 @@
                   "Animation_1-Track_0-PropertyName" : "W",
                   "Animation_1-Track_1-TrackClass" : "TAnimationPropertyTrack",
                   "Animation_1-Track_1-Mode" : 1,
-                  "Animation_1-Track_1-Frame-_Count" : 3,
+                  "Animation_1-Track_1-Frame-_Count" : 2,
                   "Animation_1-Track_1-Frame_0-Time" : 0.0000000000000000E+000,
                   "Animation_1-Track_1-Frame_0-Value" : "box2",
                   "Animation_1-Track_1-Frame_1-Time" : 1.0000000000000000E+000,
                   "Animation_1-Track_1-Frame_1-Value" : "box3",
-                  "Animation_1-Track_1-Frame_2-Time" : 1.2000000476837158E+000,
-                  "Animation_1-Track_1-Frame_2-Value" : "box3",
                   "Animation_1-Track_1-FriendlyObjectName" : "AnimationPlayerBox1.AnimationPlayer",
                   "Animation_1-Track_1-PropertyName" : "Animation",
                   "Animation_2" : "box1",
@@ -210,13 +208,11 @@
                   "Animation_2-Track_1-Transform" : "Box1",
                   "Animation_2-Track_2-TrackClass" : "TAnimationPropertyTrack",
                   "Animation_2-Track_2-Mode" : 1,
-                  "Animation_2-Track_2-Frame-_Count" : 3,
+                  "Animation_2-Track_2-Frame-_Count" : 2,
                   "Animation_2-Track_2-Frame_0-Time" : 0.0000000000000000E+000,
                   "Animation_2-Track_2-Frame_0-Value" : "box1",
-                  "Animation_2-Track_2-Frame_1-Time" : 4.0999999046325684E+000,
+                  "Animation_2-Track_2-Frame_1-Time" : 4.0000000000000000E+000,
                   "Animation_2-Track_2-Frame_1-Value" : "box2",
-                  "Animation_2-Track_2-Frame_2-Time" : 4.1999998092651367E+000,
-                  "Animation_2-Track_2-Frame_2-Value" : "box2",
                   "Animation_2-Track_2-FriendlyObjectName" : "AnimationPlayerBox1.AnimationPlayer",
                   "Animation_2-Track_2-PropertyName" : "Animation",
                   "CurrentAnimation" : "box1"
@@ -241,8 +237,8 @@
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "X" : 8.9907330274581909E-001,
-              "Z" : 1.7865238189697266E+000
+              "X" : 1.9754341840744019E+000,
+              "Z" : 3.1250560283660889E-001
             },
             "$Children" : [
               {
@@ -374,10 +370,10 @@
       "$$ClassName" : "TCastleLabel",
       "ColorPersistent" : {
         "$$ClassName" : "TCastleColorPersistent",
-        "Alpha" : 4.3745741248130798E-001,
+        "Alpha" : 9.2166048288345337E-001,
         "Blue" : 2.0000000298023224E-001,
         "Green" : 2.9803922772407532E-001,
-        "Red" : 1.0000000000000000E+000
+        "Red" : 8.4332096576690674E-001
       },
       "FontSize" : 6.0000000000000000E+001,
       "HorizontalAnchorParent" : "hpMiddle",
@@ -385,12 +381,12 @@
       "Html" : true,
       "Name" : "Label1",
       "Text" : [
-        "Hello world"
+        "Click <font color=\"#00FF00FF\">Button</font> to shake camera"
       ],
       "TranslationPersistent" : {
         "$$ClassName" : "TCastleVector2Persistent",
-        "X" : 2.4922246932983398E+001,
-        "Y" : 6.7734962463378906E+001
+        "X" : 2.0685470581054688E+001,
+        "Y" : 6.0979240417480469E+001
       },
       "$Children" : [
         {
