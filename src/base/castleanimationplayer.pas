@@ -74,8 +74,6 @@ type
   strict private
     FOnChange: TNotifyEvent;
     FKeyframeList: TAnimationKeyframeList;
-    { For mode @link(tmDiscrete), no need to execute every frame, so check the last executed frame. }
-    FLastExecutedKeyFrame: TAnimationKeyFrame;
     procedure KeyFramInTrackChange(ASender: TObject;
       const AChangeType: TKeyFrameChangeType);
     procedure KeyframesNotify(ASender: TObject;
@@ -87,7 +85,9 @@ type
     procedure SetFriendlyObjectName(const AValue: string);
     { This notification is used by @link(TAnimation), please do not use it. }
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
-  strict protected
+  protected
+    { For mode @link(tmDiscrete), no need to execute every frame, so check the last executed frame. }
+    FLastExecutedKeyFrame: TAnimationKeyFrame;
     FMode: TAnimationTrackMode;
     FFriendlyObjectName: string;
     function GetFriendlyObjectName: string; virtual;
@@ -516,8 +516,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
-TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(
+  const AValue: TAnimationKeyframe): TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -549,26 +549,20 @@ var
 begin
   if FKeyframeList.Count = 0 then
     Exit;
-
   if ATime < FKeyframeList.First.Time then
+    Exit;
+
+  Index := FKeyframeList.TimeToKeyFrame(ATime);
+  if Between(Index, 0, FKeyframeList.Count - 2) then
   begin
-    AKeyFrame := FKeyframeList.First;
-    AValue := FKeyframeList.First.Value;
+    AKeyFrame := FKeyframeList[Index];
+    AValue := Interpolate(AKeyFrame, FKeyframeList[Index + 1], ATime);
   end
   else
   begin
-    Index := FKeyframeList.TimeToKeyFrame(ATime);
-    if Between(Index, 0, FKeyframeList.Count - 2) then
-    begin
-      AKeyFrame := FKeyframeList[Index];
-      AValue := Interpolate(FKeyframeList[Index], FKeyframeList[Index + 1], ATime);
-    end
-    else
-    begin
-      { If the time is before the first frame or after the last frame, it's considered as the last static frame.}
-      AKeyFrame := FKeyframeList.Last;
-      AValue := FKeyframeList.Last.Value;
-    end;
+    { If the time is before the first frame or after the last frame, it's considered as the last static frame.}
+    AKeyFrame := FKeyframeList.Last;
+    AValue := AKeyFrame.Value;
   end;
 
   if (FMode = tmDiscrete) then
@@ -1012,8 +1006,7 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -1030,8 +1023,7 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -1048,19 +1040,22 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc):
-TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
 
 procedure TAnimation.Stop(const ResetTime: boolean);
+var
+  ATrack: TAnimationTrack;
 begin
   if ResetTime then
   begin
     FCurrentTime := 0;
     ForceUpdate;
   end;
+  for ATrack in FTrackList do if ATrack.FMode = tmDiscrete then
+      ATrack.FLastExecutedKeyFrame := nil;
   if FPlaying then FPlaying := False;
 end;
 
@@ -1293,7 +1288,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

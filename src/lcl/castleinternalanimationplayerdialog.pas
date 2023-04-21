@@ -812,6 +812,8 @@ begin
     if Assigned(CurrentAnimation) then
     begin
       CurrentTime := MousePosToTime(Event.Position);
+
+      if CurrentTime < 0 then CurrentTime := 0;
       CurrentAnimation.ForceUpdate;
     end;
     Handled := True;
