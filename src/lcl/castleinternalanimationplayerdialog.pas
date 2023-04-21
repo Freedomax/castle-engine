@@ -192,6 +192,7 @@ type
     procedure TrackDesignerUIButtonRemoveClick(Sender: TObject);
     procedure TrackDesignerUISetKeyFrameTimeClick(Sender: TObject);
     procedure TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
+    procedure TrackDesignerUISetFrameValueClick(Sender: TObject);
 
     function AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
 
@@ -237,6 +238,7 @@ type
     MenuItem4: TMenuItem;
     MenuItem5: TMenuItem;
     MenuItem6: TMenuItem;
+    MenuItemSetFrameValue: TMenuItem;
     MenuItemRenameAnimation: TMenuItem;
     MenuItemAlignKeyFrameTime: TMenuItem;
     MenuItemSetKeyFrameTime: TMenuItem;
@@ -722,6 +724,18 @@ procedure TAnimationPlayerView.TrackDesignerUIAlignKeyFrameTimeClick(Sender: TOb
 begin
   TrackDesignerUI.KeyFrame.Time := AlignedTime(TrackDesignerUI.KeyFrame.Time, 0.1);
   KeyFrameListChanged;
+end;
+
+procedure TAnimationPlayerView.TrackDesignerUISetFrameValueClick(Sender: TObject);
+var
+  s: string;
+begin
+  s := VariantToString(TrackDesignerUI.KeyFrame.Value);
+  if InputQuery('set keyframe value', 'Input a new value:', s) then
+  begin
+    TrackDesignerUI.KeyFrame.Value := VariantFromString(s);
+    KeyFrameListChanged;
+  end;
 end;
 
 function TAnimationPlayerView.AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
@@ -1859,6 +1873,8 @@ begin
       {$Ifdef fpc}@{$endif}FView.TrackDesignerUISetKeyFrameTimeClick;
     MenuItemAlignKeyFrameTime.OnClick :=
       {$Ifdef fpc}@{$endif}FView.TrackDesignerUIAlignKeyFrameTimeClick;
+    MenuItemSetFrameValue.OnClick :=
+ {$Ifdef fpc}@{$endif}FView.TrackDesignerUISetFrameValueClick;
 
     FView.PopUpmenuKeyFrame := PopupMenuKeyFrame;
   end;
