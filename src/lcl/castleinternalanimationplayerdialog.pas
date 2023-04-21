@@ -897,13 +897,26 @@ var
       begin
         Str := FormatFloat('0.#', I * DeltaTime);
         HeaderView.Font.Print(Vector2(X + 2 * HeaderView.UIScale, Y2Long),
-          Vector4(1, 1, 1, 0.88), Str);
+          White.Alpha(0.88), Str);
       end;
       if (I mod 5) = 0 then Y2 := Y2Long
       else
         Y2 := Y2Middle;
-      RenderLine(Vector2(X, Y1), Vector2(X, Y2), Vector4(1, 1, 1, 0.5), 2);
+      RenderLine(Vector2(X, Y1), Vector2(X, Y2), White.Alpha(0.5), 2);
     end;
+  end;
+
+  procedure RenderAnimationDuration(const R: TFloatRectangle);
+  var
+    L, W: single;
+  begin
+    if not Assigned(CurrentAnimation) then Exit;
+    if FScrollTime >= CurrentAnimation.MaxTime then Exit;
+    W := (CurrentAnimation.MaxTime - FScrollTime) * PixelsPerSecond * HeaderView.UIScale;
+    L := R.Left + (TrackHeadViewWidth + ItemSpacing) * UIScale;
+    if L + W > R.Right then W := R.Right - L;
+    DrawRectangle(FloatRectangle(L, R.Bottom, W, R.Height),
+      White.Alpha(0.382));
   end;
 
 var
@@ -912,9 +925,10 @@ begin
   { Draw head rect. }
   HeaderView := (Sender as TCastleUserInterfaceFont);
   RHeader := HeaderView.RenderRect;
-  DrawRectangle(RHeader, Vector4(0, 0, 0, 0.618));
+  DrawRectangle(RHeader, Black.Alpha(0.618));
   { TimeLine. }
   RenderTimeLine(RHeader);
+  RenderAnimationDuration(RHeader);
   { PlaybackLine. }
   RenderPlaybackLine;
 end;
