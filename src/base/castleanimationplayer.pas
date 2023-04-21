@@ -74,8 +74,6 @@ type
   strict private
     FOnChange: TNotifyEvent;
     FKeyframeList: TAnimationKeyframeList;
-    { For mode @link(tmDiscrete), no need to execute every frame, so check the last executed frame. }
-    FLastExecutedKeyFrame: TAnimationKeyFrame;
     procedure KeyFramInTrackChange(ASender: TObject;
       const AChangeType: TKeyFrameChangeType);
     procedure KeyframesNotify(ASender: TObject;
@@ -87,7 +85,9 @@ type
     procedure SetFriendlyObjectName(const AValue: string);
     { This notification is used by @link(TAnimation), please do not use it. }
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
-  strict protected
+  protected
+    { For mode @link(tmDiscrete), no need to execute every frame, so check the last executed frame. }
+    FLastExecutedKeyFrame: TAnimationKeyFrame;
     FMode: TAnimationTrackMode;
     FFriendlyObjectName: string;
     function GetFriendlyObjectName: string; virtual;
@@ -258,11 +258,10 @@ type
     procedure CustomSerialization(const SerializationProcess: TSerializationProcess);
       override;
 
-    { Not published, otherwise it will deserialize earlier than @link(CustomSerialization).}
-    property Animation: string read FAnimation write SetAnimation;
     property AnimationList: TAnimationList read FAnimationList;
     property CurrentAnimation: TAnimation read FCurrentAnimation;
   published
+    property Animation: string read FAnimation write SetAnimation;
     property Playing: boolean read FPlaying write SetPlaying default True;
     property OnAnimationComplete: TNotifyEvent
       read FOnAnimationComplete write SetOnAnimationComplete;
@@ -550,26 +549,20 @@ var
 begin
   if FKeyframeList.Count = 0 then
     Exit;
-
   if ATime < FKeyframeList.First.Time then
+    Exit;
+
+  Index := FKeyframeList.TimeToKeyFrame(ATime);
+  if Between(Index, 0, FKeyframeList.Count - 2) then
   begin
-    AKeyFrame := FKeyframeList.First;
-    AValue := FKeyframeList.First.Value;
+    AKeyFrame := FKeyframeList[Index];
+    AValue := Interpolate(AKeyFrame, FKeyframeList[Index + 1], ATime);
   end
   else
   begin
-    Index := FKeyframeList.TimeToKeyFrame(ATime);
-    if Between(Index, 0, FKeyframeList.Count - 2) then
-    begin
-      AKeyFrame := FKeyframeList[Index];
-      AValue := Interpolate(FKeyframeList[Index], FKeyframeList[Index + 1], ATime);
-    end
-    else
-    begin
-      { If the time is before the first frame or after the last frame, it's considered as the last static frame.}
-      AKeyFrame := FKeyframeList.Last;
-      AValue := FKeyframeList.Last.Value;
-    end;
+    { If the time is before the first frame or after the last frame, it's considered as the last static frame.}
+    AKeyFrame := FKeyframeList.Last;
+    AValue := AKeyFrame.Value;
   end;
 
   if (FMode = tmDiscrete) then
@@ -1053,12 +1046,16 @@ begin
 end;
 
 procedure TAnimation.Stop(const ResetTime: boolean);
+var
+  ATrack: TAnimationTrack;
 begin
   if ResetTime then
   begin
     FCurrentTime := 0;
     ForceUpdate;
   end;
+  for ATrack in FTrackList do if ATrack.FMode = tmDiscrete then
+      ATrack.FLastExecutedKeyFrame := nil;
   if FPlaying then FPlaying := False;
 end;
 
@@ -1117,7 +1114,10 @@ begin
       FCurrentAnimation) then
     begin
       FAnimation := '';
-      WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
+      { "Animation" is a published property, it is normal that it does not exist
+        during the first deserialization. }
+      if not (csLoading in ComponentState) then
+        WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
     end;
     UpdateAnimation;
 

@@ -129,14 +129,17 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
   object PopupMenuKeyFrame: TPopupMenu
     Left = 80
     Top = 80
-    object MenuItemLerpFunc: TMenuItem
-      Caption = 'Set LerpFunc'
-    end
     object MenuItemRemoveFrame: TMenuItem
       Caption = 'Remove KeyFrame'
     end
     object Separator4: TMenuItem
       Caption = '-'
+    end
+    object MenuItemSetFrameValue: TMenuItem
+      Caption = 'Set Value'
+    end
+    object MenuItemLerpFunc: TMenuItem
+      Caption = 'Set LerpFunc'
     end
     object MenuItemSetKeyFrameTime: TMenuItem
       Caption = 'Set Time'
