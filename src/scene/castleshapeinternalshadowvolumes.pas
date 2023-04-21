@@ -38,10 +38,10 @@ type
       we need to recalculate @link(TShapeShadowVolumes.TrianglesListShadowCasters),
       but the @link(TShapeShadowVolumes.ManifoldEdges) and
       @link(TShapeShadowVolumes.BorderEdges) may stay unchanged. }
-    VertexIndex: cardinal;
+    VertexIndex: Cardinal;
 
     { Indexes to @link(TShapeShadowVolumes.TrianglesListShadowCasters) array }
-    Triangles: array [0..1] of cardinal;
+    Triangles: array [0..1] of Cardinal;
 
     { These are vertex values at VertexIndex and (VertexIndex+1)mod 3 positions,
       but @italic(only at generation of manifold edges time).
@@ -76,10 +76,10 @@ type
       we don't have to update this when the shape changes during animation).
       You should get them as the VertexIndex
       and (VertexIndex+1) mod 3 vertexes of the triangle TriangleIndex. }
-    VertexIndex: cardinal;
+    VertexIndex: Cardinal;
 
     { Index to @link(TShapeShadowVolumes.TrianglesListShadowCasters) array. }
-    TriangleIndex: cardinal;
+    TriangleIndex: Cardinal;
   end;
   PBorderEdge = ^TBorderEdge;
 
@@ -90,12 +90,12 @@ type
 
   TShapeShadowVolumes = class
   strict private
-  type
-    TValidities = set of (
-      svTrianglesListShadowCasters,
-      svManifoldAndBorderEdges
-    );
-  var
+    type
+      TValidities = set of (
+        svTrianglesListShadowCasters,
+        svManifoldAndBorderEdges
+      );
+    var
     Validities: TValidities;
     FTrianglesListShadowCasters: TTrianglesShadowCastersList;
     FManifoldEdges: TManifoldEdgeList;
@@ -193,12 +193,16 @@ end;
 type
   TTriangleAdder = class
     TriangleList: TTriangle3List;
-    procedure AddTriangle(Shape: TObject; const Triangle: TTriangle3;
-      const Normal: TTriangle3; const TexCoord: TTriangle4; const Face: TFaceIndex);
+    procedure AddTriangle(Shape: TObject;
+      const Triangle: TTriangle3;
+      const Normal: TTriangle3; const TexCoord: TTriangle4;
+      const Face: TFaceIndex);
   end;
 
-procedure TTriangleAdder.AddTriangle(Shape: TObject; const Triangle: TTriangle3;
-  const Normal: TTriangle3; const TexCoord: TTriangle4; const Face: TFaceIndex);
+procedure TTriangleAdder.AddTriangle(Shape: TObject;
+  const Triangle: TTriangle3;
+  const Normal: TTriangle3; const TexCoord: TTriangle4;
+  const Face: TFaceIndex);
 begin
   if Triangle.IsValid then
     TriangleList.Add(Triangle);
@@ -213,7 +217,9 @@ function TShapeShadowVolumes.TrianglesListShadowCasters: TTrianglesShadowCasters
       Shape: TAbstractShapeNode;
     begin
       Shape := AShape.State.ShapeNode;
-      Result := not ((Shape <> nil) and (Shape.FdAppearance.Value <> nil) and
+      Result := not (
+        (Shape <> nil) and
+        (Shape.FdAppearance.Value <> nil) and
         (Shape.FdAppearance.Value is TAppearanceNode) and
         (not TAppearanceNode(Shape.FdAppearance.Value).FdShadowCaster.Value));
     end;
@@ -235,13 +241,8 @@ function TShapeShadowVolumes.TrianglesListShadowCasters: TTrianglesShadowCasters
         if LogShadowVolumes then
           WritelnLog('Shadow volumes', Format('Shadows casters triangles: %d',
             [Result.Count]));
-      finally
-        FreeAndNil(TriangleAdder)
-      end;
-    except
-      Result.Free;
-      raise
-    end;
+      finally FreeAndNil(TriangleAdder) end;
+    except Result.Free; raise end;
   end;
 
 begin
@@ -277,11 +278,15 @@ procedure TShapeShadowVolumes.CalculateIfNeededManifoldAndBorderEdges;
       if it's the 1st time this edge occurs, or maybe the 3d one, 5th...
       all odd occurrences, assuming that ordering of faces is consistent,
       so that counterpart edges are properly detected. }
-    procedure AddEdgeCheckManifold(EdgesSingle: TManifoldEdgeList;
-    const TriangleIndex: cardinal; const V0: TVector3; const V1: TVector3;
-    const VertexIndex: cardinal; Triangles: TTriangle3List);
+    procedure AddEdgeCheckManifold(
+      EdgesSingle: TManifoldEdgeList;
+      const TriangleIndex: Cardinal;
+      const V0: TVector3;
+      const V1: TVector3;
+      const VertexIndex: Cardinal;
+      Triangles: TTriangle3List);
     var
-      I: integer;
+      I: Integer;
       EdgePtr: PManifoldEdge;
     begin
       if EdgesSingle.Count <> 0 then
@@ -304,7 +309,7 @@ procedure TShapeShadowVolumes.CalculateIfNeededManifoldAndBorderEdges;
             be in different order. So we compare V0 with EdgeV1
             (and V1 with EdgeV0), no need to compare V1 with EdgeV1. }
           if TVector3.PerfectlyEquals(V0, EdgePtr^.V1) and
-            TVector3.PerfectlyEquals(V1, EdgePtr^.V0) then
+             TVector3.PerfectlyEquals(V1, EdgePtr^.V0) then
           begin
             EdgePtr^.Triangles[1] := TriangleIndex;
 
@@ -334,7 +339,7 @@ procedure TShapeShadowVolumes.CalculateIfNeededManifoldAndBorderEdges;
     end;
 
   var
-    I: integer;
+    I: Integer;
     Triangles: TTriangle3List;
     TrianglePtr: PTriangle3;
     EdgesSingle: TManifoldEdgeList;
@@ -363,12 +368,9 @@ procedure TShapeShadowVolumes.CalculateIfNeededManifoldAndBorderEdges;
       for I := 0 to Triangles.Count - 1 do
       begin
         { TrianglePtr points to Triangles[I] now }
-        AddEdgeCheckManifold(EdgesSingle, I, TrianglePtr^.Data[0],
-          TrianglePtr^.Data[1], 0, Triangles);
-        AddEdgeCheckManifold(EdgesSingle, I, TrianglePtr^.Data[1],
-          TrianglePtr^.Data[2], 1, Triangles);
-        AddEdgeCheckManifold(EdgesSingle, I, TrianglePtr^.Data[2],
-          TrianglePtr^.Data[0], 2, Triangles);
+        AddEdgeCheckManifold(EdgesSingle, I, TrianglePtr^.Data[0], TrianglePtr^.Data[1], 0, Triangles);
+        AddEdgeCheckManifold(EdgesSingle, I, TrianglePtr^.Data[1], TrianglePtr^.Data[2], 1, Triangles);
+        AddEdgeCheckManifold(EdgesSingle, I, TrianglePtr^.Data[2], TrianglePtr^.Data[0], 2, Triangles);
         Inc(TrianglePtr);
       end;
 
@@ -386,14 +388,12 @@ procedure TShapeShadowVolumes.CalculateIfNeededManifoldAndBorderEdges;
           FBorderEdges.List^[I].TriangleIndex := EdgesSingle.List^[I].Triangles[0];
         end;
       end;
-    finally
-      FreeAndNil(EdgesSingle);
-    end;
+    finally FreeAndNil(EdgesSingle); end;
 
     if LogShadowVolumes then
       WritelnLog('Shadow volumes', Format(
-        'Edges: %d manifold, %d border', [FManifoldEdges.Count,
-        FBorderEdges.Count]));
+        'Edges: %d manifold, %d border',
+        [FManifoldEdges.Count, FBorderEdges.Count] ));
   end;
 
 begin
