@@ -258,11 +258,10 @@ type
     procedure CustomSerialization(const SerializationProcess: TSerializationProcess);
       override;
 
-    { Not published, otherwise it will deserialize earlier than @link(CustomSerialization).}
-    property Animation: string read FAnimation write SetAnimation;
     property AnimationList: TAnimationList read FAnimationList;
     property CurrentAnimation: TAnimation read FCurrentAnimation;
   published
+    property Animation: string read FAnimation write SetAnimation;
     property Playing: boolean read FPlaying write SetPlaying default True;
     property OnAnimationComplete: TNotifyEvent
       read FOnAnimationComplete write SetOnAnimationComplete;
@@ -517,8 +516,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -1013,7 +1012,8 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -1030,7 +1030,8 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -1047,7 +1048,8 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
@@ -1117,7 +1119,10 @@ begin
       FCurrentAnimation) then
     begin
       FAnimation := '';
-      WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
+      { "Animation" is a published property, it is normal that it does not exist
+        during the first deserialization. }
+      if not (csLoading in ComponentState) then
+        WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
     end;
     UpdateAnimation;
 
@@ -1288,8 +1293,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
