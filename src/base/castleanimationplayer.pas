@@ -550,7 +550,11 @@ begin
   if FKeyframeList.Count = 0 then
     Exit;
   if ATime < FKeyframeList.First.Time then
+  begin
+    if (FLastExecutedKeyFrame <> nil) then
+      FLastExecutedKeyFrame := nil;
     Exit;
+  end;
 
   Index := FKeyframeList.TimeToKeyFrame(ATime);
   if Between(Index, 0, FKeyframeList.Count - 2) then
@@ -1288,8 +1292,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

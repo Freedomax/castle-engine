@@ -182,7 +182,6 @@ type
     procedure SetPlayingChanged(const AValue: TNotifyEvent);
     procedure CorrectTrackViewWidth(const ATrackView: TTrackView);
   protected
-    FFont: TCastleFont;
     ButtonAddKeyFrame: TCastleButton;
     TrackDesignerUI: TKeyFrameDesignerUI;
     PopupMenuKeyFrame: TPopupMenu;
@@ -1343,8 +1342,6 @@ var
   AScrollViewHeader: TCastleUserInterfaceFont;
 begin
   inherited Start;
-  FFont := TCastleFont.Create(Self);
-
   FTrackViewList := TTrackViewList.Create(False);
 
   FRoot := TCastleUserInterface.Create(self);

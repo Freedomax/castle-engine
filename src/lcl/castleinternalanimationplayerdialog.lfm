@@ -28,10 +28,12 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
     ClientWidth = 803
     TabOrder = 1
     object ButtonAnimation: TButton
-      Left = 115
+      Left = 372
       Height = 27
       Top = 8
-      Width = 85
+      Width = 84
+      Anchors = [akTop, akRight]
+      AutoSize = True
       Caption = 'Animation'
       OnClick = ButtonAnimationClick
       TabOrder = 0
@@ -40,7 +42,8 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       Left = 6
       Height = 25
       Top = 8
-      Width = 105
+      Width = 362
+      Anchors = [akTop, akLeft, akRight]
       ItemHeight = 17
       OnChange = ComboBoxAnimationChange
       ReadOnly = True
@@ -48,19 +51,22 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       TabOrder = 1
     end
     object ButtonNewTrack: TButton
-      Left = 401
+      Left = 649
       Height = 27
       Top = 8
-      Width = 90
+      Width = 88
+      Anchors = [akTop, akRight]
+      AutoSize = True
       Caption = 'New Track'
       OnClick = ButtonNewTrackClick
       TabOrder = 2
     end
     object ComboBoxPlayStyle: TComboBox
-      Left = 205
+      Left = 462
       Height = 25
       Top = 8
       Width = 118
+      Anchors = [akTop, akRight]
       ItemHeight = 17
       OnChange = ComboBoxPlayStyleChange
       ReadOnly = True
@@ -68,19 +74,20 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
       TabOrder = 3
     end
     object ButtonPlayStop: TSpeedButton
-      Left = 742
+      Left = 750
       Height = 27
       Top = 8
-      Width = 49
+      Width = 45
       Anchors = [akTop, akRight]
       Caption = 'Start'
       OnClick = ButtonPlayStopClick
     end
     object FloatSpinEditSpeed: TFloatSpinEdit
-      Left = 329
+      Left = 586
       Height = 25
       Top = 8
       Width = 58
+      Anchors = [akTop, akRight]
       Increment = 0.1
       MaxValue = 10000
       MinValue = 0.01
