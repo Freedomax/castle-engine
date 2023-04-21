@@ -216,11 +216,13 @@ begin
   begin
     TreeViewProperties.Align := alClient;
     TreeViewControls.Align := alLeft;
+    Splitter1.Visible := True;
     Caption := 'Select Property';
   end
   else
   begin
     TreeViewControls.Align := alClient;
+    Splitter1.Visible := False;
     Caption := 'Select Component';
   end;
 end;
