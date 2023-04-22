@@ -92,13 +92,13 @@ type
     FFriendlyObjectName: string;
     function GetFriendlyObjectName: string; virtual;
     procedure SetValue(const AValue: variant); virtual; abstract;
-    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
-      virtual;
   public
     constructor Create; overload; virtual;
     destructor Destroy; override;
     function ObjectName: string; virtual;
     function PropName: string; virtual;
+    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
+      virtual;
     procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
       const APath: string; const bReading: boolean; const APlayer: TComponent); virtual;
     { Add a keyframe. The time is calculated in seconds, with the time when the animation
@@ -132,28 +132,25 @@ type
   TAnimationTrackClass = class of TAnimationTrack;
 
   TAnimationVector2Track = class abstract(TAnimationTrack)
-  strict protected
+  public
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
-  public
     function AddKeyframe(const ATime: TFloatTime; const AValue: TVector2;
       const ALerpFunc: TLerpFunc = nil): TAnimationTrack.TAnimationKeyframe;
   end;
 
   TAnimationVector3Track = class abstract(TAnimationTrack)
-  strict protected
+  public
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
-  public
     function AddKeyframe(const ATime: TFloatTime; const AValue: TVector3;
       const ALerpFunc: TLerpFunc = nil): TAnimationTrack.TAnimationKeyframe;
   end;
 
   TAnimationVector4Track = class abstract(TAnimationTrack)
-  strict protected
+  public
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
-  public
     function AddKeyframe(const ATime: TFloatTime; const AValue: TVector4;
       const ALerpFunc: TLerpFunc = nil): TAnimationTrack.TAnimationKeyframe;
   end;
@@ -516,8 +513,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -1010,7 +1007,8 @@ begin
 end;
 
 function TAnimationVector2Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector2; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector2; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector2(AValue), ALerpFunc);
 end;
@@ -1027,7 +1025,8 @@ begin
 end;
 
 function TAnimationVector3Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector3; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector3; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector3(AValue), ALerpFunc);
 end;
@@ -1044,7 +1043,8 @@ begin
 end;
 
 function TAnimationVector4Track.AddKeyframe(const ATime: TFloatTime;
-  const AValue: TVector4; const ALerpFunc: TLerpFunc): TAnimationTrack.TAnimationKeyframe;
+  const AValue: TVector4; const ALerpFunc: TLerpFunc):
+TAnimationTrack.TAnimationKeyframe;
 begin
   Result := inherited AddKeyframe(ATime, VariantFromVector4(AValue), ALerpFunc);
 end;
