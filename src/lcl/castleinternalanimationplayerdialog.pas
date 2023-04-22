@@ -737,11 +737,17 @@ begin
     if (VarType(v) = VarType(TrackDesignerUI.KeyFrame.Value)) and
       (VariantLen(v) = VariantLen(TrackDesignerUI.KeyFrame.Value)) then
     begin
-      TrackDesignerUI.KeyFrame.Value := v;
-      KeyFrameListChanged;
+      try
+        { Check for exceptions. }
+        TrackDesignerUI.Track.CalcValue(v, TrackDesignerUI.KeyFrame.Value, 0.5);
+        TrackDesignerUI.KeyFrame.Value := v;
+        KeyFrameListChanged;
+      except
+        ShowMessage('Input value is incorrect.');
+      end;
     end
     else
-      ShowMessage('Input value is incorrect.');
+      ShowMessage('Input value type not match.');
   end;
 end;
 

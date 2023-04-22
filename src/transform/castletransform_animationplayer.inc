@@ -25,10 +25,10 @@
    FProperty: string;
    FPropertyInfo: PPropInfo;
    procedure SetValue(const AValue: variant); override;
-   function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
-     override;
   public
    constructor Create(AComponent: TPersistent; const AProperty: string); overload;
+      function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
+     override;
    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
      const APath: string; const bReading: boolean; const APlayer: TComponent); override;
    function AddKeyframeAtTime(const ATime: TFloatTime;
