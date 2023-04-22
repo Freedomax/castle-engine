@@ -37,15 +37,6 @@ type
     procedure Update(const SecondsPassed: single; var HandleInput: boolean); override;
   end;
 
-  TLabelColorTrack = class(TAnimationVector4Track)
-  strict private
-    FControl: TCastleLabel;
-  strict protected
-    procedure SetValue(const AValue: variant); override;
-  public
-    constructor Create(AControl: TCastleLabel);
-  end;
-
 var
   ViewMain: TViewMain;
 
@@ -80,17 +71,6 @@ begin
   Assert(LabelFps <> nil,
     'If you remove LabelFps from the design, remember to remove also the assignment "LabelFps.Caption := ..." from code');
   LabelFps.Caption := 'FPS: ' + Container.Fps.ToString;
-end;
-
-procedure TLabelColorTrack.SetValue(const AValue: variant);
-begin
-  FControl.Color := VariantToVector4(AValue);
-end;
-
-constructor TLabelColorTrack.Create(AControl: TCastleLabel);
-begin
-  inherited Create;
-  FControl := AControl;
 end;
 
 end.

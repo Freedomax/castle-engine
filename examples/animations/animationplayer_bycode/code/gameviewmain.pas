@@ -43,7 +43,7 @@ type
   strict private
     FControl: TCastleLabel;
   strict protected
-    procedure SetValue(const AValue: variant); override;
+    procedure SetValue(const AValue: TVector4); override;
   public
     constructor Create(AControl: TCastleLabel);
   end;
@@ -97,7 +97,7 @@ end;
 procedure TViewMain.Start;
 var
   Animation: TAnimation;
-  Track: TAnimationTrack;
+  Track: TAnimationPropertyTrack;
   TranslationTrack: TAnimationTranslationTrack;
   PositionTrack: TAnimationPositionTrack;
   RotationTrack: TAnimationRotationTrack;
@@ -234,9 +234,9 @@ begin
 
 end;
 
-procedure TLabelColorTrack.SetValue(const AValue: variant);
+procedure TLabelColorTrack.SetValue(const AValue: TVector4);
 begin
-  FControl.Color := VariantToVector4(AValue);
+  FControl.Color := AValue;
 end;
 
 constructor TLabelColorTrack.Create(AControl: TCastleLabel);
