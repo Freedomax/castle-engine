@@ -33,7 +33,7 @@ type
     FTrack: TAnimationTrack;
     FTrackColor: TCastleColor;
     FIsDragingKeyFrame: boolean;
-    FDragingKeyFrame: TAnimationTrack.TAnimationKeyframe;
+    FDragingKeyFrame: TAnimationKeyframe;
     procedure SetSelected(const AValue: boolean);
     procedure SetTrack(const AValue: TAnimationTrack);
     procedure SetTrackColor(const AValue: TCastleColor);
@@ -43,7 +43,7 @@ type
     function TimeToLocalPos(const ATime: TFloatTime; const APixelsPerSceond: single;
       const AScrollTime: TFloatTime): single;
     function SelectFrame(const APos: TVector2; const APixelsPerSceond: single;
-      const AScrollTime: TFloatTime): TAnimationTrack.TAnimationKeyframe;
+      const AScrollTime: TFloatTime): TAnimationKeyframe;
     { APos is in final device pixels. }
     function PosToTime(const APos: TVector2; const APixelsPerSceond: single;
       const AScrollTime: TFloatTime): TFloatTime;
@@ -57,14 +57,14 @@ type
     function UnderMouse: boolean;
 
     function BeginDragKeyFrame(
-      const AFrame: TAnimationTrack.TAnimationKeyframe): boolean;
+      const AFrame: TAnimationKeyframe): boolean;
     function EndDragKeyFrame: boolean;
 
     property Track: TAnimationTrack read FTrack write SetTrack;
     property Selected: boolean read FSelected write SetSelected;
     property TrackColor: TCastleColor read FTrackColor write SetTrackColor;
     property IsDragingKeyFrame: boolean read FIsDragingKeyFrame;
-    property DragingKeyFrame: TAnimationTrack.TAnimationKeyframe read FDragingKeyFrame;
+    property DragingKeyFrame: TAnimationKeyframe read FDragingKeyFrame;
   end;
 
   TTrackViewList = class( {$Ifdef fpc}specialize{$endif} TObjectList<TTrackView>)
@@ -104,12 +104,12 @@ type
 
   TKeyFrameDesignerUI = class(TCastleUserInterface)
   strict private
-    FKeyFrame: TAnimationTrack.TAnimationKeyframe;
+    FKeyFrame: TAnimationKeyframe;
     FTrack: TAnimationTrack;
     FUIContainer: TCastleVerticalGroup;
     FLerpFuncPreview: TLerpFuncPreview;
     FFrameValueControl, FFrameTimeControl: TCastleLabel;
-    procedure SetKeyFrame(const AValue: TAnimationTrack.TAnimationKeyframe);
+    procedure SetKeyFrame(const AValue: TAnimationKeyframe);
     procedure SetTrack(const AValue: TAnimationTrack);
   public
   const
@@ -122,7 +122,7 @@ type
     property FrameValueControl: TCastleLabel read FFrameValueControl;
     property FrameTimeControl: TCastleLabel read FFrameTimeControl;
     property Track: TAnimationTrack read FTrack write SetTrack;
-    property KeyFrame: TAnimationTrack.TAnimationKeyframe
+    property KeyFrame: TAnimationKeyframe
       read FKeyFrame write SetKeyFrame;
   end;
 
@@ -329,7 +329,7 @@ begin
 end;
 
 function TTrackView.SelectFrame(const APos: TVector2; const APixelsPerSceond: single;
-  const AScrollTime: TFloatTime): TAnimationTrack.TAnimationKeyframe;
+  const AScrollTime: TFloatTime): TAnimationKeyframe;
 var
   AIndex: integer;
   X, XFrame: single;
@@ -394,7 +394,7 @@ begin
 end;
 
 function TTrackView.BeginDragKeyFrame(
-  const AFrame: TAnimationTrack.TAnimationKeyframe): boolean;
+  const AFrame: TAnimationKeyframe): boolean;
 begin
   Result := Assigned(AFrame);
   if not Result then exit;
@@ -411,7 +411,7 @@ begin
 end;
 
 procedure TKeyFrameDesignerUI.SetKeyFrame(
-  const AValue: TAnimationTrack.TAnimationKeyframe);
+  const AValue: TAnimationKeyframe);
 begin
   if FKeyFrame = AValue then Exit;
   FKeyFrame := AValue;
@@ -1007,7 +1007,7 @@ procedure TAnimationPlayerView.ATrackViewPress(const Sender: TCastleUserInterfac
   const Event: TInputPressRelease; var Handled: boolean);
 var
   ATrackView: TTrackView;
-  AFrame: TAnimationTrack.TAnimationKeyframe;
+  AFrame: TAnimationKeyframe;
 begin
   if Event.IsMouseButton(buttonLeft) then
   begin
@@ -1442,7 +1442,7 @@ var
   ATrackView: TTrackView;
   V: TVector2;
   AIndex: integer;
-  AKeyFrame: TAnimationTrack.TAnimationKeyframe;
+  AKeyFrame: TAnimationKeyframe;
 begin
   inherited Update(SecondsPassed, HandleInput);
 
