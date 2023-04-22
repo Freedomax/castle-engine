@@ -85,6 +85,7 @@ type
     function TimeToKeyFrame(const ATime: TFloatTime): SizeInt;
   end;
 
+  { Inherit from TPersistent for RegisterClass and de/serilization referenced component. }
   TAnimationTrack = class abstract(TPersistent)
   strict private
     FOnChange: TNotifyEvent;
@@ -143,7 +144,6 @@ type
 
   TAnimationTrackClass = class of TAnimationTrack;
 
-  { Inherit from TPersistent for RegisterClass and de/serilization referenced component. }
   {$Ifdef fpc}generic{$endif}
 
   TAnimationTrackGeneric<T> = class abstract(TAnimationTrack)
@@ -1093,7 +1093,7 @@ end;
 
 procedure TAnimationKeyframe.SetLerpFunc(const AValue: TLerpFunc);
 begin
-  //delphi fail : if FLerpFunc = AValue then Exit;
+  //TODO: delphi fail : if FLerpFunc = AValue then Exit;
   FLerpFunc := AValue;
   FLerpFuncType := lftCustom;
   Changed(kfcLerpFunc);
