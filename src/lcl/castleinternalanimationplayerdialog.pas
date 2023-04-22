@@ -56,8 +56,7 @@ type
       const AScrollTime: TFloatTime): integer;
     function UnderMouse: boolean;
 
-    function BeginDragKeyFrame(
-      const AFrame: TAnimationKeyframe): boolean;
+    function BeginDragKeyFrame(const AFrame: TAnimationKeyframe): boolean;
     function EndDragKeyFrame: boolean;
 
     property Track: TAnimationTrack read FTrack write SetTrack;
@@ -122,8 +121,7 @@ type
     property FrameValueControl: TCastleLabel read FFrameValueControl;
     property FrameTimeControl: TCastleLabel read FFrameTimeControl;
     property Track: TAnimationTrack read FTrack write SetTrack;
-    property KeyFrame: TAnimationKeyframe
-      read FKeyFrame write SetKeyFrame;
+    property KeyFrame: TAnimationKeyframe read FKeyFrame write SetKeyFrame;
   end;
 
   TAnimationPlayerView = class(TCastleView)
@@ -393,8 +391,7 @@ begin
   Result := R.Contains(Container.MousePosition);
 end;
 
-function TTrackView.BeginDragKeyFrame(
-  const AFrame: TAnimationKeyframe): boolean;
+function TTrackView.BeginDragKeyFrame(const AFrame: TAnimationKeyframe): boolean;
 begin
   Result := Assigned(AFrame);
   if not Result then exit;
@@ -410,8 +407,7 @@ begin
   FDragingKeyFrame := nil;
 end;
 
-procedure TKeyFrameDesignerUI.SetKeyFrame(
-  const AValue: TAnimationKeyframe);
+procedure TKeyFrameDesignerUI.SetKeyFrame(const AValue: TAnimationKeyframe);
 begin
   if FKeyFrame = AValue then Exit;
   FKeyFrame := AValue;
@@ -454,7 +450,7 @@ end;
 procedure TKeyFrameDesignerUI.UpdateControls;
 begin
   if not Assigned(FKeyFrame) then Exit;
-  FFrameValueControl.Caption := VariantToString(FKeyFrame.Value);
+  FFrameValueControl.Caption := FKeyFrame.ValueToString;
   FFrameTimeControl.Caption := FormatDot('%.2f s', [FKeyFrame.Time]);
   FLerpFuncPreview.LerpFunc := FKeyFrame.LerpFunc;
 end;
@@ -730,7 +726,7 @@ var
   s: string;
   v: variant;
 begin
-  s := VariantToString(TrackDesignerUI.KeyFrame.Value);
+  s := TrackDesignerUI.KeyFrame.ValueToString;
   if InputQuery('set keyframe value', 'Input a new value:', s) then
   begin
     v := VariantFromString(s);
