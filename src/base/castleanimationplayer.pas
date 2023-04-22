@@ -36,7 +36,7 @@ type
   TKeyFrameChangeEvent = procedure(ASender: TObject;
     const AChangeType: TKeyFrameChangeType) of object;
 
-  TAnimationKeyframe = class
+  TAnimationKeyframe = class abstract
   strict private
     FTime: TFloatTime;
     FLerpFunc: TLerpFunc;
@@ -55,6 +55,7 @@ type
   public
     function ValueToString: string; virtual; abstract;
     procedure ValueFromString(const s: string); virtual; abstract;
+
     property LerpFuncType: TLerpFuncType read FLerpFuncType write SetLerpFuncType;
     property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
     property Time: TFloatTime read FTime write SetTime;
@@ -78,7 +79,7 @@ type
     function TimeToKeyFrame(const ATime: TFloatTime): SizeInt;
   end;
 
-  TAnimationTrack = class(TPersistent)
+  TAnimationTrack = class abstract(TPersistent)
   strict private
     FOnChange: TNotifyEvent;
 
@@ -140,19 +141,25 @@ type
 
   TAnimationTrackGeneric<T> = class abstract(TAnimationTrack)
   private
-  type
-    TAnimationKeyframeInternal =
- {$IFDEF FPC}specialize{$ENDIF}TAnimationKeyframeGeneric<T>;
     function Interpolate(const Keyframe1, Keyframe2: TAnimationKeyframe;
       const Time: TFloatTime): T;
   protected
+  type
+    TAnimationKeyframeInternal = class
+      ({$IFDEF FPC}specialize{$ENDIF}TAnimationKeyframeGeneric<T>)
+    public
+      function ValueToString: string; override;
+      procedure ValueFromString(const s: string); override;
+    end;
+
     procedure SetValue(const AValue: T); virtual; abstract;
   public
     function AddKeyframe(const ATime: TFloatTime; const AValue: T;
       const ALerpFunc: TLerpFunc =
       nil):{$IFDEF FPC}specialize{$ENDIF} TAnimationKeyframeGeneric<T>;
     procedure Evaluate(const ATime: TFloatTime); override;
-    function CalcValue(const Value1, Value2: T; const ALerp: single): T; virtual;abstract;
+    function CalcValue(const Value1, Value2: T; const ALerp: single): T;
+      virtual; abstract;
   end;
 
   TAnimationTrackClass = class of TAnimationTrack;
@@ -543,8 +550,8 @@ begin
   AddKeyframe(Result);
 end;
 
-function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
-TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(
+  const AValue: TAnimationKeyframe): TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -918,6 +925,17 @@ begin
   Result.Value := AValue;
   Result.LerpFunc := ALerpFunc;
   inherited AddKeyframe(Result);
+end;
+
+function TAnimationTrackGeneric.TAnimationKeyframeInternal.ValueToString: string;
+begin
+
+end;
+
+procedure TAnimationTrackGeneric.TAnimationKeyframeInternal.ValueFromString(
+  const s: string);
+begin
+
 end;
 
 function TAnimationVariantTrack.CalcValue(const Value1, Value2: variant;
