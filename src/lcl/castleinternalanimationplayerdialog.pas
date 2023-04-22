@@ -192,6 +192,7 @@ type
     procedure TrackDesignerUISetKeyFrameValueClick(Sender: TObject);
 
     function AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
+    procedure TrackListChanged; virtual;
 
     property CurrentTime: TFloatTime read GetCurrentTime write SetCurrentTime;
   public
@@ -750,6 +751,13 @@ begin
     Result := Result + atom;
 end;
 
+procedure TAnimationPlayerView.TrackListChanged;
+begin
+  TrackDesignerUI.Track := nil;
+  TrackDesignerUI.KeyFrame := nil;
+  ReloadTracks;
+end;
+
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
 
   function GetMousePosTime: TFloatTime;
@@ -1155,7 +1163,7 @@ begin
       Exit;
 
   CurrentAnimation.RemoveTrack(CurrentAnimation.TrackList[AIndex]);
-  ReloadTracks;
+  TrackListChanged;
 end;
 
 function TAnimationPlayerView.GetCurrentAnimation: TAnimation;
@@ -1306,6 +1314,7 @@ begin
       ATrackContainer.InsertFront(ATrackView);
       FTrackViewList.Add(ATrackView);
     end;
+
     KeyFrameListChanged;
 
   finally
@@ -1506,7 +1515,7 @@ begin
     Exit;
   end;
   CurrentAnimation.AddTrack(ATrack);
-  ReloadTracks;
+  TrackListChanged;
 end;
 
 procedure TAnimationPlayerView.LerpfuncItemClick(Sender: TObject);
@@ -1943,7 +1952,7 @@ end;
 procedure TAnimationPlayerDialog.CurrentAnimationChanged;
 begin
   UpdateUIControls;
-  FView.ReloadTracks;
+  FView.TrackListChanged;
   Fview.ResetScrollTime;
 end;
 
