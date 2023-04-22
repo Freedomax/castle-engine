@@ -191,7 +191,7 @@ type
     procedure TrackDesignerUIButtonRemoveClick(Sender: TObject);
     procedure TrackDesignerUISetKeyFrameTimeClick(Sender: TObject);
     procedure TrackDesignerUIAlignKeyFrameTimeClick(Sender: TObject);
-    procedure TrackDesignerUISetFrameValueClick(Sender: TObject);
+    procedure TrackDesignerUISetKeyFrameValueClick(Sender: TObject);
 
     function AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
 
@@ -725,15 +725,23 @@ begin
   KeyFrameListChanged;
 end;
 
-procedure TAnimationPlayerView.TrackDesignerUISetFrameValueClick(Sender: TObject);
+procedure TAnimationPlayerView.TrackDesignerUISetKeyFrameValueClick(Sender: TObject);
 var
   s: string;
+  v: variant;
 begin
   s := VariantToString(TrackDesignerUI.KeyFrame.Value);
   if InputQuery('set keyframe value', 'Input a new value:', s) then
   begin
-    TrackDesignerUI.KeyFrame.Value := VariantFromString(s);
-    KeyFrameListChanged;
+    v := VariantFromString(s);
+    if (VarType(v) = VarType(TrackDesignerUI.KeyFrame.Value)) and
+      (VariantLen(v) = VariantLen(TrackDesignerUI.KeyFrame.Value)) then
+    begin
+      TrackDesignerUI.KeyFrame.Value := v;
+      KeyFrameListChanged;
+    end
+    else
+      ShowMessage('Input value is incorrect.');
   end;
 end;
 
@@ -1881,13 +1889,13 @@ begin
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
     BuildLerpFuncMenu;
     MenuItemRemoveFrame.OnClick :=
-     {$Ifdef fpc}@{$endif}FView.TrackDesignerUIButtonRemoveClick;
+      {$Ifdef fpc}@{$endif}FView.TrackDesignerUIButtonRemoveClick;
     MenuItemSetKeyFrameTime.OnClick :=
       {$Ifdef fpc}@{$endif}FView.TrackDesignerUISetKeyFrameTimeClick;
     MenuItemAlignKeyFrameTime.OnClick :=
       {$Ifdef fpc}@{$endif}FView.TrackDesignerUIAlignKeyFrameTimeClick;
     MenuItemSetFrameValue.OnClick :=
- {$Ifdef fpc}@{$endif}FView.TrackDesignerUISetFrameValueClick;
+      {$Ifdef fpc}@{$endif}FView.TrackDesignerUISetKeyFrameValueClick;
 
     FView.PopUpmenuKeyFrame := PopupMenuKeyFrame;
   end;
