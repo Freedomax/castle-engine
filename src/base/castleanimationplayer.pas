@@ -36,6 +36,8 @@ type
   TKeyFrameChangeEvent = procedure(ASender: TObject;
     const AChangeType: TKeyFrameChangeType) of object;
 
+  TAnimationTrack = class;
+
   TAnimationKeyframe = class abstract
   strict private
     FTime: TFloatTime;
@@ -52,6 +54,7 @@ type
     property OnChange: TKeyFrameChangeEvent read FOnChange write SetOnChange;
   protected
     procedure Changed(const AChangeType: TKeyFrameChangeType);
+    function GetOwnerTrack: TAnimationTrack; virtual; abstract;
   public
     function ValueToString: string; virtual; abstract;
     procedure ValueFromString(const s: string); virtual; abstract;
@@ -59,6 +62,7 @@ type
     property LerpFuncType: TLerpFuncType read FLerpFuncType write SetLerpFuncType;
     property LerpFunc: TLerpFunc read FLerpFunc write SetLerpFunc;
     property Time: TFloatTime read FTime write SetTime;
+    property OwnerTrack: TAnimationTrack read GetOwnerTrack;
   end;
 
   {$Ifdef fpc}generic{$endif}
@@ -136,6 +140,8 @@ type
     property KeyframeList: TAnimationKeyframeList read FKeyframeList;
   end;
 
+  TAnimationTrackClass = class of TAnimationTrack;
+
   { Inherit from TPersistent for RegisterClass and de/serilization referenced component. }
   {$Ifdef fpc}generic{$endif}
 
@@ -147,31 +153,32 @@ type
   type
     TAnimationKeyframeInternal = class
       ({$IFDEF FPC}specialize{$ENDIF}TAnimationKeyframeGeneric<T>)
+    private
+      FOwner: TAnimationTrackGeneric;
+    protected
+      function GetOwnerTrack: TAnimationTrack; override;
     public
       function ValueToString: string; override;
       procedure ValueFromString(const s: string); override;
     end;
 
     procedure SetValue(const AValue: T); virtual; abstract;
-    class function KeyFrameValueToString(const AValue: T): string; virtual; abstract;
-    class function KeyFrameValueFromString(const s: string): T; virtual; abstract;
+    function KeyFrameValueToString(const AValue: T): string; virtual; abstract;
+    function KeyFrameValueFromString(const s: string): T; virtual; abstract;
   public
     function NewKeyFrame: TAnimationKeyframe; override;
     function AddKeyframe(const ATime: TFloatTime; const AValue: T;
-      const ALerpFunc: TLerpFunc =
-      nil):{$IFDEF FPC}specialize{$ENDIF} TAnimationKeyframeGeneric<T>;
+      const ALerpFunc: TLerpFunc = nil): TAnimationKeyframeInternal;
     procedure Evaluate(const ATime: TFloatTime); override;
     function CalcValue(const Value1, Value2: T; const ALerp: single): T;
       virtual; abstract;
   end;
 
-  TAnimationTrackClass = class of TAnimationTrack;
-
   TAnimationVariantTrack = class abstract(
  {$IFDEF FPC}specialize{$ENDIF} TAnimationTrackGeneric<variant>)
   protected
-    class function KeyFrameValueToString(const AValue: variant): string; override;
-    class function KeyFrameValueFromString(const s: string): variant; override;
+    function KeyFrameValueToString(const AValue: variant): string; override;
+    function KeyFrameValueFromString(const s: string): variant; override;
   public
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
@@ -180,8 +187,8 @@ type
   TAnimationVector2Track = class abstract(
  {$IFDEF FPC}specialize{$ENDIF} TAnimationTrackGeneric<TVector2>)
   protected
-    class function KeyFrameValueToString(const AValue: TVector2): string; override;
-    class function KeyFrameValueFromString(const s: string): TVector2; override;
+    function KeyFrameValueToString(const AValue: TVector2): string; override;
+    function KeyFrameValueFromString(const s: string): TVector2; override;
   public
     function CalcValue(const Value1, Value2: TVector2; const ALerp: single): TVector2;
       override;
@@ -190,8 +197,8 @@ type
   TAnimationVector3Track = class abstract(
  {$IFDEF FPC}specialize{$ENDIF} TAnimationTrackGeneric<TVector3>)
   protected
-    class function KeyFrameValueToString(const AValue: TVector3): string; override;
-    class function KeyFrameValueFromString(const s: string): TVector3; override;
+    function KeyFrameValueToString(const AValue: TVector3): string; override;
+    function KeyFrameValueFromString(const s: string): TVector3; override;
   public
     function CalcValue(const Value1, Value2: TVector3; const ALerp: single): TVector3;
       override;
@@ -200,8 +207,8 @@ type
   TAnimationVector4Track = class abstract(
  {$IFDEF FPC}specialize{$ENDIF} TAnimationTrackGeneric<TVector4>)
   protected
-    class function KeyFrameValueToString(const AValue: TVector4): string; override;
-    class function KeyFrameValueFromString(const s: string): TVector4; override;
+    function KeyFrameValueToString(const AValue: TVector4): string; override;
+    function KeyFrameValueFromString(const s: string): TVector4; override;
   public
     function CalcValue(const Value1, Value2: TVector4; const ALerp: single): TVector4;
       override;
@@ -922,40 +929,49 @@ begin
 end;
 
 function TAnimationTrackGeneric.NewKeyFrame: TAnimationKeyframe;
+var
+  AFrame: TAnimationKeyframeInternal;
 begin
-  Result := TAnimationKeyframeInternal.Create;
+  AFrame := TAnimationKeyframeInternal.Create;
+  AFrame.FOwner := Self;
+  Result := AFrame;
 end;
 
 function TAnimationTrackGeneric.AddKeyframe(const ATime: TFloatTime;
-  const AValue: T; const ALerpFunc: TLerpFunc):
- {$IFDEF FPC}specialize{$ENDIF} TAnimationKeyframeGeneric<T>;
+  const AValue: T; const ALerpFunc: TLerpFunc): TAnimationKeyframeInternal;
 begin
-  Result := TAnimationKeyframeInternal.Create;
+  Result := NewKeyFrame as TAnimationKeyframeInternal;
   Result.Time := ATime;
   Result.Value := AValue;
   Result.LerpFunc := ALerpFunc;
   inherited AddKeyframe(Result);
 end;
 
+function TAnimationTrackGeneric.TAnimationKeyframeInternal.GetOwnerTrack:
+TAnimationTrack;
+begin
+  Result := FOwner;
+end;
+
 function TAnimationTrackGeneric.TAnimationKeyframeInternal.ValueToString: string;
 begin
-  Result := TAnimationTrackGeneric.KeyFrameValueToString(Value);
+  if not Assigned(FOwner) then Exit;
+  Result := FOwner.KeyFrameValueToString(Value);
 end;
 
 procedure TAnimationTrackGeneric.TAnimationKeyframeInternal.ValueFromString(
   const s: string);
 begin
-  Value := TAnimationTrackGeneric.KeyFrameValueFromString(s);
+  if not Assigned(FOwner) then Exit;
+  Value := FOwner.KeyFrameValueFromString(s);
 end;
 
-class function TAnimationVariantTrack.KeyFrameValueToString(
-  const AValue: variant): string;
+function TAnimationVariantTrack.KeyFrameValueToString(const AValue: variant): string;
 begin
   Result := VariantToString(AValue);
 end;
 
-class function TAnimationVariantTrack.KeyFrameValueFromString(
-  const s: string): variant;
+function TAnimationVariantTrack.KeyFrameValueFromString(const s: string): variant;
 begin
   Result := VariantFromString(s);
 end;
@@ -985,14 +1001,12 @@ begin
 
 end;
 
-class function TAnimationVector2Track.KeyFrameValueToString(
-  const AValue: TVector2): string;
+function TAnimationVector2Track.KeyFrameValueToString(const AValue: TVector2): string;
 begin
-  Result := Format('(%s,%s)', [AValue[0], AValue[1]]);
+  Result := FormatDot('(%f,%f)', [AValue[0], AValue[1]]);
 end;
 
-class function TAnimationVector2Track.KeyFrameValueFromString(
-  const s: string): TVector2;
+function TAnimationVector2Track.KeyFrameValueFromString(const s: string): TVector2;
 var
   Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
   Len: integer;
@@ -1103,14 +1117,12 @@ begin
   Result := SearchIndex(ATime) - 1;
 end;
 
-class function TAnimationVector3Track.KeyFrameValueToString(
-  const AValue: TVector3): string;
+function TAnimationVector3Track.KeyFrameValueToString(const AValue: TVector3): string;
 begin
-  Result := Format('(%s,%s,%s)', [AValue[0], AValue[1], AValue[2]]);
+  Result := FormatDot('(%f,%f,%f)', [AValue[0], AValue[1], AValue[2]]);
 end;
 
-class function TAnimationVector3Track.KeyFrameValueFromString(
-  const s: string): TVector3;
+function TAnimationVector3Track.KeyFrameValueFromString(const s: string): TVector3;
 var
   Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
   Len: integer;
@@ -1133,14 +1145,12 @@ begin
   Result := (1 - ALerp) * Value1 + ALerp * Value2;
 end;
 
-class function TAnimationVector4Track.KeyFrameValueToString(
-  const AValue: TVector4): string;
+function TAnimationVector4Track.KeyFrameValueToString(const AValue: TVector4): string;
 begin
-  Result := Format('(%s,%s,%s,%s)', [AValue[0], AValue[1], AValue[2], AValue[3]]);
+  Result := FormatDot('(%f,%f,%f,%f)', [AValue[0], AValue[1], AValue[2], AValue[3]]);
 end;
 
-class function TAnimationVector4Track.KeyFrameValueFromString(
-  const s: string): TVector4;
+function TAnimationVector4Track.KeyFrameValueFromString(const s: string): TVector4;
 var
   Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
   Len: integer;
@@ -1406,8 +1416,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
