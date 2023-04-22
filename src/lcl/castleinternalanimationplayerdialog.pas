@@ -724,26 +724,17 @@ end;
 procedure TAnimationPlayerView.TrackDesignerUISetKeyFrameValueClick(Sender: TObject);
 var
   s: string;
-  v: variant;
 begin
   s := TrackDesignerUI.KeyFrame.ValueToString;
   if InputQuery('set keyframe value', 'Input a new value:', s) then
   begin
-    v := VariantFromString(s);
-    if (VarType(v) = VarType(TrackDesignerUI.KeyFrame.Value)) and
-      (VariantLen(v) = VariantLen(TrackDesignerUI.KeyFrame.Value)) then
-    begin
-      try
-        { Check for exceptions. }
-        TrackDesignerUI.Track.CalcValue(v, TrackDesignerUI.KeyFrame.Value, 0.5);
-        TrackDesignerUI.KeyFrame.Value := v;
-        KeyFrameListChanged;
-      except
-        ShowMessage('Input value is incorrect.');
-      end;
-    end
-    else
-      ShowMessage('Input value type not match.');
+    try
+      { Check for exceptions. }
+      TrackDesignerUI.KeyFrame.ValueFromString(s);
+      KeyFrameListChanged;
+    except
+      ShowMessage('Input value is incorrect.');
+    end;
   end;
 end;
 

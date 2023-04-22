@@ -153,6 +153,8 @@ type
     end;
 
     procedure SetValue(const AValue: T); virtual; abstract;
+    class function KeyFrameValueToString: string; virtual; abstract;
+    class function KeyFrameValueFromString(const s: string):T; virtual; abstract;
   public
     function AddKeyframe(const ATime: TFloatTime; const AValue: T;
       const ALerpFunc: TLerpFunc =
@@ -929,13 +931,13 @@ end;
 
 function TAnimationTrackGeneric.TAnimationKeyframeInternal.ValueToString: string;
 begin
-
+  Result := TAnimationTrackGeneric.KeyFrameValueToString;
 end;
 
 procedure TAnimationTrackGeneric.TAnimationKeyframeInternal.ValueFromString(
   const s: string);
 begin
-
+  Value := TAnimationTrackGeneric.KeyFrameValueFromString(s);
 end;
 
 function TAnimationVariantTrack.CalcValue(const Value1, Value2: variant;
@@ -1314,7 +1316,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string):
+TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
