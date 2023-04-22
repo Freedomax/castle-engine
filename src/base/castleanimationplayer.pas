@@ -111,10 +111,10 @@ type
     { Add a keyframe. The time is calculated in seconds, with the time when the animation
       starts running as the zero second. LerpFunc represents the equation for modifying the
       original Lerp, if it's nil, it means that Lerp is not modified. Lerp always ranges from 0 to 1. }
-    function AddKeyframe(const ATime: TFloatTime; const AValue: variant;
-      const ALerpFunc: TLerpFunc = nil): TAnimationKeyframe; overload;
+    function AddKeyframeByString(const ATime: TFloatTime; const AValue: string;
+      const ALerpFunc: TLerpFunc = nil): TAnimationKeyframe; virtual; abstract;
+    function NewKeyFrame: TAnimationKeyframe; virtual; abstract;
     function AddKeyframe(const AValue: TAnimationKeyframe): TAnimationKeyframe;
-      overload;
     function RemoveKeyFrame(const AValue: TAnimationKeyframe): SizeInt; overload;
     procedure RemoveKeyFrame(AIndex: SizeInt); overload;
     { Add the value of the current object as a keyframe and return a value indicating success or failure. }
@@ -153,9 +153,10 @@ type
     end;
 
     procedure SetValue(const AValue: T); virtual; abstract;
-    class function KeyFrameValueToString: string; virtual; abstract;
-    class function KeyFrameValueFromString(const s: string):T; virtual; abstract;
+    class function KeyFrameValueToString(const AValue: T): string; virtual; abstract;
+    class function KeyFrameValueFromString(const s: string): T; virtual; abstract;
   public
+    function NewKeyFrame: TAnimationKeyframe; override;
     function AddKeyframe(const ATime: TFloatTime; const AValue: T;
       const ALerpFunc: TLerpFunc =
       nil):{$IFDEF FPC}specialize{$ENDIF} TAnimationKeyframeGeneric<T>;
@@ -168,6 +169,9 @@ type
 
   TAnimationVariantTrack = class abstract(
  {$IFDEF FPC}specialize{$ENDIF} TAnimationTrackGeneric<variant>)
+  protected
+    class function KeyFrameValueToString(const AValue: variant): string; override;
+    class function KeyFrameValueFromString(const s: string): variant; override;
   public
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
       override;
@@ -175,6 +179,9 @@ type
 
   TAnimationVector2Track = class abstract(
  {$IFDEF FPC}specialize{$ENDIF} TAnimationTrackGeneric<TVector2>)
+  protected
+    class function KeyFrameValueToString(const AValue: TVector2): string; override;
+    class function KeyFrameValueFromString(const s: string): TVector2; override;
   public
     function CalcValue(const Value1, Value2: TVector2; const ALerp: single): TVector2;
       override;
@@ -182,6 +189,9 @@ type
 
   TAnimationVector3Track = class abstract(
  {$IFDEF FPC}specialize{$ENDIF} TAnimationTrackGeneric<TVector3>)
+  protected
+    class function KeyFrameValueToString(const AValue: TVector3): string; override;
+    class function KeyFrameValueFromString(const s: string): TVector3; override;
   public
     function CalcValue(const Value1, Value2: TVector3; const ALerp: single): TVector3;
       override;
@@ -189,6 +199,9 @@ type
 
   TAnimationVector4Track = class abstract(
  {$IFDEF FPC}specialize{$ENDIF} TAnimationTrackGeneric<TVector4>)
+  protected
+    class function KeyFrameValueToString(const AValue: TVector4): string; override;
+    class function KeyFrameValueFromString(const s: string): TVector4; override;
   public
     function CalcValue(const Value1, Value2: TVector4; const ALerp: single): TVector4;
       override;
@@ -511,7 +524,7 @@ begin
   begin
     if bReading then
     begin
-      Frame := TAnimationKeyframe.Create;
+      Frame := NewKeyFrame;
       AddKeyframe(Frame);
     end
     else
@@ -540,16 +553,6 @@ begin
     Frame.ValueFromString(s);
   end;
 
-end;
-
-function TAnimationTrack.AddKeyframe(const ATime: TFloatTime;
-  const AValue: variant; const ALerpFunc: TLerpFunc): TAnimationKeyframe;
-begin
-  Result := TAnimationKeyframe.Create;
-  Result.Time := ATime;
-  Result.ValueFromString(AValue);
-  Result.LerpFunc := ALerpFunc;
-  AddKeyframe(Result);
 end;
 
 function TAnimationTrack.AddKeyframe(
@@ -918,6 +921,11 @@ begin
   end;
 end;
 
+function TAnimationTrackGeneric.NewKeyFrame: TAnimationKeyframe;
+begin
+  Result := TAnimationKeyframeInternal.Create;
+end;
+
 function TAnimationTrackGeneric.AddKeyframe(const ATime: TFloatTime;
   const AValue: T; const ALerpFunc: TLerpFunc):
  {$IFDEF FPC}specialize{$ENDIF} TAnimationKeyframeGeneric<T>;
@@ -931,13 +939,25 @@ end;
 
 function TAnimationTrackGeneric.TAnimationKeyframeInternal.ValueToString: string;
 begin
-  Result := TAnimationTrackGeneric.KeyFrameValueToString;
+  Result := TAnimationTrackGeneric.KeyFrameValueToString(Value);
 end;
 
 procedure TAnimationTrackGeneric.TAnimationKeyframeInternal.ValueFromString(
   const s: string);
 begin
   Value := TAnimationTrackGeneric.KeyFrameValueFromString(s);
+end;
+
+class function TAnimationVariantTrack.KeyFrameValueToString(
+  const AValue: variant): string;
+begin
+  Result := VariantToString(AValue);
+end;
+
+class function TAnimationVariantTrack.KeyFrameValueFromString(
+  const s: string): variant;
+begin
+  Result := VariantFromString(s);
 end;
 
 function TAnimationVariantTrack.CalcValue(const Value1, Value2: variant;
@@ -963,6 +983,29 @@ begin
       'TAnimationTrack.Interpolate: Unsupported variant type [%d][%d]',
       [VarType(Value1), VarType(Value2)]);
 
+end;
+
+class function TAnimationVector2Track.KeyFrameValueToString(
+  const AValue: TVector2): string;
+begin
+  Result := Format('(%s,%s)', [AValue[0], AValue[1]]);
+end;
+
+class function TAnimationVector2Track.KeyFrameValueFromString(
+  const s: string): TVector2;
+var
+  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  Len: integer;
+begin
+  Tokens := S.Trim(['(', ')']).Split([',']);
+  Len := Length(Tokens);
+  case Len of
+    2: Result := Vector2(StrToFloat(Tokens[0]), StrToFloat(Tokens[1]));
+    else
+    begin
+      WritelnWarning('Conversion to TVector2 failed: "%s"', [s]);
+    end;
+  end;
 end;
 
 function TAnimationVector2Track.CalcValue(const Value1, Value2: TVector2;
@@ -1060,11 +1103,58 @@ begin
   Result := SearchIndex(ATime) - 1;
 end;
 
+class function TAnimationVector3Track.KeyFrameValueToString(
+  const AValue: TVector3): string;
+begin
+  Result := Format('(%s,%s,%s)', [AValue[0], AValue[1], AValue[2]]);
+end;
+
+class function TAnimationVector3Track.KeyFrameValueFromString(
+  const s: string): TVector3;
+var
+  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  Len: integer;
+begin
+  Tokens := S.Trim(['(', ')']).Split([',']);
+  Len := Length(Tokens);
+  case Len of
+    3: Result := Vector3(StrToFloat(Tokens[0]), StrToFloat(Tokens[1]),
+        StrToFloat(Tokens[2]));
+    else
+    begin
+      WritelnWarning('Conversion to TVector3 failed: "%s"', [s]);
+    end;
+  end;
+end;
 
 function TAnimationVector3Track.CalcValue(const Value1, Value2: TVector3;
   const ALerp: single): TVector3;
 begin
   Result := (1 - ALerp) * Value1 + ALerp * Value2;
+end;
+
+class function TAnimationVector4Track.KeyFrameValueToString(
+  const AValue: TVector4): string;
+begin
+  Result := Format('(%s,%s,%s,%s)', [AValue[0], AValue[1], AValue[2], AValue[3]]);
+end;
+
+class function TAnimationVector4Track.KeyFrameValueFromString(
+  const s: string): TVector4;
+var
+  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  Len: integer;
+begin
+  Tokens := S.Trim(['(', ')']).Split([',']);
+  Len := Length(Tokens);
+  case Len of
+    4: Result := Vector4(StrToFloat(Tokens[0]), StrToFloat(Tokens[1]),
+        StrToFloat(Tokens[2]), StrToFloat(Tokens[3]));
+    else
+    begin
+      WritelnWarning('Conversion to TVector4 failed: "%s"', [s]);
+    end;
+  end;
 end;
 
 function TAnimationVector4Track.CalcValue(const Value1, Value2: TVector4;
@@ -1316,8 +1406,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
