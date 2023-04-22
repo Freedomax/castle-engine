@@ -109,6 +109,7 @@ type
     destructor Destroy; override;
     function ObjectName: string; virtual;
     function PropName: string; virtual;
+    function ValidValueString(const s: string): boolean; virtual; abstract;
 
     procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
       const APath: string; const bReading: boolean; const APlayer: TComponent); virtual;
@@ -172,6 +173,7 @@ type
     procedure Evaluate(const ATime: TFloatTime); override;
     function CalcValue(const Value1, Value2: T; const ALerp: single): T;
       virtual; abstract;
+    function ValidValueString(const s: string): boolean; override;
   end;
 
   TAnimationVariantTrack = class abstract(
@@ -327,13 +329,6 @@ type
 
 function FloatMod(a, b: TFloatTime): TFloatTime;
 
-function VariantToVector2(const V: variant): TVector2;
-function VariantFromVector2(const V: TVector2): variant;
-function VariantToVector3(const V: variant): TVector3;
-function VariantFromVector3(const V: TVector3): variant;
-function VariantToVector4(const V: variant): TVector4;
-function VariantFromVector4(const V: TVector4): variant;
-
 function VariantLen(const V: variant): integer;
 function VariantToString(const V: variant): string;
 function VariantFromString(const S: string): variant;
@@ -366,6 +361,66 @@ const
     {$Ifdef fpc}@{$endif}LerpMiddleWave,{$Ifdef fpc}@{$endif}LerpHighWave,
     {$Ifdef fpc}@{$endif}LerpBounce,{$Ifdef fpc}@{$endif}LerpCircle);
 
+
+function Vector2ToString(const AValue: TVector2): string;
+begin
+  Result := FormatDot('(%f,%f)', [AValue[0], AValue[1]]);
+end;
+
+function Vector2FromString(const s: string): TVector2;
+var
+  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  Len: integer;
+begin
+  Tokens := S.Trim(['(', ')']).Split([',']);
+  Len := Length(Tokens);
+  if Len = 2 then
+    Result := Vector2(StrToFloatDot(Tokens[0]), StrToFloatDot(Tokens[1]))
+  else
+    raise Exception.CreateFmt(
+      'Conversion to TVector2 failed: "%s", length not match.', [s]);
+end;
+
+function Vector3ToString(const AValue: TVector3): string;
+begin
+  Result := FormatDot('(%f,%f,%f)', [AValue[0], AValue[1], AValue[2]]);
+end;
+
+function Vector3FromString(const s: string): TVector3;
+var
+  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  Len: integer;
+begin
+  Tokens := S.Trim(['(', ')']).Split([',']);
+  Len := Length(Tokens);
+  if Len = 3 then
+    Result := Vector3(StrToFloatDot(Tokens[0]), StrToFloatDot(Tokens[1]),
+      StrToFloatDot(Tokens[2]))
+  else
+    raise Exception.CreateFmt(
+      'Conversion to TVector3 failed: "%s", length not match.', [s]);
+end;
+
+function Vector4ToString(const AValue: TVector4): string;
+begin
+  Result := FormatDot('(%f,%f,%f,%f)', [AValue[0], AValue[1], AValue[2], AValue[3]]);
+end;
+
+function Vector4FromString(const s: string): TVector4;
+var
+  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  Len: integer;
+begin
+  Tokens := S.Trim(['(', ')']).Split([',']);
+  Len := Length(Tokens);
+  if Len = 4 then
+    Result := Vector4(StrToFloatDot(Tokens[0]), StrToFloatDot(Tokens[1]),
+      StrToFloatDot(Tokens[2]), StrToFloatDot(Tokens[3]))
+  else
+    raise Exception.CreateFmt(
+      'Conversion to TVector4 failed: "%s", length not match.', [s]);
+end;
+
 function FloatMod(a, b: TFloatTime): TFloatTime;
 begin
   if b <= 0 then Exit(0);
@@ -381,50 +436,9 @@ begin
     Result := 1;
 end;
 
-function VariantToVector2(const V: variant): TVector2;
-begin
-  if VariantLen(v) <> 2 then
-    raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
-      [2, VariantLen(v)]);
-  Result := Vector2(V[0], V[1]);
-end;
-
-function VariantFromVector2(const V: TVector2): variant;
-begin
-  Result := VarArrayOf([V.X, V.Y]);
-end;
-
-function VariantToVector3(const V: variant): TVector3;
-begin
-  if VariantLen(v) <> 3 then
-    raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
-      [3, VariantLen(v)]);
-  Result := Vector3(V[0], V[1], V[2]);
-end;
-
-function VariantFromVector3(const V: TVector3): variant;
-begin
-  Result := VarArrayOf([V.X, V.Y, V.Z]);
-end;
-
-function VariantToVector4(const V: variant): TVector4;
-begin
-  if VariantLen(v) <> 4 then
-    raise Exception.CreateFmt('variant len not match. expected:%d get:%d',
-      [4, VariantLen(v)]);
-  Result := Vector4(V[0], V[1], V[2], V[3]);
-end;
-
-function VariantFromVector4(const V: TVector4): variant;
-begin
-  Result := VarArrayOf([V.X, V.Y, V.Z, V.W]);
-end;
-
 function VariantToString(const V: variant): string;
 var
-  I: integer;
   Len: integer;
-  ArrPtr: Pointer;
 begin
   if VarIsNull(v) then Exit('');
   if VarIsArray(V) then
@@ -562,8 +576,8 @@ begin
 
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -623,6 +637,19 @@ begin
   end;
 
   SetValue(AValue);
+end;
+
+function TAnimationTrackGeneric.ValidValueString(const s: string): boolean;
+var
+  AValue: T;
+begin
+  try
+    AValue := KeyFrameValueFromString(s);
+    CalcValue(AValue, AValue, 0.5);
+    Result := True;
+  except
+    Result := False;
+  end;
 end;
 
 function TAnimationTrack.Duration: TFloatTime;
@@ -947,8 +974,7 @@ begin
   inherited AddKeyframe(Result);
 end;
 
-function TAnimationTrackGeneric.TAnimationKeyframeInternal.GetOwnerTrack:
-TAnimationTrack;
+function TAnimationTrackGeneric.TAnimationKeyframeInternal.GetOwnerTrack: TAnimationTrack;
 begin
   Result := FOwner;
 end;
@@ -1003,23 +1029,12 @@ end;
 
 function TAnimationVector2Track.KeyFrameValueToString(const AValue: TVector2): string;
 begin
-  Result := FormatDot('(%f,%f)', [AValue[0], AValue[1]]);
+  Result := Vector2ToString(AValue);
 end;
 
 function TAnimationVector2Track.KeyFrameValueFromString(const s: string): TVector2;
-var
-  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
-  Len: integer;
 begin
-  Tokens := S.Trim(['(', ')']).Split([',']);
-  Len := Length(Tokens);
-  case Len of
-    2: Result := Vector2(StrToFloat(Tokens[0]), StrToFloat(Tokens[1]));
-    else
-    begin
-      WritelnWarning('Conversion to TVector2 failed: "%s"', [s]);
-    end;
-  end;
+  Result := Vector2FromString(s);
 end;
 
 function TAnimationVector2Track.CalcValue(const Value1, Value2: TVector2;
@@ -1119,24 +1134,12 @@ end;
 
 function TAnimationVector3Track.KeyFrameValueToString(const AValue: TVector3): string;
 begin
-  Result := FormatDot('(%f,%f,%f)', [AValue[0], AValue[1], AValue[2]]);
+  Result := Vector3ToString(AValue);
 end;
 
 function TAnimationVector3Track.KeyFrameValueFromString(const s: string): TVector3;
-var
-  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
-  Len: integer;
 begin
-  Tokens := S.Trim(['(', ')']).Split([',']);
-  Len := Length(Tokens);
-  case Len of
-    3: Result := Vector3(StrToFloat(Tokens[0]), StrToFloat(Tokens[1]),
-        StrToFloat(Tokens[2]));
-    else
-    begin
-      WritelnWarning('Conversion to TVector3 failed: "%s"', [s]);
-    end;
-  end;
+  Result := Vector3FromString(s);
 end;
 
 function TAnimationVector3Track.CalcValue(const Value1, Value2: TVector3;
@@ -1147,24 +1150,12 @@ end;
 
 function TAnimationVector4Track.KeyFrameValueToString(const AValue: TVector4): string;
 begin
-  Result := FormatDot('(%f,%f,%f,%f)', [AValue[0], AValue[1], AValue[2], AValue[3]]);
+   Result := Vector4ToString(AValue);
 end;
 
 function TAnimationVector4Track.KeyFrameValueFromString(const s: string): TVector4;
-var
-  Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
-  Len: integer;
 begin
-  Tokens := S.Trim(['(', ')']).Split([',']);
-  Len := Length(Tokens);
-  case Len of
-    4: Result := Vector4(StrToFloat(Tokens[0]), StrToFloat(Tokens[1]),
-        StrToFloat(Tokens[2]), StrToFloat(Tokens[3]));
-    else
-    begin
-      WritelnWarning('Conversion to TVector4 failed: "%s"', [s]);
-    end;
-  end;
+   Result := Vector4FromString(s);
 end;
 
 function TAnimationVector4Track.CalcValue(const Value1, Value2: TVector4;
@@ -1416,8 +1407,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

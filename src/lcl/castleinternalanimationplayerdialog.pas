@@ -728,13 +728,14 @@ begin
   s := TrackDesignerUI.KeyFrame.ValueToString;
   if InputQuery('set keyframe value', 'Input a new value:', s) then
   begin
-    try
-      { Check for exceptions. }
+    { Check for exceptions. }
+    if TrackDesignerUI.Track.ValidValueString(s) then
+    begin
       TrackDesignerUI.KeyFrame.ValueFromString(s);
       KeyFrameListChanged;
-    except
-      ShowMessage('Input value is incorrect.');
-    end;
+    end
+    else
+      ShowMessage('Input value is invalid.');
   end;
 end;
 
