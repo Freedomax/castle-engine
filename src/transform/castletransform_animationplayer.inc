@@ -15,7 +15,7 @@
 }
 
 {$ifdef read_interface}
-  TAnimationPropertyTrack = class(TAnimationTrack)
+  TAnimationPropertyTrack = class(TAnimationVariantTrack)
   strict private
     FInternalComponent: TComponent;
     function GetPropertyInfo: PPropInfo;
@@ -46,7 +46,7 @@
   strict private
     FTransform: TCastleTransform;
   strict protected
-    procedure SetValue(const AValue: variant); override;
+    procedure SetValue(const AValue: TVector3); override;
   public
     constructor Create(ATransform: TCastleTransform);
     function ObjectName: string; override;
@@ -64,7 +64,7 @@
   strict private
     FTransform: TCastleTransform;
   strict protected
-    procedure SetValue(const AValue: variant); override;
+    procedure SetValue(const AValue: TVector4); override;
   public
     constructor Create(ATransform: TCastleTransform);
     function ObjectName: string; override;
@@ -82,7 +82,7 @@
   strict private
     FTransform: TCastleTransform;
   strict protected
-    procedure SetValue(const AValue: variant); override;
+    procedure SetValue(const AValue: TVector3); override;
   public
     constructor Create(ATransform: TCastleTransform);
     function ObjectName: string; override;
@@ -309,9 +309,9 @@ begin
 end;
 
 { TAnimationTranslationTrack --------------------------------------------------------------- }
-procedure TAnimationTranslationTrack.SetValue(const AValue: variant);
+procedure TAnimationTranslationTrack.SetValue(const AValue: TVector3);
 begin
-  FTransform.Translation := VariantToVector3(AValue);
+  FTransform.Translation := AValue;
 end;
 
 constructor TAnimationTranslationTrack.Create(ATransform: TCastleTransform);
@@ -350,10 +350,10 @@ begin
 end;
 
 { TAnimationRotationTrack --------------------------------------------------------------- }
-procedure TAnimationRotationTrack.SetValue(const AValue: variant);
+procedure TAnimationRotationTrack.SetValue(const AValue: TVector4);
 begin
   if Assigned(FTransform) then
-    FTransform.Rotation := VariantToVector4(AValue);
+    FTransform.Rotation := AValue;
 end;
 
 constructor TAnimationRotationTrack.Create(ATransform: TCastleTransform);
@@ -391,9 +391,9 @@ begin
 end;
 
 { TAnimationScaleTrack --------------------------------------------------------------- }
-procedure TAnimationScaleTrack.SetValue(const AValue: variant);
+procedure TAnimationScaleTrack.SetValue(const AValue: TVector3);
 begin
-  FTransform.Scale := VariantToVector3(AValue);
+  FTransform.Scale := AValue;
 end;
 
 constructor TAnimationScaleTrack.Create(ATransform: TCastleTransform);

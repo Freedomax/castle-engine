@@ -19,7 +19,7 @@
   strict private
     FControl: TCastleUserInterface;
   strict protected
-    procedure SetValue(const AValue: variant); override;
+    procedure SetValue(const AValue: TVector2); override;
   public
     constructor Create(AControl: TCastleUserInterface);
     function ObjectName: string; override;
@@ -52,9 +52,9 @@ const
   SUserInterface = 'Control';
 
 { TAnimationPositionTrack --------------------------------------------------------------- }
-procedure TAnimationPositionTrack.SetValue(const AValue: variant);
+procedure TAnimationPositionTrack.SetValue(const AValue: TVector2);
 begin
-  FControl.Translation := VariantToVector2(AValue);
+  FControl.Translation := AValue;
 end;
 
 constructor TAnimationPositionTrack.Create(AControl: TCastleUserInterface);

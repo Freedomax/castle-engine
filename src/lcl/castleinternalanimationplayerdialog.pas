@@ -33,7 +33,7 @@ type
     FTrack: TAnimationTrack;
     FTrackColor: TCastleColor;
     FIsDragingKeyFrame: boolean;
-    FDragingKeyFrame: TAnimationTrack.TAnimationKeyframe;
+    FDragingKeyFrame: TAnimationKeyframe;
     procedure SetSelected(const AValue: boolean);
     procedure SetTrack(const AValue: TAnimationTrack);
     procedure SetTrackColor(const AValue: TCastleColor);
@@ -43,7 +43,7 @@ type
     function TimeToLocalPos(const ATime: TFloatTime; const APixelsPerSceond: single;
       const AScrollTime: TFloatTime): single;
     function SelectFrame(const APos: TVector2; const APixelsPerSceond: single;
-      const AScrollTime: TFloatTime): TAnimationTrack.TAnimationKeyframe;
+      const AScrollTime: TFloatTime): TAnimationKeyframe;
     { APos is in final device pixels. }
     function PosToTime(const APos: TVector2; const APixelsPerSceond: single;
       const AScrollTime: TFloatTime): TFloatTime;
@@ -56,15 +56,14 @@ type
       const AScrollTime: TFloatTime): integer;
     function UnderMouse: boolean;
 
-    function BeginDragKeyFrame(
-      const AFrame: TAnimationTrack.TAnimationKeyframe): boolean;
+    function BeginDragKeyFrame(const AFrame: TAnimationKeyframe): boolean;
     function EndDragKeyFrame: boolean;
 
     property Track: TAnimationTrack read FTrack write SetTrack;
     property Selected: boolean read FSelected write SetSelected;
     property TrackColor: TCastleColor read FTrackColor write SetTrackColor;
     property IsDragingKeyFrame: boolean read FIsDragingKeyFrame;
-    property DragingKeyFrame: TAnimationTrack.TAnimationKeyframe read FDragingKeyFrame;
+    property DragingKeyFrame: TAnimationKeyframe read FDragingKeyFrame;
   end;
 
   TTrackViewList = class( {$Ifdef fpc}specialize{$endif} TObjectList<TTrackView>)
@@ -104,12 +103,12 @@ type
 
   TKeyFrameDesignerUI = class(TCastleUserInterface)
   strict private
-    FKeyFrame: TAnimationTrack.TAnimationKeyframe;
+    FKeyFrame: TAnimationKeyframe;
     FTrack: TAnimationTrack;
     FUIContainer: TCastleVerticalGroup;
     FLerpFuncPreview: TLerpFuncPreview;
     FFrameValueControl, FFrameTimeControl: TCastleLabel;
-    procedure SetKeyFrame(const AValue: TAnimationTrack.TAnimationKeyframe);
+    procedure SetKeyFrame(const AValue: TAnimationKeyframe);
     procedure SetTrack(const AValue: TAnimationTrack);
   public
   const
@@ -122,8 +121,7 @@ type
     property FrameValueControl: TCastleLabel read FFrameValueControl;
     property FrameTimeControl: TCastleLabel read FFrameTimeControl;
     property Track: TAnimationTrack read FTrack write SetTrack;
-    property KeyFrame: TAnimationTrack.TAnimationKeyframe
-      read FKeyFrame write SetKeyFrame;
+    property KeyFrame: TAnimationKeyframe read FKeyFrame write SetKeyFrame;
   end;
 
   TAnimationPlayerView = class(TCastleView)
@@ -194,6 +192,7 @@ type
     procedure TrackDesignerUISetKeyFrameValueClick(Sender: TObject);
 
     function AlignedTime(const ATime, Atom: TFloatTime): TFloatTime;
+    procedure TrackListChanged; virtual;
 
     property CurrentTime: TFloatTime read GetCurrentTime write SetCurrentTime;
   public
@@ -329,7 +328,7 @@ begin
 end;
 
 function TTrackView.SelectFrame(const APos: TVector2; const APixelsPerSceond: single;
-  const AScrollTime: TFloatTime): TAnimationTrack.TAnimationKeyframe;
+  const AScrollTime: TFloatTime): TAnimationKeyframe;
 var
   AIndex: integer;
   X, XFrame: single;
@@ -393,8 +392,7 @@ begin
   Result := R.Contains(Container.MousePosition);
 end;
 
-function TTrackView.BeginDragKeyFrame(
-  const AFrame: TAnimationTrack.TAnimationKeyframe): boolean;
+function TTrackView.BeginDragKeyFrame(const AFrame: TAnimationKeyframe): boolean;
 begin
   Result := Assigned(AFrame);
   if not Result then exit;
@@ -410,8 +408,7 @@ begin
   FDragingKeyFrame := nil;
 end;
 
-procedure TKeyFrameDesignerUI.SetKeyFrame(
-  const AValue: TAnimationTrack.TAnimationKeyframe);
+procedure TKeyFrameDesignerUI.SetKeyFrame(const AValue: TAnimationKeyframe);
 begin
   if FKeyFrame = AValue then Exit;
   FKeyFrame := AValue;
@@ -454,7 +451,7 @@ end;
 procedure TKeyFrameDesignerUI.UpdateControls;
 begin
   if not Assigned(FKeyFrame) then Exit;
-  FFrameValueControl.Caption := VariantToString(FKeyFrame.Value);
+  FFrameValueControl.Caption := FKeyFrame.ValueToString;
   FFrameTimeControl.Caption := FormatDot('%.2f s', [FKeyFrame.Time]);
   FLerpFuncPreview.LerpFunc := FKeyFrame.LerpFunc;
 end;
@@ -728,26 +725,18 @@ end;
 procedure TAnimationPlayerView.TrackDesignerUISetKeyFrameValueClick(Sender: TObject);
 var
   s: string;
-  v: variant;
 begin
-  s := VariantToString(TrackDesignerUI.KeyFrame.Value);
+  s := TrackDesignerUI.KeyFrame.ValueToString;
   if InputQuery('set keyframe value', 'Input a new value:', s) then
   begin
-    v := VariantFromString(s);
-    if (VarType(v) = VarType(TrackDesignerUI.KeyFrame.Value)) and
-      (VariantLen(v) = VariantLen(TrackDesignerUI.KeyFrame.Value)) then
+    { Check for exceptions. }
+    if TrackDesignerUI.Track.ValidValueString(s) then
     begin
-      try
-        { Check for exceptions. }
-        TrackDesignerUI.Track.CalcValue(v, TrackDesignerUI.KeyFrame.Value, 0.5);
-        TrackDesignerUI.KeyFrame.Value := v;
-        KeyFrameListChanged;
-      except
-        ShowMessage('Input value is incorrect.');
-      end;
+      TrackDesignerUI.KeyFrame.ValueFromString(s);
+      KeyFrameListChanged;
     end
     else
-      ShowMessage('Input value type not match.');
+      ShowMessage('Input value is invalid.');
   end;
 end;
 
@@ -760,6 +749,13 @@ begin
   Result := Result - Reminder;
   if Reminder >= 0.5 * atom then
     Result := Result + atom;
+end;
+
+procedure TAnimationPlayerView.TrackListChanged;
+begin
+  TrackDesignerUI.Track := nil;
+  TrackDesignerUI.KeyFrame := nil;
+  ReloadTracks;
 end;
 
 procedure TAnimationPlayerView.AddKeyFrameButtonClick(Sender: TObject);
@@ -1007,7 +1003,7 @@ procedure TAnimationPlayerView.ATrackViewPress(const Sender: TCastleUserInterfac
   const Event: TInputPressRelease; var Handled: boolean);
 var
   ATrackView: TTrackView;
-  AFrame: TAnimationTrack.TAnimationKeyframe;
+  AFrame: TAnimationKeyframe;
 begin
   if Event.IsMouseButton(buttonLeft) then
   begin
@@ -1167,7 +1163,7 @@ begin
       Exit;
 
   CurrentAnimation.RemoveTrack(CurrentAnimation.TrackList[AIndex]);
-  ReloadTracks;
+  TrackListChanged;
 end;
 
 function TAnimationPlayerView.GetCurrentAnimation: TAnimation;
@@ -1318,6 +1314,7 @@ begin
       ATrackContainer.InsertFront(ATrackView);
       FTrackViewList.Add(ATrackView);
     end;
+
     KeyFrameListChanged;
 
   finally
@@ -1442,7 +1439,7 @@ var
   ATrackView: TTrackView;
   V: TVector2;
   AIndex: integer;
-  AKeyFrame: TAnimationTrack.TAnimationKeyframe;
+  AKeyFrame: TAnimationKeyframe;
 begin
   inherited Update(SecondsPassed, HandleInput);
 
@@ -1518,7 +1515,7 @@ begin
     Exit;
   end;
   CurrentAnimation.AddTrack(ATrack);
-  ReloadTracks;
+  TrackListChanged;
 end;
 
 procedure TAnimationPlayerView.LerpfuncItemClick(Sender: TObject);
@@ -1955,7 +1952,7 @@ end;
 procedure TAnimationPlayerDialog.CurrentAnimationChanged;
 begin
   UpdateUIControls;
-  FView.ReloadTracks;
+  FView.TrackListChanged;
   Fview.ResetScrollTime;
 end;
 
