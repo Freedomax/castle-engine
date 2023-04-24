@@ -166,6 +166,7 @@ type
     procedure ATrackViewRender(const Sender: TCastleUserInterface);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
+    procedure FAnimationPlayerCurrentAnimationTrackListChanged(Sender: TObject);
     procedure FTrackScrollbarScroll(Sender: TObject);
     function GetCurrentTime: TFloatTime;
     procedure KeyFrameListChanged;
@@ -625,6 +626,7 @@ begin
     begin
       FAnimationPlayer.OnAnimationComplete := nil;
       FAnimationPlayer.OnCurrentAnimationChanged := nil;
+      FAnimationPlayer.OnCurrentAnimationTrackListChanged := nil;
       FAnimationPlayer.RemoveFreeNotification(Self);
     end;
     FAnimationPlayer := AValue;
@@ -635,6 +637,8 @@ begin
       FAnimationPlayer.OnCurrentAnimationChanged :=
  {$Ifdef fpc}@{$endif}FAnimationPlayerCurrentAnimationChanged;
       FAnimationPlayer.FreeNotification(Self);
+      FAnimationPlayer.OnCurrentAnimationTrackListChanged :=
+  {$Ifdef fpc}@{$endif}FAnimationPlayerCurrentAnimationTrackListChanged;
     end;
     if Assigned(FAnimationPlayerChanged) then FAnimationPlayerChanged(Self);
   end;
@@ -1101,6 +1105,12 @@ begin
   if Assigned(FCurrentAnimationChanged) then FCurrentAnimationChanged(Self);
 end;
 
+procedure TAnimationPlayerView.FAnimationPlayerCurrentAnimationTrackListChanged(
+  Sender: TObject);
+begin
+  TrackListChanged;
+end;
+
 procedure TAnimationPlayerView.FTrackScrollbarScroll(Sender: TObject);
 begin
   FScrollTime := (Sender as TCastleScrollBar).Position;
@@ -1163,7 +1173,6 @@ begin
       Exit;
 
   CurrentAnimation.RemoveTrack(CurrentAnimation.TrackList[AIndex]);
-  TrackListChanged;
 end;
 
 function TAnimationPlayerView.GetCurrentAnimation: TAnimation;
@@ -1515,7 +1524,6 @@ begin
     Exit;
   end;
   CurrentAnimation.AddTrack(ATrack);
-  TrackListChanged;
 end;
 
 procedure TAnimationPlayerView.LerpfuncItemClick(Sender: TObject);

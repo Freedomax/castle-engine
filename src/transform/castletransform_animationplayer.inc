@@ -246,17 +246,7 @@ procedure TAnimationPropertyTrack.CustomSerialization(
 var
   s: string;
   Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
-  OldComponent: TComponent;
 begin
-  if bReading then
-  begin
-    OldComponent := FComponent;
-    FComponent := nil;
-  end;
-  inherited;
-  if bReading then
-    FComponent := OldComponent;
-
   s := FriendlyObjectName;
   SerializationProcess.ReadWriteString(
     KeyProp(APath, 'FriendlyObjectName'),
@@ -264,15 +254,16 @@ begin
   if bReading and (s <> '') then
   begin
     FriendlyObjectName := s;
-    Tokens := s.Split(['.']);
-    if Length(Tokens) < 1 then
+    //Get FPersistent
+    s := '';
+    SerializationProcess.ReadWriteString(KeyProp(APath, 'Component'), s, s <> '');
+    if (s = '') then
     begin
-      WritelnWarning('Canot serialize FriendlyObjectName, empty value.');
-    end
-    else
-    begin
-      //Get FPersistent
-      SerializationProcess.RequireComponent(self, GetPropInfo(self, 'Component'), Tokens[0]);
+      Tokens := FriendlyObjectName.Split(['.']);
+      if Length(Tokens) < 1 then
+        WritelnWarning('Canot serialize FriendlyObjectName, empty value.')
+      else
+        SerializationProcess.RequireComponent(self, GetPropInfo(self, 'Component'), Tokens[0]);
     end;
   end;
 
@@ -281,6 +272,8 @@ begin
     KeyProp(APath, 'PropertyName'),
     s, s <> '');
   if bReading then FProperty := s;
+
+  inherited;
 end;
 
 function TAnimationPropertyTrack.AddKeyframeAtTime(const ATime: TFloatTime;

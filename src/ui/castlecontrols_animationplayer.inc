@@ -57,7 +57,7 @@ end;
 procedure TAnimationPositionTrack.SetControl(const AValue: TCastleUserInterface
   );
 begin
-  SetComponent(FComponent);
+  SetComponent(AValue);
 end;
 
 { TAnimationPositionTrack --------------------------------------------------------------- }

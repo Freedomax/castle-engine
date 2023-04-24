@@ -85,6 +85,8 @@ type
     function TimeToKeyFrame(const ATime: TFloatTime): SizeInt;
   end;
 
+  TAnimation = class;
+
   { Inherit from TComponent for RegisterClass, de/serilization referenced component, freenotify. }
   TAnimationTrack = class abstract(TComponent)
   strict private
@@ -102,6 +104,7 @@ type
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
   protected
     FComponent: TComponent;
+    FAnimation: TAnimation;
     FKeyframeList: TAnimationKeyframeList;
     { For mode @link(tmDiscrete), no need to execute every frame, so check the last executed frame. }
     FLastExecutedKeyFrame: TAnimationKeyframe;
@@ -233,10 +236,13 @@ type
 
   TAnimationPlayStyle = (apsOnce, apsLoop, apsPingPong, apsPingPongOnce);
 
+  TAnimationPlayer = class;
+
   TAnimation = class
   strict private
     FMaxTime: TFloatTime;
     FOnComplete: TNotifyEvent;
+    FOnTrackListChanged: TNotifyEvent;
     FPlayStyle: TAnimationPlayStyle;
     FTrackList: TAnimationTrackList;
     FCurrentTime: TFloatTime;
@@ -244,6 +250,7 @@ type
     FSpeed: single;
     procedure SetActualCurrentTime(const AValue: TFloatTime);
     procedure SetOnComplete(const AValue: TNotifyEvent);
+    procedure SetOnTrackListChanged(const AValue: TNotifyEvent);
     procedure SetPlayStyle(const AValue: TAnimationPlayStyle);
     procedure TrackListNotify(ASender: TObject;
       {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
@@ -252,15 +259,18 @@ type
     function Loop: boolean;
     { Whenever KeyFrameList or TrackList changes, this function will be triggered.
       Then we update the value of FMaxTime.}
-    procedure Changed;
+    procedure UpdateMaxTime;
     procedure TrackChange(Sender: TObject);
     function GetPingPongEvalTime: TFloatTime;
   protected
+    FPlayer: TAnimationPlayer;
     procedure Update(const DeltaTime: TFloatTime);
     procedure UpdateByCurrentTime(out bCompleted: boolean);
     procedure UpdateByTime(const ATime: TFloatTime);
 
     property OnComplete: TNotifyEvent read FOnComplete write SetOnComplete;
+    property OnTrackListChanged: TNotifyEvent
+      read FOnTrackListChanged write SetOnTrackListChanged;
   public
     constructor Create;
     destructor Destroy; override;
@@ -300,9 +310,12 @@ type
     FAnimationList: TAnimationList;
     FOnAnimationComplete: TNotifyEvent;
     FOnCurrentAnimationChanged: TNotifyEvent;
+    FOnCurrentAnimationTrackListChanged: TNotifyEvent;
     FPlaying: boolean;
+    procedure AAnimationTrackListChanged(Sender: TObject);
     procedure SetOnAnimationComplete(const AValue: TNotifyEvent);
     procedure SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
+    procedure SetOnCurrentAnimationTrackListChanged(const AValue: TNotifyEvent);
     procedure UpdateAnimation;
     procedure SetAnimation(const AValue: string);
     procedure SetPlaying(const AValue: boolean);
@@ -336,6 +349,8 @@ type
       read FOnAnimationComplete write SetOnAnimationComplete;
     property OnCurrentAnimationChanged: TNotifyEvent
       read FOnCurrentAnimationChanged write SetOnCurrentAnimationChanged;
+    property OnCurrentAnimationTrackListChanged: TNotifyEvent
+      read FOnCurrentAnimationTrackListChanged write SetOnCurrentAnimationTrackListChanged;
   end;
 
 function FloatMod(a, b: TFloatTime): TFloatTime;
@@ -515,6 +530,7 @@ end;
 
 destructor TAnimationTrack.Destroy;
 begin
+  if Assigned(FComponent) then FComponent.RemoveFreeNotification(Self);
   FKeyframeList.Free;
   inherited Destroy;
 end;
@@ -593,8 +609,8 @@ begin
 
 end;
 
-function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
-TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(
+  const AValue: TAnimationKeyframe): TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -689,13 +705,20 @@ end;
 procedure TAnimation.TrackListNotify(ASender: TObject;
   {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: TAnimationTrack; AAction: TCollectionNotification);
 begin
-  Changed;
+  UpdateMaxTime;
+  if Assigned(FOnTrackListChanged) then FOnTrackListChanged(Self);
 end;
 
 procedure TAnimation.SetOnComplete(const AValue: TNotifyEvent);
 begin
   if not SameMethods(TMethod(FOnComplete), TMethod(AValue)) then
     FOnComplete := AValue;
+end;
+
+procedure TAnimation.SetOnTrackListChanged(const AValue: TNotifyEvent);
+begin
+  if not SameMethods(TMethod(FOnTrackListChanged), TMethod(AValue)) then
+    FOnTrackListChanged := AValue;
 end;
 
 procedure TAnimation.SetActualCurrentTime(const AValue: TFloatTime);
@@ -753,6 +776,7 @@ end;
 procedure TAnimation.AddTrack(const Track: TAnimationTrack);
 begin
   FTrackList.Add(Track);
+  Track.FAnimation := Self;
   Track.OnChange := {$Ifdef fpc}@{$endif}TrackChange;
 end;
 
@@ -863,7 +887,7 @@ begin
   if not FPlaying then FPlaying := True;
 end;
 
-procedure TAnimation.Changed;
+procedure TAnimation.UpdateMaxTime;
 var
   Track: TAnimationTrack;
 begin
@@ -877,7 +901,7 @@ end;
 
 procedure TAnimation.TrackChange(Sender: TObject);
 begin
-  Changed;
+  UpdateMaxTime;
 end;
 
 function TAnimation.GetPingPongEvalTime: TFloatTime;
@@ -907,8 +931,11 @@ begin
   inherited Notification(AComponent, Operation);
   if Operation = opRemove then
   begin
-    //TODO: remove me
-    WritelnLog('remove me.');
+    //FComponent destroyed, remove me
+    if Assigned(FAnimation) then
+    begin
+      FAnimation.RemoveTrack(Self);
+    end;
   end;
 end;
 
@@ -1302,10 +1329,23 @@ begin
     FOnAnimationComplete := AValue;
 end;
 
+procedure TAnimationPlayer.AAnimationTrackListChanged(Sender: TObject);
+begin
+  if (Sender = CurrentAnimation) and Assigned(FOnCurrentAnimationTrackListChanged) then
+    FOnCurrentAnimationTrackListChanged(Self);
+end;
+
 procedure TAnimationPlayer.SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
 begin
   if not SameMethods(TMethod(FOnCurrentAnimationChanged), TMethod(AValue)) then
     FOnCurrentAnimationChanged := AValue;
+end;
+
+procedure TAnimationPlayer.SetOnCurrentAnimationTrackListChanged(
+  const AValue: TNotifyEvent);
+begin
+  if not SameMethods(TMethod(FOnCurrentAnimationTrackListChanged), TMethod(AValue)) then
+    FOnCurrentAnimationTrackListChanged := AValue;
 end;
 
 procedure TAnimationPlayer.SetAnimation(const AValue: string);
@@ -1320,7 +1360,7 @@ begin
       FAnimation := '';
       { "Animation" is a published property, it is normal that it does not exist
         during the first deserialization. }
-      if not (csLoading in ComponentState) then
+      if not (self.IsLoading) then
         WritelnWarning('AnimationPlayer', 'Animation "%s" not exists', [AValue]);
     end;
     UpdateAnimation;
@@ -1351,7 +1391,9 @@ end;
 procedure TAnimationPlayer.AddAnimationNoCheck(const AName: string;
   const AAnimation: TAnimation);
 begin
+  AAnimation.FPlayer := Self;
   AAnimation.OnComplete := {$Ifdef fpc}@{$endif}InternalAnimationComplete;
+  AAnimation.OnTrackListChanged := {$Ifdef fpc}@{$endif}AAnimationTrackListChanged;
   FAnimationList.Add(AName, AAnimation);
 end;
 

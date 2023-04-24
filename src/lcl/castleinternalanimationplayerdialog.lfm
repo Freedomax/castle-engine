@@ -9,7 +9,6 @@ object AnimationPlayerDialog: TAnimationPlayerDialog
   FormStyle = fsStayOnTop
   Position = poMainFormCenter
   ShowInTaskBar = stAlways
-  LCLVersion = '2.3.0.0'
   object CastleControl1: TCastleControl
     Left = 0
     Height = 386
