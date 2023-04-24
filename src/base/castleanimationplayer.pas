@@ -85,8 +85,8 @@ type
     function TimeToKeyFrame(const ATime: TFloatTime): SizeInt;
   end;
 
-  { Inherit from TPersistent for RegisterClass and de/serilization referenced component. }
-  TAnimationTrack = class abstract(TPersistent)
+  { Inherit from TComponent for RegisterClass, de/serilization referenced component, freenotify. }
+  TAnimationTrack = class abstract(TComponent)
   strict private
     FOnChange: TNotifyEvent;
 
@@ -101,13 +101,17 @@ type
     { This notification is used by @link(TAnimation), please do not use it. }
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
   protected
+    FComponent: TComponent;
     FKeyframeList: TAnimationKeyframeList;
     { For mode @link(tmDiscrete), no need to execute every frame, so check the last executed frame. }
     FLastExecutedKeyFrame: TAnimationKeyframe;
     FMode: TAnimationTrackMode;
     FFriendlyObjectName: string;
     function GetFriendlyObjectName: string; virtual;
+    procedure SetComponent(const AValue: TComponent); virtual;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
+    constructor Create(AOwner: TComponent); overload; override;
     constructor Create; overload; virtual;
     destructor Destroy; override;
     function ObjectName: string; virtual;
@@ -140,6 +144,8 @@ type
       this equation will be ignored. }
     property Mode: TAnimationTrackMode read FMode write FMode;
     property KeyframeList: TAnimationKeyframeList read FKeyframeList;
+  published
+    property Component: TComponent read FComponent write SetComponent;
   end;
 
   TAnimationTrackClass = class of TAnimationTrack;
@@ -579,6 +585,12 @@ begin
     Frame.ValueFromString(s);
   end;
 
+  //Get FComponent
+  if Assigned(FComponent) then s := FComponent.Name
+  else
+    s := '';
+  ComponentSerialization(SerializationProcess, self, 'Component', s, APath, bReading);
+
 end;
 
 function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
@@ -882,15 +894,28 @@ begin
     FOnChange := AValue;
 end;
 
+procedure TAnimationTrack.SetComponent(const AValue: TComponent);
+begin
+  if FComponent = AValue then Exit;
+  if Assigned(FComponent) then FComponent.RemoveFreeNotification(Self);
+  FComponent := AValue;
+  if Assigned(FComponent) then FComponent.FreeNotification(Self);
+end;
+
+procedure TAnimationTrack.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if Operation = opRemove then
+  begin
+    //TODO: remove me
+    WritelnLog('remove me.');
+  end;
+end;
+
 function TAnimationTrack.GetFriendlyObjectName: string;
 begin
   Result := FFriendlyObjectName;
   if Result = '' then Result := ObjectName;
-end;
-
-procedure TAnimationTrack.SetFriendlyObjectName(const AValue: string);
-begin
-  if FFriendlyObjectName <> AValue then FFriendlyObjectName := AValue;
 end;
 
 function CompareKeyframe({$ifdef GENERICS_CONSTREF}constref{$else}const{$endif}
@@ -899,17 +924,28 @@ begin
   Result := CompareValue(Left.Time, Right.Time);
 end;
 
-constructor TAnimationTrack.Create;
+constructor TAnimationTrack.Create(AOwner: TComponent);
 type
   TInternalKeyframeComparer =
     {$IFDEF FPC}specialize{$ENDIF}TComparer<TAnimationKeyframe>;
 begin
-  inherited Create;
+  if Assigned(AOwner) then raise Exception.Create('Owner should be nil.');
+  inherited Create(nil);
   FMode := TAnimationTrackMode.tmContinuous;
   FKeyframeList := TAnimationKeyframeList.Create(TInternalKeyframeComparer.Construct(
     {$Ifdef fpc}@{$endif}CompareKeyframe), True);
   FKeyframeList.OnNotify :=
     {$Ifdef fpc}@{$endif}KeyframesNotify;
+end;
+
+procedure TAnimationTrack.SetFriendlyObjectName(const AValue: string);
+begin
+  if FFriendlyObjectName <> AValue then FFriendlyObjectName := AValue;
+end;
+
+constructor TAnimationTrack.Create;
+begin
+  Create(nil);
 end;
 
 procedure TAnimationTrack.KeyFramInTrackChange(ASender: TObject;
@@ -1456,8 +1492,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]

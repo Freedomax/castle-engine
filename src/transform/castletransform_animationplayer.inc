@@ -17,15 +17,14 @@
 {$ifdef read_interface}
   TAnimationPropertyTrack = class(TAnimationVariantTrack)
   strict private
-    FInternalComponent: TComponent;
     function GetPropertyInfo: PPropInfo;
     procedure SetPersistent(const AValue: TPersistent);
-    procedure SetInternalComponent(const AValue: TComponent);
   protected
     FPersistent: TPersistent;
     FProperty: string;
     FPropertyInfo: PPropInfo;
     procedure SetValue(const AValue: variant); override;
+    procedure SetComponent(const AValue: TComponent); override;
   public
     constructor Create(APersistent: TPersistent; const AProperty: string); overload;
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
@@ -39,62 +38,54 @@
     property Persistent: TPersistent read FPersistent write SetPersistent ;
     property PropertyName: string read FProperty;
     property PropertyInfo: PPropInfo read GetPropertyInfo;
-  published
-    property InternalComponent: TComponent read FInternalComponent write SetInternalComponent ;
   end;
 
   TAnimationTranslationTrack = class(TAnimationVector3Track)
-  strict private
-    FTransform: TCastleTransform;
+  private
+    function GetTransform: TCastleTransform;
+    procedure SetTransform(const AValue: TCastleTransform);
   protected
     procedure SetValue(const AValue: TVector3); override;
   public
     constructor Create(ATransform: TCastleTransform);
     function ObjectName: string; override;
     function PropName: string; override;
-    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
-      const APath: string; const bReading: boolean; const APlayer: TComponent);
-      override;
     function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
   published
-    property Transform: TCastleTransform read FTransform write FTransform;
+    property Transform: TCastleTransform read GetTransform write SetTransform;
   end;
 
   TAnimationRotationTrack = class(TAnimationVector4Track)
-  strict private
-    FTransform: TCastleTransform;
+  private
+    function GetTransform: TCastleTransform;
+    procedure SetTransform(const AValue: TCastleTransform);
   protected
     procedure SetValue(const AValue: TVector4); override;
   public
     constructor Create(ATransform: TCastleTransform);
     function ObjectName: string; override;
     function PropName: string; override;
-    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
-      const APath: string; const bReading: boolean; const APlayer: TComponent);
-      override;
     function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
   published
-    property Transform: TCastleTransform read FTransform write FTransform;
+    property Transform: TCastleTransform read GetTransform write SetTransform;
   end;
 
   TAnimationScaleTrack = class(TAnimationVector3Track)
-  strict private
-    FTransform: TCastleTransform;
+  private
+    function GetTransform: TCastleTransform;
+    procedure SetTransform(const AValue: TCastleTransform);
   protected
     procedure SetValue(const AValue: TVector3); override;
   public
     constructor Create(ATransform: TCastleTransform);
     function ObjectName: string; override;
     function PropName: string; override;
-    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
-      const APath: string; const bReading: boolean; const APlayer: TComponent);
-      override;
     function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
   published
-    property Transform: TCastleTransform read FTransform write FTransform;
+    property Transform: TCastleTransform read GetTransform write SetTransform;
   end;
 
   TCastleAnimationPlayerTransform = class(TCastleTransform)
@@ -112,9 +103,6 @@
 {$endif read_interface}
 
 {$ifdef read_implementation}
-const
-  STransform = 'Transform';
-
 function TAnimationPropertyTrack.GetPropertyInfo: PPropInfo;
 begin
   if not Assigned(FPropertyInfo) and Assigned(FPersistent) and (FProperty <> '') Then
@@ -129,7 +117,7 @@ begin
   //TODO: FPersistent freenotify
 end;
 
-procedure TAnimationPropertyTrack.SetInternalComponent(const AValue: TComponent
+procedure TAnimationPropertyTrack.SetComponent(const AValue: TComponent
   );
 
   function ChildObject(Persistent: TPersistent; const AName: string): TPersistent;
@@ -173,12 +161,12 @@ procedure TAnimationPropertyTrack.SetInternalComponent(const AValue: TComponent
   end;
 
 begin
-  if FInternalComponent <> AValue then
+  if FComponent <> AValue then
   begin
-    FInternalComponent := AValue;
-    if not Assigned(FInternalComponent) then Exit;
+    inherited;
+    if not Assigned(FComponent) then Exit;
     { Load FPersistent from FriendlyObjectName. }
-    Persistent := GetObject(FInternalComponent, FriendlyObjectName);
+    Persistent := GetObject(FComponent, FriendlyObjectName);
   end;
 end;
 
@@ -258,13 +246,22 @@ procedure TAnimationPropertyTrack.CustomSerialization(
 var
   s: string;
   Tokens: {$Ifdef fpc}specialize{$endif}TArray<string>;
+  OldComponent: TComponent;
 begin
+  if bReading then
+  begin
+    OldComponent := FComponent;
+    FComponent := nil;
+  end;
   inherited;
+  if bReading then
+    FComponent := OldComponent;
+
   s := FriendlyObjectName;
   SerializationProcess.ReadWriteString(
     KeyProp(APath, 'FriendlyObjectName'),
     s, s <> '');
-  if bReading and ( s<>'' ) then
+  if bReading and (s <> '') then
   begin
     FriendlyObjectName := s;
     Tokens := s.Split(['.']);
@@ -275,7 +272,7 @@ begin
     else
     begin
       //Get FPersistent
-      SerializationProcess.RequireComponent(self, GetPropInfo(self, 'InternalComponent'), Tokens[0]);
+      SerializationProcess.RequireComponent(self, GetPropInfo(self, 'Component'), Tokens[0]);
     end;
   end;
 
@@ -313,21 +310,32 @@ begin
   Result := FProperty;
 end;
 
+function TAnimationTranslationTrack.GetTransform: TCastleTransform;
+begin
+  Result := TCastleTransform(FComponent);
+end;
+
+procedure TAnimationTranslationTrack.SetTransform(const AValue: TCastleTransform
+  );
+begin
+  SetComponent(AValue);
+end;
+
 { TAnimationTranslationTrack --------------------------------------------------------------- }
 procedure TAnimationTranslationTrack.SetValue(const AValue: TVector3);
 begin
-  FTransform.Translation := AValue;
+  Transform.Translation := AValue;
 end;
 
 constructor TAnimationTranslationTrack.Create(ATransform: TCastleTransform);
 begin
   inherited Create;
-  FTransform := ATransform;
+  Transform := ATransform;
 end;
 
 function TAnimationTranslationTrack.ObjectName: string;
 begin
-  if Assigned(FTransform) then Result := FTransform.Name
+  if Assigned(Transform) then Result := Transform.Name
   else
     Result := '';
 end;
@@ -337,39 +345,40 @@ begin
   Result := 'Translation';
 end;
 
-procedure TAnimationTranslationTrack.CustomSerialization(
-  const SerializationProcess: TSerializationProcess; const APath: string;
-  const bReading: boolean; const APlayer: TComponent);
-begin
-  inherited;
-  //Get FTransform
-  ComponentSerialization(SerializationProcess, self, STransform, ObjectName, APath, bReading);
-end;
-
 function TAnimationTranslationTrack.AddKeyframeAtTime(const ATime: TFloatTime;
   const ALerpFunc: TLerpFunc): boolean;
 begin
-  if not Assigned(FTransform) then Exit(inherited);
-  AddKeyframe(ATime, FTransform.Translation, ALerpFunc);
+  if not Assigned(Transform) then Exit(inherited);
+  AddKeyframe(ATime, Transform.Translation, ALerpFunc);
   Result :=True;
+end;
+
+function TAnimationRotationTrack.GetTransform: TCastleTransform;
+begin
+  Result := TCastleTransform(FComponent);
+end;
+
+procedure TAnimationRotationTrack.SetTransform(const AValue: TCastleTransform);
+begin
+  SetComponent(AValue);
 end;
 
 { TAnimationRotationTrack --------------------------------------------------------------- }
 procedure TAnimationRotationTrack.SetValue(const AValue: TVector4);
 begin
-  if Assigned(FTransform) then
-    FTransform.Rotation := AValue;
+  if Assigned(Transform) then
+    Transform.Rotation := AValue;
 end;
 
 constructor TAnimationRotationTrack.Create(ATransform: TCastleTransform);
 begin
   inherited Create;
-  FTransform := ATransform;
+  Transform := ATransform;
 end;
 
 function TAnimationRotationTrack.ObjectName: string;
 begin
-  if Assigned(FTransform) then Result := FTransform.Name
+  if Assigned(Transform) then Result := Transform.Name
   else Result := '';
 end;
 
@@ -378,38 +387,39 @@ begin
   Result := 'Rotation';
 end;
 
-procedure TAnimationRotationTrack.CustomSerialization(
-  const SerializationProcess: TSerializationProcess; const APath: string;
-  const bReading: boolean; const APlayer: TComponent);
-begin
-  inherited;
-  //Get FTransform
-  ComponentSerialization(SerializationProcess, self, STransform, ObjectName, APath, bReading);
-end;
-
 function TAnimationRotationTrack.AddKeyframeAtTime(const ATime: TFloatTime;
   const ALerpFunc: TLerpFunc): boolean;
 begin
-  if not Assigned(FTransform) then Exit(inherited);
-  AddKeyframe(ATime, FTransform.Rotation, ALerpFunc);
+  if not Assigned(Transform) then Exit(inherited);
+  AddKeyframe(ATime, Transform.Rotation, ALerpFunc);
   Result :=True;
+end;
+
+function TAnimationScaleTrack.GetTransform: TCastleTransform;
+begin
+  Result := TCastleTransform(FComponent);
+end;
+
+procedure TAnimationScaleTrack.SetTransform(const AValue: TCastleTransform);
+begin
+    SetComponent(AValue);
 end;
 
 { TAnimationScaleTrack --------------------------------------------------------------- }
 procedure TAnimationScaleTrack.SetValue(const AValue: TVector3);
 begin
-  FTransform.Scale := AValue;
+  Transform.Scale := AValue;
 end;
 
 constructor TAnimationScaleTrack.Create(ATransform: TCastleTransform);
 begin
   inherited Create;
-  FTransform := ATransform;
+  Transform := ATransform;
 end;
 
 function TAnimationScaleTrack.ObjectName: string;
 begin
-  if Assigned(FTransform) then Result := FTransform.Name
+  if Assigned(Transform) then Result := Transform.Name
   else Result := '';
 end;
 
@@ -418,20 +428,11 @@ begin
   Result := 'Scale';
 end;
 
-procedure TAnimationScaleTrack.CustomSerialization(
-  const SerializationProcess: TSerializationProcess; const APath: string;
-  const bReading: boolean; const APlayer: TComponent);
-begin
-  inherited;
-  //Get FTransform
-  ComponentSerialization(SerializationProcess, self, STransform, ObjectName, APath, bReading);
-end;
-
 function TAnimationScaleTrack.AddKeyframeAtTime(const ATime: TFloatTime;
   const ALerpFunc: TLerpFunc): boolean;
 begin
-  if not Assigned(FTransform) then Exit(inherited);
-  AddKeyframe(ATime, FTransform.Scale, ALerpFunc);
+  if not Assigned(Transform) then Exit(inherited);
+  AddKeyframe(ATime, Transform.Scale, ALerpFunc);
   Result :=True;
 end;
 
