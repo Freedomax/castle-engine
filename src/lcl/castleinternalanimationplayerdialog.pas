@@ -1442,6 +1442,7 @@ begin
   ButtonAddKeyFrame.AutoSize := False;
   ButtonAddKeyFrame.Height := TrackListHeadHeight;
   ButtonAddKeyFrame.Width := TrackListHeadHeight;
+  ButtonAddKeyFrame.Exists := False;
   FRoot.InsertFront(ButtonAddKeyFrame);
 
   TrackDesignerUI := TKeyFrameDesignerUI.Create(Self);
