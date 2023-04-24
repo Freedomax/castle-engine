@@ -13,6 +13,7 @@ type
   TPropertySelectResult = class
   public
     SelectedObject: TPersistent;
+    SelectedComponent: TComponent;
     SelectedProperty: string;
     FriendlyObjectName: string;
 
@@ -70,6 +71,7 @@ end;
 procedure TPropertySelectResult.Clear;
 begin
   SelectedObject := nil;
+  SelectedComponent := nil;
   SelectedProperty := '';
   FriendlyObjectName := '';
 end;
@@ -174,6 +176,7 @@ begin
 
     if Assigned(ComponentNode) then
     begin
+      R.SelectedComponent := TComponent(ComponentNode.Data);
       R.SelectedObject := TPersistent(ComponentNode.Data);
       R.FriendlyObjectName := ComponentNode.Text;
     end;
@@ -189,6 +192,7 @@ begin
 
     if Assigned(ComponentNode) then
     begin
+      R.SelectedComponent := TComponent(ComponentNode.Data);
       R.SelectedObject := TPersistent(ComponentNode.Data);
       R.FriendlyObjectName := ComponentNode.Text;
     end;

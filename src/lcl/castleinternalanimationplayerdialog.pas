@@ -635,6 +635,7 @@ begin
       FAnimationPlayer.OnCurrentAnimationChanged := nil;
       FAnimationPlayer.OnCurrentAnimationTrackListChanged := nil;
       FAnimationPlayer.OnAnimationListChanged := nil;
+
       FAnimationPlayer.RemoveFreeNotification(Self);
     end;
 
@@ -646,11 +647,12 @@ begin
        {$Ifdef fpc}@{$endif}FAnimationPlayerAnimationComplete;
       FAnimationPlayer.OnCurrentAnimationChanged :=
        {$Ifdef fpc}@{$endif}FAnimationPlayerCurrentAnimationChanged;
-      FAnimationPlayer.FreeNotification(Self);
       FAnimationPlayer.OnCurrentAnimationTrackListChanged :=
        {$Ifdef fpc}@{$endif}FAnimationPlayerCurrentAnimationTrackListChanged;
       FAnimationPlayer.OnAnimationListChanged :=
        {$Ifdef fpc}@{$endif}FAnimationPlayerAnimationListChanged;
+
+      FAnimationPlayer.FreeNotification(Self);
     end;
 
     if Assigned(FOnAnimationPlayerChanged) then FOnAnimationPlayerChanged(Self);
@@ -1608,6 +1610,7 @@ begin
         begin
           Track := TAnimationPropertyTrack.Create(R.SelectedObject,
             R.SelectedProperty);
+          Track.Component := R.SelectedComponent;
           Track.FriendlyObjectName := R.FriendlyObjectName;
           FView.AddTrack(Track);
           Inc(ACount);
