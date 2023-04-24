@@ -581,8 +581,8 @@ begin
 
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -925,7 +925,6 @@ begin
     TKeyFrameChangeType.kfcValue:
       FLastExecutedKeyFrame := nil;
     TKeyFrameChangeType.kfcLerpFunc: ;
-    else;
   end;
 end;
 
@@ -962,7 +961,8 @@ begin
   end;
 end;
 
-function TAnimationTrackGeneric{$IFNDEF FPC}<T>{$ENDIF}.SameKeyFrameValue(const Value1, Value2: T): boolean;
+function TAnimationTrackGeneric{$IFNDEF FPC}<T>{$ENDIF}.SameKeyFrameValue(
+  const Value1, Value2: T): boolean;
 begin
   Result := False;
 end;
@@ -993,7 +993,8 @@ begin
   Result := FOwner;
 end;
 
-function TAnimationTrackGeneric{$IFNDEF FPC}<T>{$ENDIF}.TAnimationKeyframeInternal.SameKeyFrameValue(
+function TAnimationTrackGeneric{$IFNDEF FPC}<T>
+{$ENDIF}.TAnimationKeyframeInternal.SameKeyFrameValue(
   const Value1, Value2: T): boolean;
 begin
   if Assigned(FOwner) then
@@ -1117,7 +1118,8 @@ begin
   Changed(kfcValue);
 end;
 
-function TAnimationKeyframeGeneric{$IFNDEF FPC}<T>{$ENDIF}.SameKeyFrameValue(const Value1, Value2: T): boolean;
+function TAnimationKeyframeGeneric{$IFNDEF FPC}<T>{$ENDIF}.SameKeyFrameValue(
+  const Value1, Value2: T): boolean;
 begin
   Result := False;
 end;
