@@ -19,27 +19,28 @@
   strict private
     FInternalComponent: TComponent;
     function GetPropertyInfo: PPropInfo;
+    procedure SetComponent(const AValue: TPersistent);
     procedure SetInternalComponent(const AValue: TComponent);
   strict protected
-   FComponent: TPersistent;
-   FProperty: string;
-   FPropertyInfo: PPropInfo;
-   procedure SetValue(const AValue: variant); override;
+    FComponent: TPersistent;
+    FProperty: string;
+    FPropertyInfo: PPropInfo;
+    procedure SetValue(const AValue: variant); override;
   public
-   constructor Create(AComponent: TPersistent; const AProperty: string); overload;
-      function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
+    constructor Create(AComponent: TPersistent; const AProperty: string); overload;
+    function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
      override;
-   procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
+    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
      const APath: string; const bReading: boolean; const APlayer: TComponent); override;
-   function AddKeyframeAtTime(const ATime: TFloatTime;
+    function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
-   function ObjectName: string; override;
-   function PropName: string; override;
-   property Component: TPersistent read FComponent;
-   property PropertyName: string read FProperty;
-   property PropertyInfo: PPropInfo read GetPropertyInfo;
+    function ObjectName: string; override;
+    function PropName: string; override;
+    property Component: TPersistent read FComponent write SetComponent ;
+    property PropertyName: string read FProperty;
+    property PropertyInfo: PPropInfo read GetPropertyInfo;
   published
-   property InternalComponent: TComponent read FInternalComponent write SetInternalComponent ;
+    property InternalComponent: TComponent read FInternalComponent write SetInternalComponent ;
   end;
 
   TAnimationTranslationTrack = class(TAnimationVector3Track)
@@ -121,6 +122,13 @@ begin
   Result := FPropertyInfo;
 end;
 
+procedure TAnimationPropertyTrack.SetComponent(const AValue: TPersistent);
+begin
+  if FComponent = AValue then Exit;
+  FComponent := AValue;
+  //TODO: FComponent freenotify
+end;
+
 procedure TAnimationPropertyTrack.SetInternalComponent(const AValue: TComponent
   );
 
@@ -171,7 +179,7 @@ begin
     FInternalComponent := AValue;
     if not Assigned(FInternalComponent) then Exit;
     { Load FComponent from FriendlyObjectName. }
-    FComponent := GetObject(FInternalComponent, FriendlyObjectName);
+    Component := GetObject(FInternalComponent, FriendlyObjectName);
   end;
 end;
 
@@ -224,7 +232,7 @@ constructor TAnimationPropertyTrack.Create(AComponent: TPersistent;
   const AProperty: string);
 begin
   Create;
-  FComponent := AComponent;
+  Component := AComponent;
   FProperty := AProperty;
   FPropertyInfo := GetPropInfo(FComponent, FProperty);
 
