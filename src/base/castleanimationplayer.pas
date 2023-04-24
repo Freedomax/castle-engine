@@ -309,11 +309,15 @@ type
     FCurrentAnimation: TAnimation;
     FAnimationList: TAnimationList;
     FOnAnimationComplete: TNotifyEvent;
+    FOnAnimationListChanged: TNotifyEvent;
     FOnCurrentAnimationChanged: TNotifyEvent;
     FOnCurrentAnimationTrackListChanged: TNotifyEvent;
     FPlaying: boolean;
     procedure AAnimationTrackListChanged(Sender: TObject);
+    procedure FAnimationListKeyNotify(ASender: TObject; const AItem: string;
+      AAction: TCollectionNotification);
     procedure SetOnAnimationComplete(const AValue: TNotifyEvent);
+    procedure SetOnAnimationListChanged(const AValue: TNotifyEvent);
     procedure SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
     procedure SetOnCurrentAnimationTrackListChanged(const AValue: TNotifyEvent);
     procedure UpdateAnimation;
@@ -351,6 +355,8 @@ type
       read FOnCurrentAnimationChanged write SetOnCurrentAnimationChanged;
     property OnCurrentAnimationTrackListChanged: TNotifyEvent
       read FOnCurrentAnimationTrackListChanged write SetOnCurrentAnimationTrackListChanged;
+    property OnAnimationListChanged: TNotifyEvent
+      read FOnAnimationListChanged write SetOnAnimationListChanged;
   end;
 
 function FloatMod(a, b: TFloatTime): TFloatTime;
@@ -609,8 +615,8 @@ begin
 
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -1329,10 +1335,22 @@ begin
     FOnAnimationComplete := AValue;
 end;
 
+procedure TAnimationPlayer.SetOnAnimationListChanged(const AValue: TNotifyEvent);
+begin
+  if not SameMethods(TMethod(FOnAnimationListChanged), TMethod(AValue)) then
+    FOnAnimationListChanged := AValue;
+end;
+
 procedure TAnimationPlayer.AAnimationTrackListChanged(Sender: TObject);
 begin
   if (Sender = CurrentAnimation) and Assigned(FOnCurrentAnimationTrackListChanged) then
     FOnCurrentAnimationTrackListChanged(Self);
+end;
+
+procedure TAnimationPlayer.FAnimationListKeyNotify(ASender: TObject;
+  const AItem: string; AAction: TCollectionNotification);
+begin
+  if Assigned(FOnAnimationListChanged) then FOnAnimationListChanged(Self);
 end;
 
 procedure TAnimationPlayer.SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
@@ -1524,6 +1542,7 @@ begin
   inherited Create(AOwner);
   { not ownvalues. wo need rename animation. }
   FAnimationList := TAnimationList.Create([]);
+  FAnimationList.OnKeyNotify := {$Ifdef fpc}@{$endif}FAnimationListKeyNotify;
   FPlaying := True;
 end;
 
@@ -1534,7 +1553,8 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(
+  const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
