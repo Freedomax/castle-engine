@@ -126,11 +126,12 @@ type
 
   TAnimationPlayerView = class(TCastleView)
   strict private
-    FAnimationPlayerChanged: TNotifyEvent;
-    FCurrentAnimationChanged: TNotifyEvent;
+    FOnAnimationListChanged: TNotifyEvent;
+    FOnAnimationPlayerChanged: TNotifyEvent;
+    FOnCurrentAnimationChanged: TNotifyEvent;
     FPixelsPerSecond: single;
     FPlaying: boolean;
-    FPlayingChanged: TNotifyEvent;
+    FOnPlayingChanged: TNotifyEvent;
     FScrollTime: TFloatTime;
   const
     TrackHeight = 100;
@@ -165,19 +166,22 @@ type
       const Event: TInputPressRelease; var Handled: boolean);
     procedure ATrackViewRender(const Sender: TCastleUserInterface);
     procedure FAnimationPlayerAnimationComplete(Sender: TObject);
+    procedure FAnimationPlayerAnimationListChanged(Sender: TObject);
     procedure FAnimationPlayerCurrentAnimationChanged(Sender: TObject);
+    procedure FAnimationPlayerCurrentAnimationTrackListChanged(Sender: TObject);
     procedure FTrackScrollbarScroll(Sender: TObject);
     function GetCurrentTime: TFloatTime;
     procedure KeyFrameListChanged;
+    procedure SetOnAnimationListChanged(const AValue: TNotifyEvent);
     procedure UpdateTimeBar;
     function GetCurrentAnimation: TAnimation;
     procedure SetAnimationPlayer(const AValue: TAnimationPlayer);
-    procedure SetAnimationPlayerChanged(const AValue: TNotifyEvent);
-    procedure SetCurrentAnimationChanged(const AValue: TNotifyEvent);
+    procedure SetOnAnimationPlayerChanged(const AValue: TNotifyEvent);
+    procedure SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
     procedure SetCurrentTime(const AValue: TFloatTime);
     procedure SetPixelsPerSecond(const AValue: single);
     procedure SetPlaying(const AValue: boolean);
-    procedure SetPlayingChanged(const AValue: TNotifyEvent);
+    procedure SetOnPlayingChanged(const AValue: TNotifyEvent);
     procedure CorrectTrackViewWidth(const ATrackView: TTrackView);
   protected
     ButtonAddKeyFrame: TCastleButton;
@@ -215,11 +219,14 @@ type
     property CurrentAnimation: TAnimation read GetCurrentAnimation;
     property Playing: boolean read FPlaying write SetPlaying;
     property PixelsPerSecond: single read FPixelsPerSecond write SetPixelsPerSecond;
-    property PlayingChanged: TNotifyEvent read FPlayingChanged write SetPlayingChanged;
-    property AnimationPlayerChanged: TNotifyEvent
-      read FAnimationPlayerChanged write SetAnimationPlayerChanged;
-    property CurrentAnimationChanged: TNotifyEvent
-      read FCurrentAnimationChanged write SetCurrentAnimationChanged;
+    property OnPlayingChanged: TNotifyEvent read FOnPlayingChanged
+      write SetOnPlayingChanged;
+    property OnAnimationPlayerChanged: TNotifyEvent
+      read FOnAnimationPlayerChanged write SetOnAnimationPlayerChanged;
+    property OnAnimationListChanged: TNotifyEvent
+      read FOnAnimationListChanged write SetOnAnimationListChanged;
+    property OnCurrentAnimationChanged: TNotifyEvent
+      read FOnCurrentAnimationChanged write SetOnCurrentAnimationChanged;
   end;
 
   TAnimationPlayerDialog = class(TForm)
@@ -270,6 +277,7 @@ type
   private
     FView: TAnimationPlayerView;
 
+    procedure FViewAnimationListChanged(Sender: TObject);
     procedure FViewAnimationPlayerChanged(Sender: TObject);
     procedure FViewCurrentAnimationChanged(Sender: TObject);
     procedure FViewPlayingChanged(Sender: TObject);
@@ -625,32 +633,41 @@ begin
     begin
       FAnimationPlayer.OnAnimationComplete := nil;
       FAnimationPlayer.OnCurrentAnimationChanged := nil;
+      FAnimationPlayer.OnCurrentAnimationTrackListChanged := nil;
+      FAnimationPlayer.OnAnimationListChanged := nil;
       FAnimationPlayer.RemoveFreeNotification(Self);
     end;
+
     FAnimationPlayer := AValue;
+
     if Assigned(FAnimationPlayer) then
     begin
       FAnimationPlayer.OnAnimationComplete :=
- {$Ifdef fpc}@{$endif}FAnimationPlayerAnimationComplete;
+       {$Ifdef fpc}@{$endif}FAnimationPlayerAnimationComplete;
       FAnimationPlayer.OnCurrentAnimationChanged :=
- {$Ifdef fpc}@{$endif}FAnimationPlayerCurrentAnimationChanged;
+       {$Ifdef fpc}@{$endif}FAnimationPlayerCurrentAnimationChanged;
       FAnimationPlayer.FreeNotification(Self);
+      FAnimationPlayer.OnCurrentAnimationTrackListChanged :=
+       {$Ifdef fpc}@{$endif}FAnimationPlayerCurrentAnimationTrackListChanged;
+      FAnimationPlayer.OnAnimationListChanged :=
+       {$Ifdef fpc}@{$endif}FAnimationPlayerAnimationListChanged;
     end;
-    if Assigned(FAnimationPlayerChanged) then FAnimationPlayerChanged(Self);
+
+    if Assigned(FOnAnimationPlayerChanged) then FOnAnimationPlayerChanged(Self);
   end;
 
 end;
 
-procedure TAnimationPlayerView.SetAnimationPlayerChanged(const AValue: TNotifyEvent);
+procedure TAnimationPlayerView.SetOnAnimationPlayerChanged(const AValue: TNotifyEvent);
 begin
-  if not SameMethods(TMethod(FAnimationPlayerChanged), TMethod(AValue)) then
-    FAnimationPlayerChanged := AValue;
+  if not SameMethods(TMethod(FOnAnimationPlayerChanged), TMethod(AValue)) then
+    FOnAnimationPlayerChanged := AValue;
 end;
 
-procedure TAnimationPlayerView.SetCurrentAnimationChanged(const AValue: TNotifyEvent);
+procedure TAnimationPlayerView.SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
 begin
-  if not SameMethods(TMethod(FCurrentAnimationChanged), TMethod(AValue)) then
-    FCurrentAnimationChanged := AValue;
+  if not SameMethods(TMethod(FOnCurrentAnimationChanged), TMethod(AValue)) then
+    FOnCurrentAnimationChanged := AValue;
 end;
 
 procedure TAnimationPlayerView.SetCurrentTime(const AValue: TFloatTime);
@@ -678,7 +695,7 @@ begin
       else
         CurrentAnimation.Stop;
     end;
-    if Assigned(FPlayingChanged) then FPlayingChanged(Self);
+    if Assigned(FOnPlayingChanged) then FOnPlayingChanged(Self);
 
     if FPlaying and Assigned(AnimationPlayer) and not AnimationPlayer.Playing then
       ShowMessage(
@@ -686,10 +703,10 @@ begin
   end;
 end;
 
-procedure TAnimationPlayerView.SetPlayingChanged(const AValue: TNotifyEvent);
+procedure TAnimationPlayerView.SetOnPlayingChanged(const AValue: TNotifyEvent);
 begin
-  if FPlayingChanged <> AValue then
-    FPlayingChanged := AValue;
+  if FOnPlayingChanged <> AValue then
+    FOnPlayingChanged := AValue;
 end;
 
 procedure TAnimationPlayerView.CorrectTrackViewWidth(const ATrackView: TTrackView);
@@ -1095,10 +1112,21 @@ begin
   Playing := False;
 end;
 
+procedure TAnimationPlayerView.FAnimationPlayerAnimationListChanged(Sender: TObject);
+begin
+  if Assigned(FOnAnimationListChanged) then FOnAnimationListChanged(Self);
+end;
+
 procedure TAnimationPlayerView.FAnimationPlayerCurrentAnimationChanged(
   Sender: TObject);
 begin
-  if Assigned(FCurrentAnimationChanged) then FCurrentAnimationChanged(Self);
+  if Assigned(FOnCurrentAnimationChanged) then FOnCurrentAnimationChanged(Self);
+end;
+
+procedure TAnimationPlayerView.FAnimationPlayerCurrentAnimationTrackListChanged(
+  Sender: TObject);
+begin
+  TrackListChanged;
 end;
 
 procedure TAnimationPlayerView.FTrackScrollbarScroll(Sender: TObject);
@@ -1117,6 +1145,12 @@ procedure TAnimationPlayerView.KeyFrameListChanged;
 begin
   UpdateTimeBar;
   TrackDesignerUI.UpdateControls;
+end;
+
+procedure TAnimationPlayerView.SetOnAnimationListChanged(const AValue: TNotifyEvent);
+begin
+  if not SameMethods(TMethod(FOnAnimationListChanged), TMethod(AValue)) then
+    FOnAnimationListChanged := AValue;
 end;
 
 procedure TAnimationPlayerView.UpdateTimeBar;
@@ -1163,7 +1197,6 @@ begin
       Exit;
 
   CurrentAnimation.RemoveTrack(CurrentAnimation.TrackList[AIndex]);
-  TrackListChanged;
 end;
 
 function TAnimationPlayerView.GetCurrentAnimation: TAnimation;
@@ -1409,6 +1442,7 @@ begin
   ButtonAddKeyFrame.AutoSize := False;
   ButtonAddKeyFrame.Height := TrackListHeadHeight;
   ButtonAddKeyFrame.Width := TrackListHeadHeight;
+  ButtonAddKeyFrame.Exists := False;
   FRoot.InsertFront(ButtonAddKeyFrame);
 
   TrackDesignerUI := TKeyFrameDesignerUI.Create(Self);
@@ -1515,7 +1549,6 @@ begin
     Exit;
   end;
   CurrentAnimation.AddTrack(ATrack);
-  TrackListChanged;
 end;
 
 procedure TAnimationPlayerView.LerpfuncItemClick(Sender: TObject);
@@ -1559,6 +1592,8 @@ procedure TAnimationPlayerDialog.MenuItem1Click(Sender: TObject);
 var
   Form: TPropertySelectForm;
   Track: TAnimationPropertyTrack;
+  R: TPropertySelectResult;
+  ACount: integer;
 begin
   Form := TPropertySelectForm.Create(nil);
   try
@@ -1566,16 +1601,19 @@ begin
 
     if Form.ShowModal = mrOk then
     begin
-      if Assigned(Form.SelectResult.SelectedObject) and
-        (Form.SelectResult.SelectedProperty <> '') then
+      ACount := 0;
+      for R in Form.SelectResult do
       begin
-        Track := TAnimationPropertyTrack.Create(Form.SelectResult.SelectedObject,
-          Form.SelectResult.SelectedProperty);
-        Track.FriendlyObjectName := Form.SelectResult.FriendlyObjectName;
-        FView.AddTrack(Track);
-      end
-      else
-        ShowMessage('Did not complete the selection.');
+        if Assigned(R.SelectedObject) and (R.SelectedProperty <> '') then
+        begin
+          Track := TAnimationPropertyTrack.Create(R.SelectedObject,
+            R.SelectedProperty);
+          Track.FriendlyObjectName := R.FriendlyObjectName;
+          FView.AddTrack(Track);
+          Inc(ACount);
+        end;
+      end;
+      if ACount = 0 then ShowMessage('Did not complete the selection.');
     end;
   finally
     FreeAndNil(Form);
@@ -1678,7 +1716,6 @@ begin
   begin
     AnimationPlayer.NewAnimation(AName);
     AnimationPlayer.Animation := AName;
-    AnimationListChanged;
   end;
 end;
 
@@ -1691,18 +1728,17 @@ begin
     TMsgDlgType.mtConfirmation, [mbOK, mbCancel], '') = mrCancel then
     Exit;
   AnimationPlayer.RemoveAnimation(AName);
-  AnimationListChanged;
 end;
 
 procedure TAnimationPlayerDialog.MenuItemRenameAnimationClick(Sender: TObject);
 var
-  AName: string;
+  AName, AOldName: string;
 begin
+  AOldName := AnimationPlayer.Animation;
   AName := AnimationPlayer.Animation;
   if InputQuery('Rename Animation', 'Input new name:', AName) then
   begin
-    AnimationPlayer.RenameAnimation(AnimationPlayer.Animation, AName);
-    AnimationListChanged;
+    AnimationPlayer.RenameAnimation(AOldName, AName);
   end;
 end;
 
@@ -1733,6 +1769,8 @@ end;
 function TAnimationPlayerDialog.SelectTransform: TCastleTransform;
 var
   Form: TPropertySelectForm;
+  R: TPropertySelectResult;
+  bok: boolean;
 begin
   Result := nil;
   Form := TPropertySelectForm.Create(nil);
@@ -1741,13 +1779,18 @@ begin
 
     if Form.ShowModal = mrOk then
     begin
-      if Assigned(Form.SelectResult.SelectedObject) and
-        (Form.SelectResult.SelectedObject is TCastleTransform) then
+      bok := (Form.SelectResult.Count > 0);
+      if bok then
       begin
-        Result := Form.SelectResult.SelectedObject as TCastleTransform;
-      end
-      else
+        R := Form.SelectResult.First;
+        bok := Assigned(R.SelectedObject) and (R.SelectedObject is
+          TCastleTransform);
+        if bok then
+          Result := R.SelectedObject as TCastleTransform;
+      end;
+      if not bok then
         ShowMessage('Did not complete the selection.');
+
     end;
   finally
     FreeAndNil(Form);
@@ -1757,6 +1800,8 @@ end;
 function TAnimationPlayerDialog.SelectUI: TCastleUserInterface;
 var
   Form: TPropertySelectForm;
+  R: TPropertySelectResult;
+  bok: boolean;
 begin
   Result := nil;
   Form := TPropertySelectForm.Create(nil);
@@ -1765,13 +1810,18 @@ begin
 
     if Form.ShowModal = mrOk then
     begin
-      if Assigned(Form.SelectResult.SelectedObject) and
-        (Form.SelectResult.SelectedObject is TCastleUserInterface) then
+      bok := (Form.SelectResult.Count > 0);
+      if bok then
       begin
-        Result := Form.SelectResult.SelectedObject as TCastleUserInterface;
-      end
-      else
+        R := Form.SelectResult.First;
+        bok := Assigned(R.SelectedObject) and (R.SelectedObject is
+          TCastleUserInterface);
+        if bok then
+          Result := R.SelectedObject as TCastleUserInterface;
+      end;
+      if not bok then
         ShowMessage('Did not complete the selection.');
+
     end;
   finally
     FreeAndNil(Form);
@@ -1813,6 +1863,11 @@ begin
     Caption := ACaption
   else
     Caption := ACaption + ' - ' + AName;
+  AnimationListChanged;
+end;
+
+procedure TAnimationPlayerDialog.FViewAnimationListChanged(Sender: TObject);
+begin
   AnimationListChanged;
 end;
 
@@ -1885,9 +1940,10 @@ begin
   if not Assigned(FView) then
   begin
     FView := TAnimationPlayerView.Create(CastleControl1);
-    FView.PlayingChanged := {$Ifdef fpc}@{$endif}FViewPlayingChanged;
-    FView.AnimationPlayerChanged := {$Ifdef fpc}@{$endif}FViewAnimationPlayerChanged;
-    FView.CurrentAnimationChanged := {$Ifdef fpc}@{$endif}FViewCurrentAnimationChanged;
+    FView.OnPlayingChanged := {$Ifdef fpc}@{$endif}FViewPlayingChanged;
+    FView.OnAnimationPlayerChanged := {$Ifdef fpc}@{$endif}FViewAnimationPlayerChanged;
+    FView.OnCurrentAnimationChanged := {$Ifdef fpc}@{$endif}FViewCurrentAnimationChanged;
+    FView.OnAnimationListChanged := {$Ifdef fpc}@{$endif}FViewAnimationListChanged;
     CastleControl1.Container.View := FView;
     CastleControl1.Container.BackgroundColor := CastleColors.Gray;
     BuildLerpFuncMenu;

@@ -46,11 +46,12 @@ object PropertySelectForm: TPropertySelectForm
     Top = 0
     Width = 359
     Align = alClient
+    MultiSelect = True
     ReadOnly = True
     ShowSeparators = False
     TabOrder = 2
     OnDblClick = TreeViewPropertiesDblClick
-    Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
+    Options = [tvoAllowMultiselect, tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
   end
   object Splitter1: TSplitter
     Left = 408

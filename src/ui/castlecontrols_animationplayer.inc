@@ -16,21 +16,19 @@
 
 {$ifdef read_interface}
   TAnimationPositionTrack = class(TAnimationVector2Track)
-  strict private
-    FControl: TCastleUserInterface;
+  private
+    function GetControl: TCastleUserInterface;
+    procedure SetControl(const AValue: TCastleUserInterface);
   strict protected
     procedure SetValue(const AValue: TVector2); override;
   public
     constructor Create(AControl: TCastleUserInterface);
     function ObjectName: string; override;
     function PropName: string; override;
-    procedure CustomSerialization(const SerializationProcess: TSerializationProcess;
-      const APath: string; const bReading: boolean; const APlayer: TComponent);
-      override;
     function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
   published
-    property Control: TCastleUserInterface read FControl write FControl;
+    property Control: TCastleUserInterface read GetControl write SetControl;
   end;
 
   TCastleAnimationPlayer = class(TCastleUserInterface)
@@ -51,21 +49,32 @@
 const
   SUserInterface = 'Control';
 
+function TAnimationPositionTrack.GetControl: TCastleUserInterface;
+begin
+  Result := TCastleUserInterface(FComponent);
+end;
+
+procedure TAnimationPositionTrack.SetControl(const AValue: TCastleUserInterface
+  );
+begin
+  SetComponent(AValue);
+end;
+
 { TAnimationPositionTrack --------------------------------------------------------------- }
 procedure TAnimationPositionTrack.SetValue(const AValue: TVector2);
 begin
-  FControl.Translation := AValue;
+  Control.Translation := AValue;
 end;
 
 constructor TAnimationPositionTrack.Create(AControl: TCastleUserInterface);
 begin
   inherited Create;
-  FControl := AControl;
+  Control := AControl;
 end;
 
 function TAnimationPositionTrack.ObjectName: string;
 begin
-  if Assigned(FControl) then Result := FControl.Name
+  if Assigned(Control) then Result := Control.Name
   else Result := '';
 end;
 
@@ -74,20 +83,11 @@ begin
   Result := 'Translation';
 end;
 
-procedure TAnimationPositionTrack.CustomSerialization(
-  const SerializationProcess: TSerializationProcess; const APath: string;
-  const bReading: boolean; const APlayer: TComponent);
-begin
-  inherited;
-  //Get FControl
-  ComponentSerialization(SerializationProcess, self, SUserInterface, ObjectName, APath, bReading);
-end;
-
 function TAnimationPositionTrack.AddKeyframeAtTime(const ATime: TFloatTime;
   const ALerpFunc: TLerpFunc): boolean;
 begin
-  if not Assigned(FControl) then Exit(inherited);
-  AddKeyframe(ATime, FControl.Translation, ALerpFunc);
+  if not Assigned(Control) then Exit(inherited);
+  AddKeyframe(ATime, Control.Translation, ALerpFunc);
   Result :=True;
 end;
 
