@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ButtonPanel, ComCtrls,
   ExtCtrls, CastleControls, CastleUIControls, CastleTransform, CastleViewport,
-  RttiUtils;
+  RttiUtils, Generics.Collections;
 
 type
   TPropertySelectResult = class
@@ -18,6 +18,12 @@ type
 
     constructor Create;
     procedure Clear;
+  end;
+
+  TPropertySelectResultList = class(
+ {$Ifdef fpc}specialize{$endif}TObjectList<TPropertySelectResult>)
+  public
+    function HasValidResult: boolean;
   end;
 
   TPropertySelectMode = (psmProperty, psmComponent);
@@ -34,13 +40,13 @@ type
     procedure TreeViewControlsSelectionChanged(Sender: TObject);
     procedure TreeViewPropertiesDblClick(Sender: TObject);
   private
-    FSelectResult: TPropertySelectResult;
+    FSelectResult: TPropertySelectResultList;
     FDblClickCompleted: boolean;
     FMode: TPropertySelectMode;
     procedure SetMode(const AValue: TPropertySelectMode);
     procedure UpdateSelectedResult;
   public
-    property SelectResult: TPropertySelectResult read FSelectResult;
+    property SelectResult: TPropertySelectResultList read FSelectResult;
     property Mode: TPropertySelectMode read FMode write SetMode;
     procedure Load(const AControl: TCastleUserInterface;
       const AsRoot: boolean = True; const AMode: TPropertySelectMode = psmProperty);
@@ -66,6 +72,17 @@ begin
   SelectedObject := nil;
   SelectedProperty := '';
   FriendlyObjectName := '';
+end;
+
+function TPropertySelectResultList.HasValidResult: boolean;
+var
+  R: TPropertySelectResult;
+begin
+  Result := False;
+  for R in self do
+  begin
+    if Assigned(R.SelectedObject) and (R.SelectedProperty <> '') then Exit(True);
+  end;
 end;
 
 procedure TPropertySelectForm.TreeViewControlsSelectionChanged(Sender: TObject);
@@ -133,8 +150,7 @@ end;
 procedure TPropertySelectForm.TreeViewPropertiesDblClick(Sender: TObject);
 begin
   UpdateSelectedResult;
-  if Assigned(FSelectResult.SelectedObject) and
-    (FSelectResult.SelectedProperty <> '') then
+  if FSelectResult.HasValidResult then
   begin
     FDblClickCompleted := True;
     ModalResult := mrOk;
@@ -145,63 +161,82 @@ procedure TPropertySelectForm.UpdateSelectedResult;
 var
   Node: TTreeNode;
   ComponentNode, PropertyNode: TTreeNode;
+  R: TPropertySelectResult;
+  I: integer;
 begin
   FSelectResult.Clear;
-
   ComponentNode := TreeViewControls.Selected;
-  PropertyNode := TreeViewProperties.Selected;
 
-  if Assigned(ComponentNode) then
+  if Fmode <> psmProperty then
   begin
-    FSelectResult.SelectedObject := TPersistent(ComponentNode.Data);
-    FSelectResult.FriendlyObjectName := ComponentNode.Text;
-  end;
+    R := TPropertySelectResult.Create;
+    FSelectResult.Add(R);
 
-  if Fmode <> psmProperty then Exit;
-
-  if Assigned(PropertyNode) then
-  begin
-    if Assigned(PropertyNode.Data) then
+    if Assigned(ComponentNode) then
     begin
-      //child object, update FSelectedObject
-      FSelectResult.SelectedObject := TPersistent(TreeViewProperties.Selected.Data);
-    end
-    else
-    begin
-      //child object, update FSelectedObject
-      if Assigned(PropertyNode.Parent) then
-        FSelectResult.SelectedObject :=
-          TPersistent(PropertyNode.Parent.Data);
-      FSelectResult.SelectedProperty := PropertyNode.Text;
+      R.SelectedObject := TPersistent(ComponentNode.Data);
+      R.FriendlyObjectName := ComponentNode.Text;
     end;
+    Exit;
   end;
 
-
-  FSelectResult.FriendlyObjectName := '';
-  if Assigned(ComponentNode) then
+  for I := 0 to TreeViewProperties.SelectionCount - 1 do
   begin
-    Node := PropertyNode;
-    if Assigned(Node) then
+    PropertyNode := TreeViewProperties.Selections[I];
+
+    R := TPropertySelectResult.Create;
+    FSelectResult.Add(R);
+
+    if Assigned(ComponentNode) then
     begin
-      if not Assigned(Node.Data) then  Node := Node.Parent;
-      if Assigned(Node) then
+      R.SelectedObject := TPersistent(ComponentNode.Data);
+      R.FriendlyObjectName := ComponentNode.Text;
+    end;
+
+    if Assigned(PropertyNode) then
+    begin
+      if Assigned(PropertyNode.Data) then
       begin
-        FSelectResult.FriendlyObjectName := Node.Text;
-        while True do
-        begin
-          Node := Node.Parent;
-          if not Assigned(Node) then Break;
-          FSelectResult.FriendlyObjectName :=
-            Node.Text + '.' + FSelectResult.FriendlyObjectName;
-        end;
+        //child object, update FSelectedObject
+        R.SelectedObject := TPersistent(TreeViewProperties.Selected.Data);
+      end
+      else
+      begin
+        //child object, update FSelectedObject
+        if Assigned(PropertyNode.Parent) then
+          R.SelectedObject :=
+            TPersistent(PropertyNode.Parent.Data);
+        R.SelectedProperty := PropertyNode.Text;
       end;
     end;
 
-    if FSelectResult.FriendlyObjectName = '' then
-      FSelectResult.FriendlyObjectName := ComponentNode.Text
-    else
-      FSelectResult.FriendlyObjectName :=
-        ComponentNode.Text + '.' + FSelectResult.FriendlyObjectName;
+
+    R.FriendlyObjectName := '';
+    if Assigned(ComponentNode) then
+    begin
+      Node := PropertyNode;
+      if Assigned(Node) then
+      begin
+        if not Assigned(Node.Data) then  Node := Node.Parent;
+        if Assigned(Node) then
+        begin
+          R.FriendlyObjectName := Node.Text;
+          while True do
+          begin
+            Node := Node.Parent;
+            if not Assigned(Node) then Break;
+            R.FriendlyObjectName :=
+              Node.Text + '.' + R.FriendlyObjectName;
+          end;
+        end;
+      end;
+
+      if R.FriendlyObjectName = '' then
+        R.FriendlyObjectName := ComponentNode.Text
+      else
+        R.FriendlyObjectName :=
+          ComponentNode.Text + '.' + R.FriendlyObjectName;
+    end;
   end;
 
 end;
@@ -235,7 +270,7 @@ end;
 
 procedure TPropertySelectForm.FormCreate(Sender: TObject);
 begin
-  FSelectResult := TPropertySelectResult.Create;
+  FSelectResult := TPropertySelectResultList.Create(True);
   Mode := psmProperty;
 end;
 

@@ -1592,6 +1592,8 @@ procedure TAnimationPlayerDialog.MenuItem1Click(Sender: TObject);
 var
   Form: TPropertySelectForm;
   Track: TAnimationPropertyTrack;
+  R: TPropertySelectResult;
+  ACount: integer;
 begin
   Form := TPropertySelectForm.Create(nil);
   try
@@ -1599,16 +1601,19 @@ begin
 
     if Form.ShowModal = mrOk then
     begin
-      if Assigned(Form.SelectResult.SelectedObject) and
-        (Form.SelectResult.SelectedProperty <> '') then
+      ACount := 0;
+      for R in Form.SelectResult do
       begin
-        Track := TAnimationPropertyTrack.Create(Form.SelectResult.SelectedObject,
-          Form.SelectResult.SelectedProperty);
-        Track.FriendlyObjectName := Form.SelectResult.FriendlyObjectName;
-        FView.AddTrack(Track);
-      end
-      else
-        ShowMessage('Did not complete the selection.');
+        if Assigned(R.SelectedObject) and (R.SelectedProperty <> '') then
+        begin
+          Track := TAnimationPropertyTrack.Create(R.SelectedObject,
+            R.SelectedProperty);
+          Track.FriendlyObjectName := R.FriendlyObjectName;
+          FView.AddTrack(Track);
+          Inc(ACount);
+        end;
+      end;
+      if ACount = 0 then ShowMessage('Did not complete the selection.');
     end;
   finally
     FreeAndNil(Form);
@@ -1764,6 +1769,8 @@ end;
 function TAnimationPlayerDialog.SelectTransform: TCastleTransform;
 var
   Form: TPropertySelectForm;
+  R: TPropertySelectResult;
+  bok: boolean;
 begin
   Result := nil;
   Form := TPropertySelectForm.Create(nil);
@@ -1772,13 +1779,18 @@ begin
 
     if Form.ShowModal = mrOk then
     begin
-      if Assigned(Form.SelectResult.SelectedObject) and
-        (Form.SelectResult.SelectedObject is TCastleTransform) then
+      bok := (Form.SelectResult.Count > 0);
+      if bok then
       begin
-        Result := Form.SelectResult.SelectedObject as TCastleTransform;
-      end
-      else
+        R := Form.SelectResult.First;
+        bok := Assigned(R.SelectedObject) and (R.SelectedObject is
+          TCastleTransform);
+        if bok then
+          Result := R.SelectedObject as TCastleTransform;
+      end;
+      if not bok then
         ShowMessage('Did not complete the selection.');
+
     end;
   finally
     FreeAndNil(Form);
@@ -1788,6 +1800,8 @@ end;
 function TAnimationPlayerDialog.SelectUI: TCastleUserInterface;
 var
   Form: TPropertySelectForm;
+  R: TPropertySelectResult;
+  bok: boolean;
 begin
   Result := nil;
   Form := TPropertySelectForm.Create(nil);
@@ -1796,13 +1810,18 @@ begin
 
     if Form.ShowModal = mrOk then
     begin
-      if Assigned(Form.SelectResult.SelectedObject) and
-        (Form.SelectResult.SelectedObject is TCastleUserInterface) then
+      bok := (Form.SelectResult.Count > 0);
+      if bok then
       begin
-        Result := Form.SelectResult.SelectedObject as TCastleUserInterface;
-      end
-      else
+        R := Form.SelectResult.First;
+        bok := Assigned(R.SelectedObject) and (R.SelectedObject is
+          TCastleUserInterface);
+        if bok then
+          Result := R.SelectedObject as TCastleUserInterface;
+      end;
+      if not bok then
         ShowMessage('Did not complete the selection.');
+
     end;
   finally
     FreeAndNil(Form);
