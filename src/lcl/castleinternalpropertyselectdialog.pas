@@ -198,7 +198,7 @@ begin
       if Assigned(PropertyNode.Data) then
       begin
         //child object, update FSelectedObject
-        R.SelectedObject := TPersistent(TreeViewProperties.Selected.Data);
+        R.SelectedObject := TPersistent(PropertyNode.Data);
       end
       else
       begin
