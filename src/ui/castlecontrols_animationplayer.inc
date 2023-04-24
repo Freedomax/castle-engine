@@ -23,7 +23,6 @@
     procedure SetValue(const AValue: TVector2); override;
   public
     constructor Create(AControl: TCastleUserInterface);
-    function ObjectName: string; override;
     function PropName: string; override;
     function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
@@ -70,12 +69,6 @@ constructor TAnimationPositionTrack.Create(AControl: TCastleUserInterface);
 begin
   inherited Create;
   Control := AControl;
-end;
-
-function TAnimationPositionTrack.ObjectName: string;
-begin
-  if Assigned(Control) then Result := Control.Name
-  else Result := '';
 end;
 
 function TAnimationPositionTrack.PropName: string;

@@ -543,7 +543,9 @@ end;
 
 function TAnimationTrack.ObjectName: string;
 begin
-  Result := '';
+  if Assigned(FComponent) then Result := FComponent.Name
+  else
+    Result := '';
 end;
 
 function TAnimationTrack.PropName: string;
@@ -615,8 +617,8 @@ begin
 
 end;
 
-function TAnimationTrack.AddKeyframe(
-  const AValue: TAnimationKeyframe): TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
+TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -1553,8 +1555,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(const PropertyName: string):
-TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
