@@ -1621,6 +1621,7 @@ begin
   else
   if AnimationList.TryGetValue(AOldName, Ani) then
   begin
+    EnsureAnimationNameUnique(ANewName);
     bCurrent := Animation = AOldName;
     FAnimationList.Remove(AOldName);
     AddAnimation(ANewName, Ani);
