@@ -99,7 +99,6 @@ type
 
     procedure SetOnChange(const AValue: TNotifyEvent);
   private
-    procedure SetFriendlyObjectName(const AValue: string);
     { This notification is used by @link(TAnimation), please do not use it. }
     property OnChange: TNotifyEvent read FOnChange write SetOnChange;
   protected
@@ -112,6 +111,7 @@ type
     FFriendlyObjectName: string;
     function GetFriendlyObjectName: string; virtual;
     procedure SetComponent(const AValue: TComponent); virtual;
+    procedure SetFriendlyObjectName(const AValue: string); virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
     constructor Create(AOwner: TComponent); overload; override;
@@ -617,8 +617,8 @@ begin
 
 end;
 
-function TAnimationTrack.AddKeyframe(const AValue: TAnimationKeyframe):
-TAnimationKeyframe;
+function TAnimationTrack.AddKeyframe(
+  const AValue: TAnimationKeyframe): TAnimationKeyframe;
 begin
   AValue.OnChange := {$Ifdef fpc}@{$endif}KeyFramInTrackChange;
   FKeyframeList.Add(AValue);
@@ -975,7 +975,8 @@ end;
 
 procedure TAnimationTrack.SetFriendlyObjectName(const AValue: string);
 begin
-  if FFriendlyObjectName <> AValue then FFriendlyObjectName := AValue;
+  if FFriendlyObjectName <> AValue then
+    FFriendlyObjectName := AValue;
 end;
 
 constructor TAnimationTrack.Create;

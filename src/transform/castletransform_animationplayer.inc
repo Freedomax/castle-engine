@@ -25,6 +25,8 @@
     FPropertyInfo: PPropInfo;
     procedure SetValue(const AValue: variant); override;
     procedure SetComponent(const AValue: TComponent); override;
+    procedure SetFriendlyObjectName(const AValue: string); override;
+    procedure UpdatePersistent;
   public
     constructor Create(APersistent: TPersistent; const AProperty: string); overload;
     function CalcValue(const Value1, Value2: variant; const ALerp: single): variant;
@@ -111,39 +113,61 @@ procedure TAnimationPropertyTrack.SetPersistent(const AValue: TPersistent);
 begin
   if FPersistent = AValue then Exit;
   FPersistent := AValue;
-  //TODO: FPersistent freenotify
 end;
 
 procedure TAnimationPropertyTrack.SetComponent(const AValue: TComponent
   );
-
-  function ChildObject(Persistent: TPersistent; const AName: string): TPersistent;
-  var
-    PropList: TPropInfoList;
-    i: integer;
-    PropValue: TObject;
+begin
+  if FComponent <> AValue then
   begin
-    Result := nil;
-    PropList := TPropInfoList.Create(Persistent, tkProperties);
-    try
-      for i := 0 to PropList.Count - 1 do
-      begin
-        if (PropList[i]^.PropType^.Kind = tkClass) and (PropList[i]^.Name = AName) then
-        begin
-          PropValue := GetObjectProp(Persistent, PropList[i]);
-          if PropValue is TPersistent then Exit(PropValue as TPersistent);
-        end;
-      end;
-    finally
-      PropList.Free;
-    end;
+    inherited;
+    { Load FPersistent from FriendlyObjectName. }
+    if not Assigned(Persistent) then UpdatePersistent;
   end;
+end;
+
+procedure TAnimationPropertyTrack.SetFriendlyObjectName(const AValue: string);
+begin
+  if FFriendlyObjectName <> AValue then
+  begin
+    inherited SetFriendlyObjectName(AValue);
+    if not Assigned(Persistent) then UpdatePersistent;
+  end;
+end;
+
+procedure TAnimationPropertyTrack.UpdatePersistent;
 
   function GetObject(AComponent:TPersistent; APropPath: string):TPersistent;
+
+    function ChildObject(APersistent: TPersistent; const AName: string): TPersistent;
+    var
+      PropList: TPropInfoList;
+      i: integer;
+      PropValue: TObject;
+    begin
+      Result := nil;
+      if not Assigned(APersistent) then Exit;
+
+      PropList := TPropInfoList.Create(APersistent, tkProperties);
+      try
+        for i := 0 to PropList.Count - 1 do
+        begin
+          if (PropList[i]^.PropType^.Kind = tkClass) and (PropList[i]^.Name = AName) then
+          begin
+            PropValue := GetObjectProp(APersistent, PropList[i]);
+            if PropValue is TPersistent then Exit(PropValue as TPersistent);
+          end;
+        end;
+      finally
+        PropList.Free;
+      end;
+    end;
+
   var
     arr:{$Ifdef fpc}specialize{$endif} TArray<string>;
     i:integer;
   begin
+    if not Assigned(AComponent) then Exit(nil);
     arr := APropPath.Split(['.']);
     { arr[0] is AComponent's name. }
     if Length(arr) > 1 then
@@ -158,13 +182,7 @@ procedure TAnimationPropertyTrack.SetComponent(const AValue: TComponent
   end;
 
 begin
-  if FComponent <> AValue then
-  begin
-    inherited;
-    if not Assigned(FComponent) then Exit;
-    { Load FPersistent from FriendlyObjectName. }
-    Persistent := GetObject(FComponent, FriendlyObjectName);
-  end;
+  Persistent := GetObject(FComponent, FriendlyObjectName);
 end;
 
 { TAnimationPropertyTrack --------------------------------------------------------------- }
