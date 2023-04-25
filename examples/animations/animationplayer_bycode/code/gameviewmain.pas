@@ -40,12 +40,8 @@ type
   end;
 
   TLabelColorTrack = class(TAnimationVector4Track)
-  strict private
-    FControl: TCastleLabel;
   strict protected
     procedure SetValue(const AValue: TVector4); override;
-  public
-    constructor Create(AControl: TCastleLabel);
   end;
 
 var
@@ -144,7 +140,8 @@ begin
   { Label }
   Animation := TAnimation.Create;
 
-  LabelColorTrack := TLabelColorTrack.Create(AnimationPlayer1.Parent as TCastleLabel);
+  LabelColorTrack := TLabelColorTrack.Create;
+  LabelColorTrack.Component := AnimationPlayer1.Parent as TCastleLabel;
   LabelColorTrack.Mode := tmContinuous;
   LabelColorTrack.AddKeyframe(1, Vector4(1, 0.3, 0.2, 1));
   LabelColorTrack.AddKeyframe(0, Vector4(1, 0.3, 0.2, 1));
@@ -236,13 +233,7 @@ end;
 
 procedure TLabelColorTrack.SetValue(const AValue: TVector4);
 begin
-  FControl.Color := AValue;
-end;
-
-constructor TLabelColorTrack.Create(AControl: TCastleLabel);
-begin
-  inherited Create;
-  FControl := AControl;
+  TCastleLabel(FComponent).Color := AValue;
 end;
 
 end.

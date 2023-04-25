@@ -48,7 +48,6 @@
     procedure SetValue(const AValue: TVector3); override;
   public
     constructor Create(ATransform: TCastleTransform);
-    function ObjectName: string; override;
     function PropName: string; override;
     function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
@@ -64,7 +63,6 @@
     procedure SetValue(const AValue: TVector4); override;
   public
     constructor Create(ATransform: TCastleTransform);
-    function ObjectName: string; override;
     function PropName: string; override;
     function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
@@ -80,7 +78,6 @@
     procedure SetValue(const AValue: TVector3); override;
   public
     constructor Create(ATransform: TCastleTransform);
-    function ObjectName: string; override;
     function PropName: string; override;
     function AddKeyframeAtTime(const ATime: TFloatTime;
      const ALerpFunc: TLerpFunc = nil): boolean; override;
@@ -289,9 +286,9 @@ end;
 
 function TAnimationPropertyTrack.ObjectName: string;
 begin
-  Result := inherited;
-  if not Assigned(FPersistent) then exit;
-  if FPersistent is TComponent then
+  if not Assigned(FPersistent) then
+    Result := inherited
+  else if FPersistent is TComponent then
     Result := (FPersistent as TComponent).Name
   else
     Result := '(' + FPersistent.ClassName + ')';
@@ -324,13 +321,6 @@ constructor TAnimationTranslationTrack.Create(ATransform: TCastleTransform);
 begin
   inherited Create;
   Transform := ATransform;
-end;
-
-function TAnimationTranslationTrack.ObjectName: string;
-begin
-  if Assigned(Transform) then Result := Transform.Name
-  else
-    Result := '';
 end;
 
 function TAnimationTranslationTrack.PropName: string;
@@ -369,12 +359,6 @@ begin
   Transform := ATransform;
 end;
 
-function TAnimationRotationTrack.ObjectName: string;
-begin
-  if Assigned(Transform) then Result := Transform.Name
-  else Result := '';
-end;
-
 function TAnimationRotationTrack.PropName: string;
 begin
   Result := 'Rotation';
@@ -408,12 +392,6 @@ constructor TAnimationScaleTrack.Create(ATransform: TCastleTransform);
 begin
   inherited Create;
   Transform := ATransform;
-end;
-
-function TAnimationScaleTrack.ObjectName: string;
-begin
-  if Assigned(Transform) then Result := Transform.Name
-  else Result := '';
 end;
 
 function TAnimationScaleTrack.PropName: string;

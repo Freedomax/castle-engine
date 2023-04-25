@@ -314,8 +314,8 @@ type
     FOnCurrentAnimationTrackListChanged: TNotifyEvent;
     FPlaying: boolean;
     procedure AAnimationTrackListChanged(Sender: TObject);
-    procedure FAnimationListKeyNotify(ASender: TObject; const AItem: string;
-      AAction: TCollectionNotification);
+    procedure FAnimationListKeyNotify(ASender: TObject;
+ {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: string; AAction: TCollectionNotification);
     procedure SetOnAnimationComplete(const AValue: TNotifyEvent);
     procedure SetOnAnimationListChanged(const AValue: TNotifyEvent);
     procedure SetOnCurrentAnimationChanged(const AValue: TNotifyEvent);
@@ -543,7 +543,9 @@ end;
 
 function TAnimationTrack.ObjectName: string;
 begin
-  Result := '';
+  if Assigned(FComponent) then Result := FComponent.Name
+  else
+    Result := '';
 end;
 
 function TAnimationTrack.PropName: string;
@@ -1348,7 +1350,7 @@ begin
 end;
 
 procedure TAnimationPlayer.FAnimationListKeyNotify(ASender: TObject;
-  const AItem: string; AAction: TCollectionNotification);
+  {$ifdef GENERICS_CONSTREF}constref{$else}const{$endif} AItem: string; AAction: TCollectionNotification);
 begin
   if Assigned(FOnAnimationListChanged) then FOnAnimationListChanged(Self);
 end;
@@ -1553,8 +1555,7 @@ begin
   inherited Destroy;
 end;
 
-function TAnimationPlayer.PropertySections(
-  const PropertyName: string): TPropertySections;
+function TAnimationPlayer.PropertySections(const PropertyName: string): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['Playing', 'Animation']) then
     Result := [psBasic]
