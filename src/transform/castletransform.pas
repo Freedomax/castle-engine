@@ -24,7 +24,7 @@ uses SysUtils, Classes, Math, Generics.Collections, Contnrs, Kraft,
   CastleRectangles, CastleUtils, CastleTimeUtils, CastleComponentSerialize,
   CastleSoundEngine, CastleTriangles, CastleRenderOptions, CastleProjection,
   CastleUIControls, CastleQuaternions, CastleColors, CastleInternalClassUtils,
-  CastleAnimationPlayer, TypInfo;
+  CastleAnimationPlayer;
 
 type
   {$define read_interface}
