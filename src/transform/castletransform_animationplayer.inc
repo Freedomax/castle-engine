@@ -196,7 +196,7 @@ function TAnimationPropertyTrack.CalcValue(const Value1, Value2: variant;
   const ALerp: single): variant;
 var
   V1_int, V2_int: int64;
-  V1_float, V2_float: extended;
+  V1_float, V2_float, F: extended;
   Tk: TTypeKind;
 begin
   if not Assigned(PropertyInfo) then Exit;
@@ -204,11 +204,15 @@ begin
   Tk := FPropertyInfo^.PropType^.Kind;
   case Tk of
     tkInteger, tkInt64, tkEnumeration,
-    tkSet, tkChar, tkWChar:
+    tkSet, tkChar, tkWChar{$ifdef FPC}, tkBool{$endif}:
     begin
       V1_int := Value1;
       V2_int := Value2;
-      Result := Floor((1 - ALerp) * V1_int + ALerp * V2_int);
+      F := (1 - ALerp) * V1_int + ALerp * V2_int;
+      if V1_int <= V2_int then
+        Result := Floor(F)
+      else
+        Result := Ceil(F);
     end;
     tkFloat:
     begin
