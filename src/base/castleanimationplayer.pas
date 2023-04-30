@@ -1898,4 +1898,6 @@ begin
   if Assigned(FCurrentAnimation) then FCurrentAnimation.Stop(ResetTime);
 end;
 
+initialization
+  RegisterClasses([TAnimationPropertyTrack]);
 end.
