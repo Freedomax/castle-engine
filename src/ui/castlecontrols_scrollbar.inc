@@ -23,16 +23,15 @@ type
     FFrame: TCastleImagePersistent;
     FSlider: TCastleImagePersistent;
     FScrollBarType: TCastleScrollBarType;
+    FSliderMinSize: Single;
     FViewSize, FContentSize: Single;
     FPosition: Single;
     FDragOffset :single;
     FOnScroll: TNotifyEvent;
-    FSliderColor: TCastleColor;
-    FSliderAlpha: single;
-    FSliderMinSize, FSliderMargin: Single;
     FHidden: Boolean;
     FDragging: Boolean;
     procedure SetContentSize(const AValue: Single);
+    procedure SetSliderMinSize(const AValue: Single);
     procedure SetViewSize(const AValue: Single);
     procedure UpdatePosition;
   protected
@@ -61,17 +60,12 @@ type
     procedure SetContentAndViewSize(const AContentSize, AViewSize: Single);
     function PropertySections(const PropertyName: String): TPropertySections; override;
 
-    //TODO: SliderXxx not used
-    property SliderColor: TCastleColor read FSliderColor write FSliderColor;
-    property SliderAlpha: Single read FSliderAlpha write FSliderAlpha;
-    property SliderMinSize: Single read FSliderMinSize write FSliderMinSize;
-    property SliderMargin: Single read FSliderMargin write FSliderMargin;
-
     property OnScroll: TNotifyEvent read FOnScroll write FOnScroll;
   published
     property ViewSize: Single read FViewSize write SetViewSize{$Ifdef fpc} default 10.0{$endif};
     property ContentSize: Single read FContentSize write SetContentSize{$Ifdef fpc} default 100.0{$endif};
     property Position: Single read FPosition write ScrollTo{$Ifdef fpc} default 0.0{$endif};
+    property SliderMinSize: Single read FSliderMinSize write SetSliderMinSize{$Ifdef fpc} default 6.0{$endif};
     property ScrollBarType: TCastleScrollBarType read FScrollBarType write FScrollBarType default sbHorizontal;
     property Frame: TCastleImagePersistent read FFrame;
     property Slider: TCastleImagePersistent read FSlider;
@@ -88,13 +82,8 @@ begin
   FViewSize := 10.0;
   FContentSize := 100.0;
   FPosition := 0.0;
+  FSliderMinSize := 6.0;
   FScrollBarType := sbHorizontal;
-
-  FSliderColor := White;
-  FSliderAlpha := 1;
-  FSliderMinSize := 8;
-  FSliderMargin := 2;
-
   FHidden := False;
   FDragging := False;
   FFrame := TCastleImagePersistent.Create;
@@ -119,6 +108,12 @@ begin
   FContentSize := AValue;
   UpdatePosition;
   UpdateVisibility;
+end;
+
+procedure TCastleScrollBar.SetSliderMinSize(const AValue: Single);
+begin
+  if FSliderMinSize = AValue then Exit;
+  FSliderMinSize := AValue;
 end;
 
 procedure TCastleScrollBar.SetViewSize(const AValue: Single);
@@ -242,7 +237,7 @@ function TCastleScrollBar.PropertySections(const PropertyName: String
   ): TPropertySections;
 begin
   if ArrayContainsString(PropertyName, ['ViewSize', 'ContentSize', 'Position',
-    'ScrollBarType', 'Frame', 'Slider']) Then
+    'ScrollBarType', 'Frame', 'Slider', 'SliderMinSize']) Then
     Result := [psBasic]
   else
     Result := inherited PropertySections(PropertyName);
