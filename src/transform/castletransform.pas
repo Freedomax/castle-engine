@@ -53,7 +53,7 @@ implementation
 uses CastleLog, CastleApplicationProperties, CastleURIUtils, CastleInternalRays,
   CastleRenderContext,
   // TODO: this breaks unit dependencies, transform->scene
-  X3DNodes, CastleScene, CastleInternalPhysicsVisualization, RttiUtils;
+  X3DNodes, CastleScene, CastleInternalPhysicsVisualization;
 
 {$define read_implementation}
 {$I castletransform_initial_types.inc}
@@ -156,6 +156,6 @@ initialization
   RegisterSerializableComponent(TCastleSliderJoint, ['Physics', 'Joint', 'Slider']);
   {$endif CASTLE_EXPERIMENTAL_JOINTS}
 
-  RegisterClasses([TAnimationPropertyTrack, TAnimationTranslationTrack, TAnimationScaleTrack,
+  RegisterClasses([TAnimationTranslationTrack, TAnimationScaleTrack,
     TAnimationRotationTrack]);
 end.

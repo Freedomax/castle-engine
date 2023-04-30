@@ -133,6 +133,11 @@ type
     FPlaying: boolean;
     FOnPlayingChanged: TNotifyEvent;
     FScrollTime: TFloatTime;
+    FAnimationPlayer: TAnimationPlayer;
+    FRoot: TCastleUserInterface;
+    FTrackListView: TCastleVerticalGroup;
+    FTrackViewList: TTrackViewList;
+    FTrackScrollbar: TCastleScrollBar;
   const
     TrackHeight = 100;
     TrackHeadViewWidth = 150;
@@ -140,12 +145,6 @@ type
     ItemFontSmallSize = 12;
     ItemSpacing = 2;
     TrackListHeadHeight = 20;
-  var
-    FAnimationPlayer: TAnimationPlayer;
-    FRoot: TCastleUserInterface;
-    FTrackListView: TCastleVerticalGroup;
-    FTrackViewList: TTrackViewList;
-    FTrackScrollbar: TCastleScrollBar;
     procedure AButtonDeleteTrackClick(Sender: TObject);
     procedure ACheckBoxChange(Sender: TObject);
     procedure AddKeyFrameButtonClick(Sender: TObject);

@@ -20,28 +20,29 @@ type
 
   TCastleScrollBar = class(TCastleUserInterface)
   private
-    FType: TCastleScrollBarType;
+    FFrame: TCastleImagePersistent;
+    FSlider: TCastleImagePersistent;
+    FScrollBarType: TCastleScrollBarType;
+    FSliderMinSize: Single;
     FViewSize, FContentSize: Single;
     FPosition: Single;
     FDragOffset :single;
     FOnScroll: TNotifyEvent;
-    FThumbColor: TCastleColor;
-    FThumbAlpha: single;
-    FThumbMinSize, FThumbMargin: Single;
     FHidden: Boolean;
     FDragging: Boolean;
     procedure SetContentSize(const AValue: Single);
+    procedure SetSliderMinSize(const AValue: Single);
     procedure SetViewSize(const AValue: Single);
     procedure UpdatePosition;
   protected
     procedure UIScaleChanged; override;
-    function ThumbRect: TFloatRectangle;
-    function ThumbSize: Single;
+    function SliderRect: TFloatRectangle;
+    function SliderSize: Single;
     procedure Scroll(const AValue: Single);
     procedure ScrollTo(AValue: Single);
     procedure ScrollBy(const AValue: Single);
     function MousePosToPosition(const APos: TVector2): Single;
-    function PosValueToPosition(const AValue: Single): Single;
+    function PosValueToPosition(AValue: Single): Single;
     procedure UpdateVisibility;
     function GetSize:single;
     function GetPos(const APos:TVector2):single;
@@ -50,24 +51,24 @@ type
     function MouseUp(const  APos: TVector2): Boolean;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     procedure Resize; override;
     procedure Render; override;
     function Press(const Event: TInputPressRelease): boolean; override;
     function Release(const Event: TInputPressRelease): boolean; override;
     function Motion(const Event: TInputMotion): boolean; override;
-
-
     procedure SetContentAndViewSize(const AContentSize, AViewSize: Single);
+    function PropertySections(const PropertyName: String): TPropertySections; override;
 
-    property ViewSize: Single read FViewSize write SetViewSize ;
-    property ContentSize: Single read FContentSize write SetContentSize ;
-    property Position: Single read FPosition write ScrollTo;
-    property ScrollBarType: TCastleScrollBarType read FType write FType;
-    property ThumbColor: TCastleColor read FThumbColor write FThumbColor;
-    property ThumbAlpha: Single read FThumbAlpha write FThumbAlpha;
-    property ThumbMinSize: Single read FThumbMinSize write FThumbMinSize;
-    property ThumbMargin: Single read FThumbMargin write FThumbMargin;
     property OnScroll: TNotifyEvent read FOnScroll write FOnScroll;
+  published
+    property ViewSize: Single read FViewSize write SetViewSize{$Ifdef fpc} default 10.0{$endif};
+    property ContentSize: Single read FContentSize write SetContentSize{$Ifdef fpc} default 100.0{$endif};
+    property Position: Single read FPosition write ScrollTo{$Ifdef fpc} default 0.0{$endif};
+    property SliderMinSize: Single read FSliderMinSize write SetSliderMinSize{$Ifdef fpc} default 6.0{$endif};
+    property ScrollBarType: TCastleScrollBarType read FScrollBarType write FScrollBarType default sbHorizontal;
+    property Frame: TCastleImagePersistent read FFrame;
+    property Slider: TCastleImagePersistent read FSlider;
   end;
 
 
@@ -78,17 +79,24 @@ type
 constructor TCastleScrollBar.Create(AOwner: TComponent);
 begin
   inherited;
-  FViewSize := 1;
-  FContentSize := 1;
-  FPosition := 0;
-  FType := sbHorizontal;
-  FThumbColor := White;
-  FThumbAlpha := 1;
-  FThumbMinSize := 8;
-  FThumbMargin := 2;
+  FViewSize := 10.0;
+  FContentSize := 100.0;
+  FPosition := 0.0;
+  FSliderMinSize := 6.0;
+  FScrollBarType := sbHorizontal;
   FHidden := False;
   FDragging := False;
+  FFrame := TCastleImagePersistent.Create;
+  FSlider := TCastleImagePersistent.Create;
 end;
+
+destructor TCastleScrollBar.Destroy;
+begin
+  FreeAndNil(FFrame);
+  FreeAndNil(FSlider);
+  inherited Destroy;
+end;
+
 procedure TCastleScrollBar.UpdatePosition;
 begin
   FPosition := Clamped(FPosition, 0, FContentSize - FViewSize);
@@ -100,6 +108,12 @@ begin
   FContentSize := AValue;
   UpdatePosition;
   UpdateVisibility;
+end;
+
+procedure TCastleScrollBar.SetSliderMinSize(const AValue: Single);
+begin
+  if FSliderMinSize = AValue then Exit;
+  FSliderMinSize := AValue;
 end;
 
 procedure TCastleScrollBar.SetViewSize(const AValue: Single);
@@ -126,26 +140,45 @@ procedure TCastleScrollBar.Render;
 var
   R: TFloatRectangle;
 
-    procedure DrawThumb;
-    var
-      RThumb: TFloatRectangle;
-    begin
-      RThumb := ThumbRect;
-      RThumb := FloatRectangle(RThumb.LeftBottom * UIScale, RThumb.Width * UIScale, RThumb.Height * UIScale);
-      RThumb.LeftBottom := R.LeftBottom + RThumb.LeftBottom;
-      Theme.Draw(RThumb, TThemeImage.tiScrollbarSlider, UIScale);
-    end;
+  procedure DrawImageType(const AImage: TCastleImagePersistent;
+    const AThemeImage: TThemeImage; const ARect: TFloatRectangle);
+  var
+    FinalFrame: TCastleImagePersistent;
+  begin
+    if AImage.Empty then
+      FinalFrame := Theme.ImagesPersistent[AThemeImage]
+    else
+      FinalFrame := AImage;
 
-    procedure DrawScrollArea;
-    begin
-      Theme.Draw(R, TThemeImage.tiScrollbarFrame, UIScale);
-    end;
+    FinalFrame.DrawUiBegin(UIScale);
+    //TODO: color fade
+    FinalFrame.Color := FinalFrame.Color;//TODO: color fade * Color;
+    FinalFrame.Draw(ARect);
+    FinalFrame.DrawUiEnd;
+  end;
+
+  procedure DrawSlider;
+  var
+    RSlider: TFloatRectangle;
+  begin
+    RSlider := SliderRect;
+    RSlider := FloatRectangle(RSlider.LeftBottom * UIScale, RSlider.Width * UIScale,
+      RSlider.Height * UIScale);
+    RSlider.LeftBottom := R.LeftBottom + RSlider.LeftBottom;
+
+    DrawImageType(FSlider, tiScrollbarSlider, RSlider);
+  end;
+
+  procedure DrawFrame;
+  begin
+    DrawImageType(FFrame, tiScrollbarFrame, R);
+  end;
 
 begin
   inherited;
   R := RenderRect;
-  DrawScrollArea;
-  DrawThumb;
+  DrawFrame;
+  DrawSlider;
 end;
 
 function TCastleScrollBar.Press(const Event: TInputPressRelease): boolean;
@@ -200,16 +233,27 @@ begin
 
 end;
 
+function TCastleScrollBar.PropertySections(const PropertyName: String
+  ): TPropertySections;
+begin
+  if ArrayContainsString(PropertyName, ['ViewSize', 'ContentSize', 'Position',
+    'ScrollBarType', 'Frame', 'Slider', 'SliderMinSize']) Then
+    Result := [psBasic]
+  else
+    Result := inherited PropertySections(PropertyName);
+end;
+
 function TCastleScrollBar.MouseDown(const APos: TVector2
   ): Boolean;
 var
   R: TFloatRectangle;
+  AScrollPos: TVector2;
 begin
-  R := ThumbRect;
+  R := SliderRect;
   if R.Contains(APos) then
   begin
-    FDragOffset:= GetPos(APos);
-    if FType = sbHorizontal then
+    FDragOffset := GetPos(APos);
+    if FScrollBarType = sbHorizontal then
       FDragOffset := FDragOffset - R.Left
     else
       FDragOffset := FDragOffset - R.Top;
@@ -217,7 +261,11 @@ begin
   end
   else
   begin
-    ScrollTo(MousePosToPosition(APos - R.Size / 2));
+    if FScrollBarType = sbVertical then
+      AScrollPos := APos + R.Size / 2
+    else
+      AScrollPos := APos - R.Size / 2;
+    ScrollTo(MousePosToPosition(AScrollPos));
   end;
   Result := True;
 end;
@@ -242,29 +290,28 @@ begin
   end else Result := False;
 end;
 
-function TCastleScrollBar.ThumbRect: TFloatRectangle;
+function TCastleScrollBar.SliderRect: TFloatRectangle;
 var
   Pos:single;
 begin
-  Pos := FPosition * (GetSize - ThumbSize) / (FContentSize - FViewSize);
-  case FType of
+  Pos := FPosition * (GetSize - SliderSize) / (FContentSize - FViewSize);
+  case FScrollBarType of
     sbHorizontal:
-      Result := FloatRectangle(Pos, 0, ThumbSize, EffectiveHeight);
+      Result := FloatRectangle(Pos, 0, SliderSize, EffectiveHeight);
     sbVertical:
-      Result := FloatRectangle(0,EffectiveHeight - Pos - ThumbSize, EffectiveWidth, ThumbSize);
+      Result := FloatRectangle(0, EffectiveHeight - Pos - SliderSize, EffectiveWidth, SliderSize);
   end;
-
 end;
 
-function TCastleScrollBar.ThumbSize: Single;
+function TCastleScrollBar.SliderSize: Single;
 begin
   Result := FViewSize * GetSize / FContentSize;
-  if Result < FThumbMinSize then Result := FThumbMinSize;
+  if Result < FSliderMinSize then Result := FSliderMinSize;
 end;
 function TCastleScrollBar.GetSize: single;
 begin
   Result := 0;
-  case FType of
+  case FScrollBarType of
     sbHorizontal:
       Result := EffectiveWidth;
     sbVertical:
@@ -275,7 +322,7 @@ end;
 function TCastleScrollBar.GetPos(const APos: TVector2): single;
 begin
   Result := 0;
-  case FType of
+  case FScrollBarType of
     sbHorizontal:
       Result := APos.X;
     sbVertical:
@@ -305,9 +352,10 @@ begin
   ScrollTo(FPosition + AValue);
 end;
 
-function TCastleScrollBar.PosValueToPosition(const AValue: Single): Single;
+function TCastleScrollBar.PosValueToPosition(AValue: Single): Single;
 begin
-  Result := AValue * (FContentSize-FViewSize)/(GetSize-ThumbSize);
+  if FScrollBarType = sbVertical then AValue := EffectiveHeight - AValue;
+  Result := AValue * (FContentSize-FViewSize)/(GetSize-SliderSize);
   Result := Clamped(Result, 0, FContentSize - FViewSize);
 end;
 

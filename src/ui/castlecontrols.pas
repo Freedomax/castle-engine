@@ -118,6 +118,7 @@ initialization
   RegisterSerializableComponent(TCastleCheckbox, 'Checkbox');
   RegisterSerializableComponent(TCastleDesign, 'Design (Use Another castle-user-interface File)');
   RegisterSerializableComponent(TCastleMask, 'Mask');
+  RegisterSerializableComponent(TCastleScrollBar, 'ScrollBar');
 
   R := TRegisteredComponent.Create;
   {$warnings off} // using deprecated, to keep reading it from castle-user-interface working
