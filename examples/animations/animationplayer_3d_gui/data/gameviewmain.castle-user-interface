@@ -98,11 +98,23 @@
           },
           {
             "$$ClassName" : "TCastlePointLight",
-            "Intensity" : 1.0000000000000000E+001,
+            "Intensity" : 5.0000000000000000E+000,
             "Name" : "PointLight1",
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
               "X" : 6.4161138534545898E+000,
+              "Y" : 3.1747901439666748E+000,
+              "Z" : 2.3748314380645752E+000
+            }
+          },
+          {
+            "$$ClassName" : "TCastlePointLight",
+            "Exists" : false,
+            "Intensity" : 5.0000000000000000E+000,
+            "Name" : "PointLight2",
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : -6.6673135757446289E+000,
               "Y" : 3.1747901439666748E+000,
               "Z" : 2.3748314380645752E+000
             }
@@ -237,8 +249,8 @@
             },
             "TranslationPersistent" : {
               "$$ClassName" : "TCastleVector3Persistent",
-              "X" : -8.7810015678405762E-001,
-              "Z" : 1.7969251871109009E+000
+              "X" : 4.6082922816276550E-001,
+              "Z" : 1.9461851119995117E+000
             },
             "$Children" : [
               {
@@ -281,6 +293,41 @@
                 "Name" : "AnimationPlayerSphere1"
               }
             ]
+          },
+          {
+            "$$ClassName" : "TCastleAnimationPlayerTransform",
+            "AnimationPlayer" : {
+              "$$ClassName" : "TAnimationPlayer",
+              "Animation" : "1",
+              "Animation-_Count" : 1,
+              "Animation_0" : "1",
+              "Animation_0-PlayStyle" : 1,
+              "Animation_0-Speed" : 4.0000000000000000E+000,
+              "Animation_0-Track-_Count" : 1,
+              "Animation_0-Track_0-TrackClass" : "TAnimationPropertyTrack",
+              "Animation_0-Track_0-FriendlyObjectName" : "PointLight2",
+              "Animation_0-Track_0-PropertyName" : "Exists",
+              "Animation_0-Track_0-Frame-_Count" : 3,
+              "Animation_0-Track_0-Frame_0-Time" : 0.0000000000000000E+000,
+              "Animation_0-Track_0-Frame_0-Value" : "1",
+              "Animation_0-Track_0-Frame_1-Time" : 1.0000000000000000E+000,
+              "Animation_0-Track_0-Frame_1-Value" : "0",
+              "Animation_0-Track_0-Frame_2-Time" : 2.0000000000000000E+000,
+              "Animation_0-Track_0-Frame_2-Value" : "1",
+              "Animation_0-Track_0-Component" : "PointLight2",
+              "CurrentAnimation" : "1"
+            },
+            "Name" : "AnimationPlayerTransform2",
+            "RotationPersistent" : {
+              "$$ClassName" : "TCastleVector4RotationPersistent",
+              "Z" : 1.0000000000000000E+000
+            },
+            "TranslationPersistent" : {
+              "$$ClassName" : "TCastleVector3Persistent",
+              "X" : -6.6673135757446289E+000,
+              "Y" : 3.1747901439666748E+000,
+              "Z" : 2.3748314380645752E+000
+            }
           }
         ]
       },
@@ -321,9 +368,9 @@
         },
         "TranslationPersistent" : {
           "$$ClassName" : "TCastleVector3Persistent",
-          "X" : -8.7143361568450928E-002,
-          "Y" : 1.1257323265075684E+001,
-          "Z" : 3.7658195495605469E+000
+          "X" : -8.9518755674362183E-002,
+          "Y" : 1.1646580696105957E+001,
+          "Z" : 3.8792829513549805E+000
         }
       },
       "InternalDesignNavigations[dnFly]" : {
@@ -372,9 +419,10 @@
       "$$ClassName" : "TCastleLabel",
       "ColorPersistent" : {
         "$$ClassName" : "TCastleColorPersistent",
+        "Alpha" : 3.2082977890968323E-001,
         "Blue" : 2.0000000298023224E-001,
         "Green" : 2.9803922772407532E-001,
-        "Red" : 1.0000000000000000E+000
+        "Red" : 7.5834047794342041E-001
       },
       "FontSize" : 6.0000000000000000E+001,
       "HorizontalAnchorParent" : "hpMiddle",
@@ -386,8 +434,8 @@
       ],
       "TranslationPersistent" : {
         "$$ClassName" : "TCastleVector2Persistent",
-        "X" : 2.0000000000000000E+001,
-        "Y" : 6.0000000000000000E+001
+        "X" : 2.5942739486694336E+001,
+        "Y" : 6.9187553405761719E+001
       },
       "$Children" : [
         {
