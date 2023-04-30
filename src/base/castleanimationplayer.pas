@@ -289,6 +289,7 @@ type
     procedure UpdateMaxTime;
     procedure TrackChange(Sender: TObject);
     function GetPingPongEvalTime: TFloatTime;
+    procedure ResetLastExecutedKeyFrame;
   protected
     FPlayer: TAnimationPlayer;
     procedure Update(const DeltaTime: TFloatTime);
@@ -858,11 +859,13 @@ begin
   case FPlayStyle of
     apsLoop:
     begin
+      if FCurrentTime >= MaxTime then ResetLastExecutedKeyFrame;
       FCurrentTime := FloatMod(FCurrentTime, MaxTime);
       EvalTime := FCurrentTime;
     end;
     apsPingPong:
     begin
+      if FCurrentTime >= 2 * MaxTime then ResetLastExecutedKeyFrame;
       EvalTime := GetPingPongEvalTime;
     end;
     apsPingPongOnce:
@@ -945,6 +948,15 @@ begin
   Result := FCurrentTime;
   if Result >= MaxTime then
     Result := 2 * MaxTime - Result;
+end;
+
+procedure TAnimation.ResetLastExecutedKeyFrame;
+var
+  ATrack: TAnimationTrack;
+begin
+  for ATrack in FTrackList do
+    if ATrack.FMode = tmDiscrete then
+      ATrack.FLastExecutedKeyFrame := nil;
 end;
 
 procedure TAnimationTrack.SetOnChange(const AValue: TNotifyEvent);
@@ -1532,16 +1544,13 @@ begin
 end;
 
 procedure TAnimation.Stop(const ResetTime: boolean);
-var
-  ATrack: TAnimationTrack;
 begin
+  ResetLastExecutedKeyFrame;
   if ResetTime then
   begin
     FCurrentTime := 0;
     ForceUpdate;
   end;
-  for ATrack in FTrackList do if ATrack.FMode = tmDiscrete then
-      ATrack.FLastExecutedKeyFrame := nil;
   if FPlaying then FPlaying := False;
 end;
 
