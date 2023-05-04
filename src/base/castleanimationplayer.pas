@@ -921,7 +921,10 @@ end;
 procedure TAnimation.Start(const ResetTime: boolean);
 begin
   if ResetTime then
+  begin
+    ResetLastExecutedKeyFrame;
     FCurrentTime := 0;
+  end;
   if not FPlaying then FPlaying := True;
 end;
 
@@ -1545,9 +1548,9 @@ end;
 
 procedure TAnimation.Stop(const ResetTime: boolean);
 begin
-  ResetLastExecutedKeyFrame;
   if ResetTime then
   begin
+    ResetLastExecutedKeyFrame;
     FCurrentTime := 0;
     ForceUpdate;
   end;
