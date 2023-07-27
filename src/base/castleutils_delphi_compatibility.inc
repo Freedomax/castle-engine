@@ -1,3 +1,4 @@
+{%MainUnit castleutils.pas}
 {
   Copyright 2017-2023 Michalis Kamburelis.
 
@@ -49,6 +50,13 @@ type
   WINBOOL = longbool;
   PUInt16 = ^UInt16;
   PInt32 = ^Int32;
+  {$ifndef VER340}
+  { Pointer to UInt32.
+    Known to be necessary to be defined in CGE for Delphi 10.2
+    (see https://github.com/castle-engine/castle-engine/issues/475),
+    not necessary with Delphi >= 10.4. }
+  PUInt32 = ^UInt32;
+  {$endif}
   TGetVendorNameEvent  = function: string;
   TGetAppNameEvent  = function: string;
   TEventType = (etCustom, etInfo, etWarning, etError, etDebug);
@@ -95,6 +103,13 @@ function IsWild(InputStr, Wilds: string; IgnoreCase: Boolean): Boolean;
 procedure FillByte(var X; Count: SizeInt; Value: Byte);
 procedure FillDWord(var X; const Count: SizeInt; const Value: DWord);
 function StrToDWord(const S: String): DWord;
+
+{ Silence warnings, we know it is platform specific and most code shouldn't use Extended,
+  it's also said in our coding convs: https://castle-engine.io/coding_conventions }
+{$warnings off}
+const
+  MaxFloat = MaxExtended;
+{$warnings on}
 
 {$endif read_interface}
 {$ifdef read_implementation}

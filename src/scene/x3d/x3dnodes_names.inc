@@ -1,3 +1,4 @@
+{%MainUnit x3dnodes.pas}
 {
   Copyright 2002-2022 Michalis Kamburelis.
 
@@ -134,7 +135,7 @@ end;
 function TX3DNodeNames.IndexOfNode(const Node: TX3DNode): Integer;
 begin
   for Result := 0 to Count - 1 do
-    if List^[Result].Node = Node then
+    if L[Result].Node = Node then
       Exit;
   Result := -1;
 end;
@@ -142,7 +143,7 @@ end;
 function TX3DNodeNames.IndexOfName(const Name: string): Integer;
 begin
   for Result := 0 to Count - 1 do
-    if List^[Result].Name = Name then
+    if L[Result].Name = Name then
       Exit;
   Result := -1;
 end;
@@ -152,8 +153,8 @@ var
   I: Integer;
 begin
   for I := 0 to Count - 1 do
-    if List^[I].Node = Node then
-      Exit(not List^[I].Finished);
+    if L[I].Node = Node then
+      Exit(not L[I].Finished);
   Result := false; // Node reading not even started
 end;
 
@@ -175,7 +176,21 @@ begin
   begin
     I := IndexOfName(BindToName);
     if I <> -1 then
-      P := PX3DNodeNameRec(Ptr(I)) else
+    begin
+      P := PX3DNodeNameRec(Ptr(I));
+      { Warn about duplicate node names.
+        Avoid warning for TX3DPrototypeNode, as right now we knowingly
+        override names when instantiating node.
+        Testcase: demo-models/x3d/anchor_test.x3dv }
+      if (P^.Node <> Node) and
+         (not (P^.Node is TX3DPrototypeNode)) and
+         (not (Node is TX3DPrototypeNode)) then
+      begin
+        WritelnWarning('Node name "%s" used multiple times for different nodes. This is not allowed in X3D. (It is allowed in VRML, but we advise to upgrade all VRML models to X3D.)', [
+          BindToName
+        ]);
+      end;
+    end else
       P := PX3DNodeNameRec(Add);
     P^.Node := Node;
     P^.Name := BindToName;
@@ -195,8 +210,8 @@ begin
   I := IndexOfName(Name);
   if I <> -1 then
   begin
-    Result := List^[I].Node;
-    NodeFinished := List^[I].Finished;
+    Result := L[I].Node;
+    NodeFinished := L[I].Finished;
   end else
     Result := nil;
 end;

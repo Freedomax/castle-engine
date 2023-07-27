@@ -1,3 +1,4 @@
+{%MainUnit x3dnodes.pas}
 {
   Copyright 2002-2023 Michalis Kamburelis.
 
@@ -255,15 +256,15 @@ var
           case Justify of
             fjBegin, fjFirst:
               for I := 0 to TextWidths.Count - 1 do
-                LineBounds.Items.List^[I] := Vector2(
+                LineBounds.Items.L[I] := Vector2(
                   TextWidths[I] * XScale, FinalHeight);
             fjMiddle:
               for I := 0 to TextWidths.Count - 1 do
-                LineBounds.Items.List^[I] := Vector2(
+                LineBounds.Items.L[I] := Vector2(
                   (MaxTextWidth + TextWidths[I]) * XScale / 2, FinalHeight);
             fjEnd   :
               for I := 0 to TextWidths.Count - 1 do
-                LineBounds.Items.List^[I] := Vector2(
+                LineBounds.Items.L[I] := Vector2(
                   MaxTextWidth * XScale, FinalHeight);
             {$ifndef COMPILER_CASE_ANALYSIS}
             else raise EInternalError.Create('Invalid font justify value');
@@ -472,8 +473,8 @@ begin
     MaxTextWidth := 0;
     for I := 0 to TextWidths.Count - 1 do
     begin
-      TextWidths.List^[I] := Font.TextWidth(Strings[I]);
-      MaxVar(MaxTextWidth, TextWidths.List^[I]);
+      TextWidths.L[I] := Font.TextWidth(Strings[I]);
+      MaxVar(MaxTextWidth, TextWidths.L[I]);
     end;
 
     if Strings.Count <> 0 then
@@ -809,14 +810,22 @@ end;
 destructor TTextNode.Destroy;
 begin
   if X3DCache <> nil then
+  begin
     X3DCache.FreeFontTexture(FFontTextureNode);
+    // X3DCache.FreeFontTexture must be set it to nil
+    Assert(FFontTextureNode = nil);
+  end;
   inherited;
 end;
 
 procedure TTextNode.FontChanged;
 begin
   if X3DCache <> nil then
+  begin
     X3DCache.FreeFontTexture(FFontTextureNode);
+    // X3DCache.FreeFontTexture must be set it to nil
+    Assert(FFontTextureNode = nil);
+  end;
 end;
 
 function TTextNode.TexCoordField: TSFNode;

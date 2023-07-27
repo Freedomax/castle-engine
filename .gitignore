@@ -22,6 +22,7 @@ lib/
 # https://docwiki.embarcadero.com/RADStudio/Sydney/en/API_(*.rsm)
 *.rsm
 *.local
+__recovery
 
 # Other backups
 *.blend1
@@ -71,7 +72,7 @@ castle-game-engine-*.fpm
 /examples/animations/expose_transformations_to_animate_children/expose_transformations_demo
 /examples/animations/play_animation/play_animation
 /examples/animations/simultaneous_animations_one_scene/simultaneous_animations_one_scene
-/examples/animations/split_long_md3_animation_into_logical_pieces/split_long_md3_animation_into_logical_pieces
+/examples/animations/split_long_animation/split_long_animation
 /examples/animations/md3_animations_tags/md3_animations_tags
 /examples/audio/audio_player/audio_player
 /examples/audio/doppler_demo/doppler_demo
@@ -163,9 +164,6 @@ castle-game-engine-*.fpm
 /examples/research_special_rendering_methods/dynamic_ambient_occlusion/dynamic_ambient_occlusion
 /examples/research_special_rendering_methods/new_renderer_skeleton/new_renderer_skeleton
 /examples/research_special_rendering_methods/plane_mirror_and_shadow/plane_mirror_and_shadow
-/examples/research_special_rendering_methods/radiance_transfer/precompute/precompute_radiance_transfer
-/examples/research_special_rendering_methods/radiance_transfer/radiance_transfer
-/examples/research_special_rendering_methods/radiance_transfer/visualize_spherical_harmonics/visualize_spherical_harmonics
 /examples/research_special_rendering_methods/shadow_fields/precompute_shadow_field
 /examples/research_special_rendering_methods/shadow_fields/shadow_fields
 /examples/research_special_rendering_methods/transform_feedback/transform_feedback
@@ -182,7 +180,6 @@ castle-game-engine-*.fpm
 /examples/test_local_filename_chars/test_local_filename_chars
 /examples/third_person_navigation/third_person_navigation
 /examples/tiled/map_viewer/map_viewer
-/examples/tiled/map_viewer_in_viewport/map_viewer_in_viewport
 /examples/tiled/strategy_game_demo/strategy_game_demo
 /examples/user_interface/custom_cursor/custom_cursor
 /examples/user_interface/dragging_test/dragging_test
@@ -195,6 +192,7 @@ castle-game-engine-*.fpm
 /examples/user_interface/zombie_fighter/zombie_fighter
 /examples/user_interface/zombie_fighter_alternative_short_lived_views/zombie_fighter
 /examples/viewport_and_scenes/anisotropic_filtering/anisotropic_filtering
+/examples/viewport_and_scenes/billboards_blending_in_3d/billboards_blending_in_3d
 /examples/viewport_and_scenes/build_3d_object_by_code/build_3d_object_by_code
 /examples/viewport_and_scenes/build_3d_object_by_code_2_tunnel/build_3d_object_by_code_2_tunnel
 /examples/viewport_and_scenes/cars_demo/cars_demo
@@ -223,6 +221,8 @@ castle-game-engine-*.fpm
 /examples/viewport_and_scenes/view_3d_model_basic/view_3d_model_basic
 /examples/viewport_and_scenes/viewport_3d_tutorial/my-new-project-3d
 /examples/viewport_and_scenes/occlusion_culling/occlusion_culling
+/examples/viewport_and_scenes/shadows_distance_culling/shadows_distance_culling
+/examples/viewport_and_scenes/projector/projector
 /examples/visualize_triangulation/visualize_triangulation
 /examples/window/multi_window/multi_window
 /examples/window/multiple_windows_and_viewports/multiple_windows_and_viewports

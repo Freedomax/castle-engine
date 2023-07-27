@@ -153,6 +153,16 @@ function FloatToStrFDot(const Value: Extended;
   const Precision: Integer;
   const Digits: Integer): String;
 
+{ Display float as nice concise number to read (but not necessarily with
+  absolute precision):
+  always decimal,
+  no digits after dot if not necessary,
+  show some digits (but not too many - right now 2) after dot if they are meaningful.
+
+  Like other ...Dot routines, always uses dot (.) as a decimal separator,
+  regardless of the user's locale settings. }
+function FloatToStrDisplay(const AValue: Extended): String;
+
 { Like standard TryStrToFloat, but always uses dot (.) as a decimal separator
   for the floating point numbers, regardless of the user's locale settings.
 
@@ -160,7 +170,7 @@ function FloatToStrFDot(const Value: Extended;
   and in general ignores locale (standard StrToFloat looks at ThousandSeparator). }
 function TryStrToFloatDot(const S: String; out Value: Single): Boolean; overload;
 function TryStrToFloatDot(const S: String; out Value: Double): Boolean; overload;
-{$ifndef EXTENDED_EQUALS_DOUBLE}
+{$ifdef EXTENDED_OVERLOADS}
 function TryStrToFloatDot(const S: String; out Value: Extended): Boolean; overload;
 {$endif}
 
@@ -400,6 +410,29 @@ begin
   Result := FloatToStrF(Value, FloatFormat, Precision, Digits, FormatSettings);
 end;
 
+function FloatToStrDisplay(const AValue: Extended): String;
+begin
+  Result := FloatToStrFDot(AValue, ffFixed,
+    { With FPC, Precision = 0 is also OK, but with Delphi it's not,
+      it will use scientific notation then early, e.g. for 123.0.
+      See TTestCastleUtils.TestFloatToStrDisplay testcase. }
+    20,
+    2);
+
+  { We just remove trailing digits after decimal separator, we don't need them.
+    A less hacky way (that doens't involve string fixing) would be nicer,
+    but it doesn't seem possible based on FloatToStrF possibilities,
+    at least with FPC. }
+  if Pos('.', Result) <> 0 then
+  begin
+    while Result[Length(Result)] = '0' do
+      SetLength(Result, Length(Result) - 1);
+    // previous removals of zero possibly removed all zeroes after ., so remove .
+    if Result[Length(Result)] = '.' then
+      SetLength(Result, Length(Result) - 1);
+  end;
+end;
+
 (*
 function TryStrToFloatDot(const S: String; out Value: Single): Boolean;
 var
@@ -419,7 +452,7 @@ begin
   Result := TryStrToFloat(S, Value, FormatSettings);
 end;
 
-{$ifndef EXTENDED_EQUALS_DOUBLE}
+{$ifdef EXTENDED_OVERLOADS}
 function TryStrToFloatDot(const S: String; out Value: Extended): Boolean;
 var
   FormatSettings: TFormatSettings;
@@ -469,7 +502,7 @@ begin
   Result := Err = 0;
 end;
 
-{$ifndef EXTENDED_EQUALS_DOUBLE}
+{$ifdef EXTENDED_OVERLOADS}
 function TryStrToFloatDot(const S: String; out Value: Extended): Boolean;
 var
   Err: Integer;

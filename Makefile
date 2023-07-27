@@ -83,17 +83,16 @@ EXE_EXTENSION :=
 # See https://stackoverflow.com/questions/7656425/makefile-ifeq-logical-or#9802777
 # to how this trick to detect an alternative works.
 ifneq (,$(filter $(OS),Windows_NT win64))
-  $(info Detected Windows, OS is $(OS))
+  $(info Detected OS: Windows)
 
   # On Windows avoid using Windows built-in "find" program. Use the Cygwin "find".
   FIND := `cygpath --mixed /bin/find`
   EXE_EXTENSION := .exe
 else
-  $(info Detected non-Windows, OS is $(OS))
-
   # Only on Unix, you can use "uname" to further detect Unix variants,
   # see https://stackoverflow.com/questions/714100/os-detecting-makefile
   UNAME_S := $(shell uname -s)
+  $(info Detected OS: $(UNAME_S))
 
   # On macOS, use gsed and ginstall (e.g. from Homebrew, use "brew install gnu-sed coreutils").
   # See https://www.topbug.net/blog/2013/04/14/install-and-use-gnu-command-line-tools-in-mac-os-x/
@@ -343,12 +342,8 @@ examples:
 .PHONY: examples-delphi
 examples-delphi:
 	"$(FIND)" ./examples/ \
-	  '(' -path ./examples/network/tcp_connection -prune ')' -o \
 	  '(' -path ./examples/castlescript/image_make_by_script -prune ')' -o \
 	  '(' -path ./examples/localization -prune ')' -o \
-	  '(' -path ./examples/network/custom_url_handler -prune ')' -o \
-	  '(' -path ./examples/research_special_rendering_methods -prune ')' -o \
-	  '(' -path ./examples/visualize_triangulation -prune ')' -o \
 	  '(' -path ./examples/audio/audio_player -prune ')' -o \
 	  '(' -path ./examples/audio/test_sound_source_allocator -prune ')' -o \
 	  '(' -path ./examples/deprecated_random_generator -prune ')' -o \
@@ -445,6 +440,7 @@ clean: cleanexamples
 	  packages/castle_base.pas \
 	  packages/castle_window.pas \
 	  packages/castle_components.pas \
+	  packages/castle_editor_components.pas \
 	  packages/alternative_castle_window_based_on_lcl.pas \
 	  tests/test_castle_game_engine \
 	  tests/test_castle_game_engine.exe \

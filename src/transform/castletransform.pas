@@ -158,4 +158,7 @@ initialization
 
   RegisterClasses([TAnimationTranslationTrack, TAnimationScaleTrack,
     TAnimationRotationTrack]);
+  InternalBehavior := TCastleBehavior.Create(nil);
+finalization
+  FreeAndNil(InternalBehavior);
 end.

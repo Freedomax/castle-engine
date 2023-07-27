@@ -180,8 +180,16 @@ procedure ReadGrowingStream(const GrowingStream, DestStream: TStream;
 { Read a growing stream, and returns it's contents as a string.
   A "growing stream" is a stream that we can only read
   sequentially, no seeks allowed, and size is unknown until we hit the end.
+
   Works on 8-bit strings, i.e. AnsiStrings. }
 function ReadGrowingStreamToString(const GrowingStream: TStream): AnsiString;
+
+{ Read a growing stream, and returns it's contents as a string.
+  A "growing stream" is a stream that we can only read
+  sequentially, no seeks allowed, and size is unknown until we hit the end.
+
+  Works with String, i.e. UTF-16 with Delphi, UTF-8 with FPC. }
+function ReadGrowingStreamToDefaultString(const GrowingStream: TStream): String;
 
 { Encode / decode a string in a binary stream. Records string length (4 bytes),
   then the string contents (Length(S) bytes).
@@ -192,8 +200,12 @@ function StreamReadString(const Stream: TStream): AnsiString;
 { @groupEnd }
 
 { Convert whole Stream to a string.
+
   Changes Stream.Position to 0 and then reads Stream.Size bytes,
   so be sure that Stream.Size is usable.
+  Use @link(ReadGrowingStreamToString) if you want to read a stream where
+  setting Position / reading Size are not reliable.
+
   Works on 8-bit strings, i.e. AnsiStrings. }
 function StreamToString(const Stream: TStream): AnsiString;
 
@@ -677,6 +689,34 @@ type
       Note: We can't use @code(csLoading in ComponentState) because in Delphi
       it is not possible to control it from CastleComponentSerialize. }
     property IsLoading: Boolean read FIsLoading;
+
+    { Whether the current value of this object should be written
+      to the stream. This should be @true if @italic(anything) inside
+      this object should be serialized (which means it has non-default
+      value or "stored" specifier indicates that it should be serialized).
+
+      This is used by CastleComponentSerialize, which is used in
+      Castle Game Engine for all serialization.
+
+      In simple cases, this just says whether the current value of this object
+      equals to some default value.
+
+      The default implementation of this class returns @true (so always write).
+
+      Descendants that override this to sometimes return @false
+      (so no need to write) must be very careful: any addition of a new field
+      requires extending this method, otherwise new field may not be saved sometimes
+      (when all other fields are default). Descentants of such classes
+      must also be aware of it.
+      This check must include everything that is inside this object in JSON,
+      including subcomponents and children objects (as done e.g. by
+      @link(TSerializationProcess.ReadWriteList)).
+      In practice, overriding this method is only reasonable for simple classes
+      that will not change much in the future, like TCastleVector3Persistent.
+
+      The name of this method is consistent with TPropertyEditor.ValueIsStreamed
+      in LCL. }
+    function ValueIsStreamed: Boolean; virtual;
   end;
 
 { Enumerate all properties that are possible to translate in this component
@@ -856,7 +896,7 @@ type
       is under / above each other), you want to place NewItem at the same
       position as previous TCastleOnScreenMenu instance, if any. }
     function MakeSingle(ReplaceClass: TClass; NewItem: TObject;
-      AddEnd: boolean): TObject;
+      AddEnd: boolean): TObject; deprecated 'this is a complicated method without clear use-case now; do not use';
 
     { Extract (remove from the list, but never free) given item index.
       This is similar TObjectList.Extract, except it takes an index. }
@@ -895,9 +935,23 @@ function DumpStackToString(const BaseFramePointer: Pointer): string;
 function DumpExceptionBackTraceToString: string;
 {$endif}
 
-{ Propose a name for given component class, making it unique in given ComponentsOwner. }
+{ Propose a name for given component class, making it unique
+  in given ComponentsOwner.
+
+  If you provide non-empty BaseName, it will be used as component base name,
+  and we will only add numeric suffix to make it unique.
+  Make sure in this case that BaseName is a valid Pascal identifier.
+
+  If you leave empty BaseName, we will use ComponentClass.ClassName
+  to generate a useful base name. Again, we will add numeric suffix
+  to make it unique. }
+function ProposeComponentName(const ComponentClass: TComponentClass;
+  const ComponentsOwner: TComponent;
+  BaseName: String = ''): String;
+
 function InternalProposeName(const ComponentClass: TComponentClass;
   const ComponentsOwner: TComponent): String;
+  deprecated 'use ProposeComponentName';
 
 type
   TFreeNotificationObserver = class;
@@ -1263,20 +1317,58 @@ begin
   if ResetDestStreamPosition then DestStream.Position := 0;
 end;
 
-function ReadGrowingStreamToString(const GrowingStream: TStream): AnsiString;
+function ReadGrowingStreamToMemory(const GrowingStream: TStream): TMemoryStream;
 const
-  BufferSize = 10000;
+  BufferSize = 1000 * 1000;
 var
   ReadCount: Integer;
-  Buffer: string;
+  TotalReadCount: Int64;
+  MemoryStart: Pointer;
 begin
-  SetLength(Buffer, BufferSize);
-  Result := '';
-  repeat
-    ReadCount := GrowingStream.Read(Buffer[1], Length(Buffer));
-    if ReadCount = 0 then Break;
-    Result := Result + Copy(Buffer, 1, ReadCount);
-  until false;
+  Result := TMemoryStream.Create;
+  try
+    TotalReadCount := 0;
+    repeat
+      Result.Size := TotalReadCount + BufferSize;
+      MemoryStart := Pointer(PtrUInt(Result.Memory) + TotalReadCount);
+      ReadCount := GrowingStream.Read(MemoryStart^, BufferSize);
+      if ReadCount = 0 then Break;
+      TotalReadCount := TotalReadCount + ReadCount;
+    until false;
+    Result.Size := TotalReadCount;
+  except FreeAndNil(Result); raise end;
+end;
+
+function ReadGrowingStreamToString(const GrowingStream: TStream): AnsiString;
+var
+  Memory: TMemoryStream;
+begin
+  Memory := ReadGrowingStreamToMemory(GrowingStream);
+  try
+    SetLength(Result, Memory.Size);
+    if Memory.Size <> 0 then
+      Move(Memory.Memory^, Result[1], Memory.Size);
+  finally FreeAndNil(Memory) end;
+end;
+
+function ReadGrowingStreamToDefaultString(const GrowingStream: TStream): String;
+var
+  Memory: TMemoryStream;
+begin
+  Memory := ReadGrowingStreamToMemory(GrowingStream);
+  try
+    {$warnings off} // this makes FPS warning "unreachable code" but it makes sense on Delphi, we want to keep compiling it
+    if (Memory.Size mod SizeOf(Char)) <> 0 then
+      raise Exception.CreateFmt('ReadGrowingStreamToDefaultString: stream size %d is not a multiple of SizeOf(Char) = %d', [
+        Memory.Size,
+        SizeOf(Char)
+      ]);
+    {$warnings on}
+
+    SetLength(Result, Memory.Size div SizeOf(Char));
+    if Memory.Size <> 0 then
+      Move(Memory.Memory^, Result[1], Memory.Size);
+  finally FreeAndNil(Memory) end;
 end;
 
 procedure StreamWriteString(const Stream: TStream; const S: AnsiString);
@@ -1340,7 +1432,7 @@ function MemoryStreamLoadFromDefaultString(const S: String; const Rewind: boolea
 begin
   Result := TMemoryStream.Create;
   try
-    MemoryStreamLoadFromString(Result, S, Rewind);
+    MemoryStreamLoadFromDefaultString(Result, S, Rewind);
   except FreeAndNil(Result); raise end;
 end;
 
@@ -1880,6 +1972,11 @@ begin
         FNonVisualComponents[I].Free; // will remove itself from Behaviors list
 end;
 
+function TCastleComponent.ValueIsStreamed: Boolean;
+begin
+  Result := true;
+end;
+
 { TComponent routines -------------------------------------------------------- }
 
 type
@@ -2323,6 +2420,13 @@ end;
 
 function InternalProposeName(const ComponentClass: TComponentClass;
   const ComponentsOwner: TComponent): String;
+begin
+  Result := ProposeComponentName(ComponentClass, ComponentsOwner, '');
+end;
+
+function ProposeComponentName(const ComponentClass: TComponentClass;
+  const ComponentsOwner: TComponent;
+  BaseName: String): String;
 
   { Cleanup S (right now, always taken from some ClassName)
     to be a nice component name, which also must make it a valid Pascal identifier. }
@@ -2358,7 +2462,10 @@ var
   ResultBase: String;
   I: Integer;
 begin
-  ResultBase := CleanComponentName(ComponentClass.ClassName);
+  if BaseName <> '' then
+    ResultBase := BaseName
+  else
+    ResultBase := CleanComponentName(ComponentClass.ClassName);
 
   { A simple test of the CleanComponentName routine.
     This is *not* a good place for such automated test, but for now it was simplest to put it here. }

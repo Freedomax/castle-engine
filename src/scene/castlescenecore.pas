@@ -205,8 +205,6 @@ type
   end;
 
   TViewpointStack = class(TX3DBindableStack)
-  protected
-    procedure DoBoundChanged; override;
   public
     function Top: TAbstractViewpointNode;
     procedure PushIfEmpty(Node: TAbstractViewpointNode; SendEvents: boolean);
@@ -388,14 +386,6 @@ type
 
     constructor Create;
   end;
-
-  { Possible values for @link(TCastleSceneCore.PrimitiveGeometry). }
-  TPrimitiveGeometry = (
-    pgNone,
-    pgRectangle2D,
-    pgSphere,
-    pgBox
-  );
 
   { Possible options for @link(TCastleSceneCore.Load). }
   TSceneLoadOption = (
@@ -599,8 +589,6 @@ type
       tree. }
     ShapeLODs: TObjectList;
 
-    FPrimitiveGeometry: TPrimitiveGeometry;
-
     { Increased when something changed that could affect the results
       of Shapes tree traversal, i.e. different TShape instances returned
       by Shapes.Traverse.
@@ -661,8 +649,6 @@ type
     { Always assigned to PlayingAnimationNode.EventIsActive. }
     procedure PlayingAnimationIsActive(
       const Event: TX3DEvent; const Value: TX3DField; const ATime: TX3DTime);
-
-    procedure SetPrimitiveGeometry(const AValue: TPrimitiveGeometry);
 
     { If we have NewPlayingAnimationUse, apply it
       (actually start playing it using X3D nodes, calling UpdateNewPlayingAnimation).
@@ -788,7 +774,7 @@ type
       it's transformation) or when camera position changed (by user actions
       or animating the Viewpoint). }
     procedure ProximitySensorUpdate(const PSI: TProximitySensorInstance;
-      const CameraVectors: TCameraVectors);
+      const CameraVectors: TViewVectors);
   private
     FCompiledScriptHandlers: TCompiledScriptHandlerInfoList;
 
@@ -909,7 +895,7 @@ type
       This is calculated every time now (in the future it may be optimized
       to recalculate only when WorldTransform changed, e.g. using
       FWorldTransformAndInverseId). }
-    function GetCameraLocal(out CameraVectors: TCameraVectors): boolean; overload;
+    function GetCameraLocal(out CameraVectors: TViewVectors): boolean; overload;
     function GetCameraLocal(out CameraLocalPosition: TVector3): boolean; overload;
 
     function PointingDevicePressRelease(const DoPress: boolean;
@@ -1738,18 +1724,12 @@ type
       Note that, since some fields are only in some descendants (e.g. MoveSpeed
       is only at TCastleWalkNavigation) then some TNavigationInfoNode settings
       are just not transferred to all Navigation instances like
-      TCastleExamineNavigation.
-
-      WorldBox is the expected bounding box of the whole 3D scene.
-      Usually, it should be TCastleViewport.Items.BoundingBox.
-      In simple cases (if this scene is the only TCastleScene instance
-      in your world, and it's not transformed) it may be equal to just
-      @link(BoundingBox) of this scene. }
+      TCastleExamineNavigation }
     procedure InternalUpdateNavigation(
       const Navigation: TCastleNavigation);
 
     { Update TCastleCamera properties based on the current X3D nodes
-      (currently bound X3D Viewpoint NavigationInfo nodes).
+      (currently bound X3D Viewpoint and NavigationInfo nodes).
       When no viewpoint is currently bound, we will go to a suitable
       viewpoint to see the whole world (based on the WorldBox).
 
@@ -1857,26 +1837,6 @@ type
     property OnHeadlightOnChanged: TNotifyEvent
       read FOnHeadlightOnChanged write FOnHeadlightOnChanged;
 
-    { Notify the scene that camera position/direction changed a lot.
-      It may be called when you make a sudden change to the camera,
-      like teleporting the player to a completely different scene part.
-
-      This may be used as a hint by some optimizations. It tells that what
-      will be visible in the next rendered frame will be probably
-      very different from what was visible in the last frame.
-
-      @italic(Current implementation notes:)
-
-      Currently, this is used by TCastleScene if you use
-      @link(TCastleRenderOptions.OcclusionQuery RenderOptions.OcclusionQuery).
-      Normally, occlusion query tries to reuse results from previous
-      frame, using the assumption that usually camera changes slowly
-      and objects appear progressively in the view. When you make
-      a sudden camera jump/change, this assumption breaks, so it's
-      better to resign from occlusion query for the very next frame.
-      This method will do exactly that. }
-    procedure ViewChangedSuddenly; virtual;
-
     procedure PrepareResources(const Options: TPrepareResourcesOptions;
       const Params: TPrepareParams); override;
 
@@ -1908,9 +1868,6 @@ type
     { Global lights of this scene. Read-only.
       Useful to shine these lights on other scenes, if TCastleScene.CastGlobalLights. }
     property InternalGlobalLights: TLightInstancesList read FGlobalLights;
-    {$ifdef FPC}
-    property GlobalLights: TLightInstancesList read FGlobalLights; deprecated;
-    {$endif}
 
     { Find a named X3D node in the current node graph.
 
@@ -2257,6 +2214,15 @@ type
 
     procedure InternalIncShapesHash;
     property InternalShapesHash: TShapesHash read FShapesHash;
+
+    { Load again the model from current URL.
+      This makes sense to be used when underlying file on disk
+      changed, and you want to reload it.
+
+      TODO: If the file is cached using @link(Cache), then it will not reload
+      the version in cache, so effectively it will not load new version from
+      disk. This will be fixed at some point. }
+    procedure ReloadUrl;
   published
     { When using @link(PlayAnimation) without TPlayAnimationParameters,
       this value is used as the duration (in seconds) of animation cross-fade
@@ -2338,13 +2304,12 @@ type
           Using this flag adds an additional optimization during rendering.
           It allows to use frustum culling with an octree.
           Whether the frustum culling is actually used depends
-          on @link(TCastleScene.OctreeFrustumCulling) value (by default: yes).
+          on @link(TCastleScene.ShapeFrustumCulling) value (by default: yes).
 
           Without this flag, we can still use frustum culling,
           but it's less effective as it considers each shape separately.
-          Whether the frustum culling is actually used depends
-          in this case
-          on @link(TCastleScene.FrustumCulling) value (by default: yes).
+          Whether the frustum culling is actually used also depends
+          on @link(TCastleScene.ShapeFrustumCulling) value.
 
           Using frustum culling (preferably with ssRendering flag)
           is highly adviced if your camera usually only sees
@@ -2524,14 +2489,6 @@ type
     property AnimateSkipTicks: Cardinal read FAnimateSkipTicks write SetAnimateSkipTicks
       default 0;
 
-    {$ifdef FPC}
-    { Easily turn the scene into a simple primitive, like sphere or box or plane.
-      Changing this to something else than pgNone
-      reloads the scene (calls @link(Load) with a new X3D graph). }
-    property PrimitiveGeometry: TPrimitiveGeometry
-      read FPrimitiveGeometry write SetPrimitiveGeometry default pgNone;
-      deprecated 'use TCastleBox, TCastleSphere, TCastlePlane for these primitives';
-    {$endif}
 
     { If AutoAnimation is set, this animation will be automatically played.
       It is useful to determine the initial animation, played once the model
@@ -2858,18 +2815,6 @@ end;
 
 { TViewpointStack ------------------------------------------------------------ }
 
-procedure TViewpointStack.DoBoundChanged;
-begin
-  { The new viewpoint may be in some totally different place of the scene,
-    so call ViewChangedSuddenly.
-
-    This takes care of all viewpoints switching, like
-    - switching to other viewpoint through view3dscene "viewpoints" menu,
-    - just getting an event set_bind = true through vrml route. }
-  ParentScene.ViewChangedSuddenly;
-  inherited;
-end;
-
 function TViewpointStack.Top: TAbstractViewpointNode;
 begin
   Result := (inherited Top) as TAbstractViewpointNode;
@@ -2885,7 +2830,7 @@ end;
 function TCastleSceneCore.TGeneratedTextureList.IndexOfTextureNode(TextureNode: TX3DNode): Integer;
 begin
   for Result := 0 to Count - 1 do
-    if List^[Result].TextureNode = TextureNode then
+    if L[Result].TextureNode = TextureNode then
       Exit;
   Result := -1;
 end;
@@ -2956,9 +2901,9 @@ var
   I: Integer;
 begin
   for I := 0 to Count - 1 do
-    if (List^[I].TextureNode is TGeneratedShadowMapNode) and
-       (TGeneratedShadowMapNode(List^[I].TextureNode).FdLight.Value = LightNode) then
-      List^[I].Functionality.InternalUpdateNeeded := true;
+    if (L[I].TextureNode is TGeneratedShadowMapNode) and
+       (TGeneratedShadowMapNode(L[I].TextureNode).FdLight.Value = LightNode) then
+      L[I].Functionality.InternalUpdateNeeded := true;
 end;
 
 { TTimeDependentList ------------------------------------------------- }
@@ -3364,7 +3309,25 @@ begin
 
   { Not calling UnregisterScene when FOwnsRootNode=true is just an optimization.
     There's no point in calling recursive UnregisterScene if the FRootNode
-    will be freed right afterwards. }
+    will be freed right afterwards.
+
+    TODO: This optimization is actually not without a problem.
+    If the RootNode has some child that has other parents (outside of this
+    scene, or with KeepExistingBegin) then they will remain existing,
+    and will have a dangling reference to this Scene.
+    This happened with internal TAppearanceNode in CastleTerrain at one point.
+
+    In general, we do not guarantee detaching invalid Scene reference now.
+    E.g. if a node will stop being part of a scene,
+    because we do
+
+      Appearance.Material := OldMaterial;
+      // add Appearance to Scene in any way
+      Appearance.Material := NewMaterial;
+      FreeAndNil(Scene);
+
+    ... then OldMaterial will have invalid reference in OldMaterial.Scene.
+  }
   if (FRootNode <> nil) and (not FOwnsRootNode) then
     FRootNode.UnregisterScene;
 
@@ -3505,11 +3468,6 @@ begin
 
     LoadCore(NewRoot, NewRootCacheOrigin, true, AOptions);
 
-    { When loading from URL, reset FPrimitiveGeometry.
-      Otherwise deserialization would be undefined -- do we load contents
-      from URL or PrimitiveGeometry? }
-    FPrimitiveGeometry := pgNone;
-
     { After loading a new model we need to
       - update sizes calculated by AutoSize for simple colliders
       - update triangles used by TCastleMeshCollider (note that this code
@@ -3544,14 +3502,6 @@ end;
 procedure TCastleSceneCore.Loaded;
 begin
   inherited;
-
-  {$ifdef FPC} // with non-FPC, we don't define PrimitiveGeometry at all
-  {$warnings off} // using deprecated to warn about it
-  if PrimitiveGeometry <> pgNone then
-    WritelnWarning('PrimitiveGeometry is deprecated. Instead: use specialized components like TCastleBox, TCastleSphere');
-  {$warnings on}
-  {$endif}
-
   if FPendingSetUrl <> '' then
   begin
     Url := FPendingSetUrl;
@@ -3606,6 +3556,17 @@ begin
     else
       Load(AValue);
   end;
+end;
+
+procedure TCastleSceneCore.ReloadUrl;
+begin
+  { Naive implementation:
+      TempUrl := Url;
+      Url := '';
+      Url := TempUrl;
+    But this would make warning in case of non-empty AutoAnimation,
+    that such animation doesn't exist in empty scene. }
+  Load(Url);
 end;
 
 (* This is working, and ultra-fast thanks to TShapeTree.AssociatedShape,
@@ -4024,7 +3985,6 @@ begin
     HandleVisibilitySensor(Node as TVisibilitySensorNode) else
   if Node is TScreenEffectNode then
   begin
-    TScreenEffectNode(Node).StateForShaderPrepare.Assign(StateStack.Top);
     ParentScene.ScreenEffectNodes.Add(Node);
   end;
 end;
@@ -4574,8 +4534,8 @@ function TTransformChangeHelper.TransformChangeTraverse(
     begin
       if List <> nil then
         for I := 0 to List.Count - 1 do
-          if List.List^[I].Node = LightNode then
-            LightNode.UpdateLightInstanceState(List.List^[I], StateStack.Top);
+          if List.L[I].Node = LightNode then
+            LightNode.UpdateLightInstanceState(List.L[I], StateStack.Top);
     end;
 
   var
@@ -4605,7 +4565,7 @@ function TTransformChangeHelper.TransformChangeTraverse(
   procedure HandleProximitySensor(Node: TProximitySensorNode);
   var
     Instance: TProximitySensorInstance;
-    CameraVectors: TCameraVectors;
+    CameraVectors: TViewVectors;
   begin
     Check(Shapes^.Index < Shapes^.Group.Children.Count,
       'Missing shape in Shapes tree');
@@ -4991,20 +4951,6 @@ var
     end;
   end;
 
-  procedure HandleChangeAlphaChannel;
-  var
-    C, I: Integer;
-  begin
-    C := TShapeTree.AssociatedShapesCount(ANode);
-    if C <> 0 then
-    begin
-      // pass Changes (with chAlphaChannel) to TGLShape.Changed
-      for I := 0 to C - 1 do
-        TShape(TShapeTree.AssociatedShape(ANode, I)).Changed(false, [Change]);
-      VisibleChangeHere([vcVisibleGeometry, vcVisibleNonGeometry]);
-    end;
-  end;
-
   procedure HandleChangeLightInstanceProperty;
   var
     J: integer;
@@ -5203,7 +5149,7 @@ var
     I: Integer;
     VSInstances: TVisibilitySensorInstanceList;
     VS: TVisibilitySensorNode;
-    CameraVectors: TCameraVectors;
+    CameraVectors: TViewVectors;
   begin
     if ANode is TProximitySensorNode then
     begin
@@ -5465,15 +5411,8 @@ var
   end;
 
   procedure HandleChangeScreenEffectEnabled;
-  var
-    SE: TScreenEffectNode;
   begin
-    SE := ANode as TScreenEffectNode;
-    { Just like TCastleScene.CloseGLScreenEffect: no need to even
-      communicate with renderer, just reset ShaderLoaded and Shader.
-      At the nearest time, it will be recalculated. }
-    SE.ShaderLoaded := false;
-    SE.Shader := nil;
+    (ANode as TScreenEffectNode).InternalRendererResourceFree;
     VisibleChangeHere([vcVisibleNonGeometry]);
   end;
 
@@ -5563,7 +5502,6 @@ begin
       chCoordinate: HandleChangeCoordinate;
       chNormal, chTangent: HandleChangeNormalTangent;
       chVisibleVRML1State, chGeometryVRML1State: HandleVRML1State;
-      chAlphaChannel: HandleChangeAlphaChannel;
       chLightInstanceProperty: HandleChangeLightInstanceProperty;
       chLightForShadowVolumes: HandleChangeLightForShadowVolumes;
       chLightLocationDirection: HandleChangeLightLocationDirection;
@@ -7122,14 +7060,14 @@ procedure TCastleSceneCore.InternalCameraChanged;
 
   { Update things depending on camera information and X3D events.
     Call it only when ProcessEvents. }
-  procedure CameraProcessing(const CameraVectors: TCameraVectors);
+  procedure CameraProcessing(const CameraVectors: TViewVectors);
   var
     I: Integer;
   begin
     Assert(ProcessEvents);
 
     for I := 0 to ShapeLODs.Count - 1 do
-      UpdateLODLevel(TShapeTreeLOD(ShapeLODs.Items[I]), CameraVectors.Position);
+      UpdateLODLevel(TShapeTreeLOD(ShapeLODs.Items[I]), CameraVectors.Translation);
 
     for I := 0 to ProximitySensors.Count - 1 do
       ProximitySensorUpdate(ProximitySensors[I], CameraVectors);
@@ -7157,7 +7095,7 @@ procedure TCastleSceneCore.InternalCameraChanged;
   end;
 
 var
-  CameraVectors: TCameraVectors;
+  CameraVectors: TViewVectors;
 begin
   if World <> nil then // may be called from SetProcessEvents when World may be nil
     LastCameraStateId := World.InternalMainCameraStateId;
@@ -7369,7 +7307,7 @@ end;
 { proximity sensor ----------------------------------------------------------- }
 
 procedure TCastleSceneCore.ProximitySensorUpdate(const PSI: TProximitySensorInstance;
-  const CameraVectors: TCameraVectors);
+  const CameraVectors: TViewVectors);
 var
   APosition, ADirection, AUp: TVector3;
   ProxNode: TProximitySensorNode;
@@ -7400,7 +7338,7 @@ begin
           it's InverseTransform and call ProximitySensorUpdate.
       }
 
-      APosition := PSI.InverseTransform.MultPoint(CameraVectors.Position);
+      APosition := PSI.InverseTransform.MultPoint(CameraVectors.Translation);
 
       NewIsActive :=
         (APosition.X >= ProxNode.FdCenter.Value.X - ProxNode.FdSize.Value.X / 2) and
@@ -7452,19 +7390,19 @@ end;
 { camera --------------------------------------------------------------------- }
 
 function TCastleSceneCore.GetCameraLocal(
-  out CameraVectors: TCameraVectors): boolean;
+  out CameraVectors: TViewVectors): boolean;
 begin
   // note that HasWorldTransform implies also World <> nil
   Result := HasWorldTransform and (World.MainCamera <> nil);
   if Result then
   begin
     World.MainCamera.GetWorldView(
-      CameraVectors.Position,
+      CameraVectors.Translation,
       CameraVectors.Direction,
       CameraVectors.Up);
-    CameraVectors.Position  := WorldInverseTransform.MultPoint    (CameraVectors.Position);
-    CameraVectors.Direction := WorldInverseTransform.MultDirection(CameraVectors.Direction);
-    CameraVectors.Up        := WorldInverseTransform.MultDirection(CameraVectors.Up);
+    CameraVectors.Translation := WorldInverseTransform.MultPoint    (CameraVectors.Translation);
+    CameraVectors.Direction   := WorldInverseTransform.MultDirection(CameraVectors.Direction);
+    CameraVectors.Up          := WorldInverseTransform.MultDirection(CameraVectors.Up);
   end;
 end;
 
@@ -7527,9 +7465,9 @@ var
   I: Integer;
 begin
   for I := 0 to CompiledScriptHandlers.Count - 1 do
-    if CompiledScriptHandlers.List^[I].Name = HandlerName then
+    if CompiledScriptHandlers.L[I].Name = HandlerName then
     begin
-      CompiledScriptHandlers.List^[I].Handler(ReceivedValue, NextEventTime);
+      CompiledScriptHandlers.L[I].Handler(ReceivedValue, NextEventTime);
       Break;
     end;
 end;
@@ -7561,6 +7499,7 @@ procedure TCastleSceneCore.InternalUpdateNavigation(
   const Navigation: TCastleNavigation);
 var
   NavigationNode: TNavigationInfoNode;
+  ViewpointNode: TAbstractViewpointNode;
   Radius: Single;
   RadiusAutoCalculated: Boolean;
 
@@ -7604,8 +7543,23 @@ var
       Navigation.MoveSpeed := NavigationNode.FdSpeed.Value;
   end;
 
+  procedure UpdateExamineNavigation(const Navigation: TCastleExamineNavigation);
+  begin
+    if ViewpointNode <> nil then
+    begin
+      Navigation.AutoCenterOfRotation := ViewpointNode.AutoCenterOfRotation;
+      Navigation.CenterOfRotation := ViewpointNode.Transform.MultPoint(
+        ViewpointNode.CenterOfRotation);
+    end else
+    begin
+      Navigation.AutoCenterOfRotation := true;
+      Navigation.CenterOfRotation := TVector3.Zero; // remove previous customization of this property
+    end;
+  end;
+
 begin
   NavigationNode := NavigationInfoStack.Top;
+  ViewpointNode := ViewpointStack.Top;
 
   { calculate Radius }
   Radius := SensibleCameraRadius(RadiusAutoCalculated);
@@ -7613,6 +7567,8 @@ begin
 
   if Navigation is TCastleWalkNavigation then
     UpdateWalkNavigation(TCastleWalkNavigation(Navigation));
+  if Navigation is TCastleExamineNavigation then
+    UpdateExamineNavigation(TCastleExamineNavigation(Navigation));
 end;
 
 procedure TCastleSceneCore.InternalUpdateCamera(const ACamera: TCastleCamera;
@@ -7935,11 +7891,6 @@ begin
     HeadlightOn := DefaultNavigationInfoHeadlight;
 end;
 
-procedure TCastleSceneCore.ViewChangedSuddenly;
-begin
-  { Nothing meaningful to do in this class }
-end;
-
 procedure TCastleSceneCore.PrepareResources(const Options: TPrepareResourcesOptions;
   const Params: TPrepareParams);
 
@@ -8137,6 +8088,7 @@ var
   AUp: TVector3;
   GravityUp: TVector3;
   Version: TX3DCameraVersion;
+  NewViewNodeMake: TMakeX3DViewpoint;
   NewViewNode: TAbstractChildNode;
   NewViewpointNode: TAbstractViewpointNode;
   NavigationType: string;
@@ -8157,10 +8109,26 @@ begin
   GravityUp := Navigation.Camera.GravityUp;
 
   if RootNode.HasForceVersion and (RootNode.ForceVersion.Major <= 1) then
-    Version := cvVrml1_Inventor else
+    Version := cvVrml1_Inventor
+  else
     Version := cvVrml2_X3d;
-  NewViewNode := MakeCameraNode(Version, '', APosition, ADirection, AUp, GravityUp,
-    NewViewpointNode);
+  NewViewNodeMake := TMakeX3DViewpoint.Create;
+  try
+    NewViewNodeMake.Version := Version;
+    NewViewNodeMake.Position := APosition;
+    NewViewNodeMake.Direction := ADirection;
+    NewViewNodeMake.Up := AUp;
+    NewViewNodeMake.GravityUp := GravityUp;
+
+    if Navigation is TCastleExamineNavigation then
+    begin
+      NewViewNodeMake.AutoCenterOfRotation := TCastleExamineNavigation(Navigation).AutoCenterOfRotation;
+      NewViewNodeMake.CenterOfRotation := TCastleExamineNavigation(Navigation).CenterOfRotation;
+    end;
+
+    NewViewNode := NewViewNodeMake.ToNode(NewViewpointNode);
+  finally FreeAndNil(NewViewNodeMake) end;
+
   NewViewpointNode.FdDescription.Value := AName;
   NewViewpointNode.X3DName := 'Viewpoint' + IntToStr(Random(10000));
   NewViewpointNode.Scene := Self;
@@ -8612,7 +8580,7 @@ procedure TCastleSceneCore.FontChanged;
 begin
   if RootNode <> nil then
   begin
-    GLContextClose; // force TGLRenderer.Prepare on shapes
+    GLContextClose; // force TRenderer.Prepare on shapes
     { Free and recalculate all proxy nodes...
       TODO: this could be done much more efficiently,
       we only need to free proxies on text nodes. }
@@ -8684,39 +8652,6 @@ procedure TCastleSceneCore.LocalRender(const Params: TRenderParams);
 begin
   inherited;
   RenderingCameraChanged(Params.RenderingCamera);
-end;
-
-procedure TCastleSceneCore.SetPrimitiveGeometry(const AValue: TPrimitiveGeometry);
-const
-  Classes: array [TPrimitiveGeometry] of TAbstractGeometryNodeClass =
-  ( nil,
-    TRectangle2DNode,
-    TSphereNode,
-    TBoxNode
-  );
-var
-  Shape: TShapeNode;
-  TransformNode: TTransformNode;
-  NewRootNode: TX3DRootNode;
-begin
-  if FPrimitiveGeometry <> AValue then
-  begin
-    FPrimitiveGeometry := AValue;
-    if Classes[FPrimitiveGeometry] <> nil then
-    begin
-      { Reset FURL if the scene contents are determined by PrimitiveGeometry,
-        otherwise deserialization would be undefined -- do we load contents
-        from URL or PrimitiveGeometry? }
-      FURL := '';
-
-      NewRootNode := TX3DRootNode.Create;
-      Classes[FPrimitiveGeometry].CreateWithTransform(Shape, TransformNode);
-      // default Material, to be lit
-      Shape.Material := TMaterialNode.Create;
-      NewRootNode.AddChildren(TransformNode);
-      Load(NewRootNode, true);
-    end;
-  end;
 end;
 
 procedure TCastleSceneCore.InternalIncShapesHash;

@@ -35,11 +35,15 @@ type
     procedure TestURIExists;
     procedure TestRelativeToCastleDataURL;
     procedure TestExtractURI;
+    procedure TestDotfile;
+    procedure TestDecodeBase64;
+    procedure TestEncodeBase64;
   end;
 
 implementation
 
-uses CastleURIUtils, URIParser, CastleUtils;
+uses Base64, URIParser,
+  CastleURIUtils, CastleUtils, CastleClassUtils;
 
 procedure TTestURIUtils.TestURIProtocol;
 var
@@ -113,12 +117,6 @@ var
   Filename: String;
   FilenameAsUri: String;
   FilenameFromUri: String;
-const
-  SubDelims = ['!', '$', '&', '''', '(', ')', '*', '+', ',', ';', '='];
-  ALPHA = ['A'..'Z', 'a'..'z'];
-  DIGIT = ['0'..'9'];
-  Unreserved = ALPHA + DIGIT + ['-', '.', '_', '~'];
-  ValidPathChars = Unreserved + SubDelims + ['@', ':', '/'];
 {$endif}
 begin
   { FilenameToURISafe must percent-encode,
@@ -158,7 +156,7 @@ begin
   AssertEquals(Filename, FilenameFromUri);
 
   FilenamePart := 'C:/Users/cge/AppData/Local/test_local_filename_chars/config with Polish chars ćma źrebak żmija wąż królik.txt';
-  FilenamePartPercent := InternalUriEscape(FilenamePart, ValidPathChars);
+  FilenamePartPercent := InternalUriEscape(FilenamePart);
   AssertEquals('C:/Users/cge/AppData/Local/test_local_filename_chars/config%20with%20Polish%20chars%20%C4%87ma%20%C5%BArebak%20%C5%BCmija%20w%C4%85%C5%BC%20kr%C3%B3lik.txt', FilenamePartPercent);
   FilenamePartUnescaped := InternalUriUnescape(FilenamePartPercent);
   AssertEquals(FilenamePart, FilenamePartUnescaped);
@@ -302,6 +300,79 @@ begin
   AssertEquals('armor.tga', ExtractURIName('armor.tga'));
   AssertEquals('armor.tga', ExtractURIName('/armor.tga'));
   AssertEquals('armor.tga', ExtractURIName('blabla/armor.tga'));
+end;
+
+procedure TTestURIUtils.TestDotfile;
+begin
+  { Test that dot on 1st place is not treated as extension start. }
+
+  AssertEquals('.hidden', ExtractURIName('https://blah/.hidden'));
+  AssertEquals('.hidden', ExtractURIName('castle-data:/.hidden'));
+  AssertEquals('.hidden.x3d', ExtractURIName('https://blah/.hidden.x3d'));
+  AssertEquals('.hidden.x3d', ExtractURIName('castle-data:/.hidden.x3d'));
+
+  AssertEquals('https://blah/.hidden', DeleteURIExt('https://blah/.hidden'));
+  AssertEquals('castle-data:/.hidden', DeleteURIExt('castle-data:/.hidden'));
+  AssertEquals('https://blah/.hidden', DeleteURIExt('https://blah/.hidden.x3d'));
+  AssertEquals('castle-data:/.hidden', DeleteURIExt('castle-data:/.hidden.x3d'));
+  AssertEquals('https://blah/.hidden.x3d', DeleteURIExt('https://blah/.hidden.x3d.gz'));
+  AssertEquals('castle-data:/.hidden.x3d', DeleteURIExt('castle-data:/.hidden.x3d.gz'));
+end;
+
+procedure TTestURIUtils.TestDecodeBase64;
+var
+  Source: TStream;
+  Decode: TBase64DecodingStream;
+  DecodeStr: String;
+begin
+  // sample from https://en.wikipedia.org/wiki/Base64
+
+  { TODO: Why both versions with TStringStream fail on Delphi?
+    TStringStream (esp 2nd variant) should encode in UTF-16, which should
+    be what our TBase64DecodingStream expects (as shown by the fact that
+    MemoryStreamLoadFromDefaultString is OK). }
+  //Source := TStringStream.Create('TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu');
+  //Source := TStringStream.Create('TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu', TEncoding.Unicode, false);
+
+  Source := MemoryStreamLoadFromDefaultString('TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu');
+  try
+    Assert(Source.Size = SizeOf(Char) * Length('TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu'));
+    Decode := TBase64DecodingStream.Create(Source, bdmMIME);
+    try
+      { The input from https://en.wikipedia.org/wiki/Base64 contains 8-bit
+        (ASCII) string encoded, which is why ReadGrowingStreamToString (AnsiString)
+        makes sense.
+        See TBase64DecodingStream about encodings. }
+      DecodeStr :=
+        //ReadGrowingStreamToDefaultString
+        ReadGrowingStreamToString
+        (Decode);
+      AssertEquals('Many hands make light work.', DecodeStr);
+    finally FreeAndNil(Decode) end;
+  finally FreeAndNil(Source) end;
+end;
+
+procedure TTestURIUtils.TestEncodeBase64;
+var
+  S: TStringStream;
+  Encode: TBase64EncodingStream;
+  EncodeStr: String;
+begin
+  // sample from https://en.wikipedia.org/wiki/Base64
+  S := TStringStream.Create;
+  try
+    Encode := TBase64EncodingStream.Create(S);
+    try
+      { The sample from https://en.wikipedia.org/wiki/Base64 contains 8-bit
+        (ASCII) string encoded, which is why feeding here using WriteStr
+        (this always converts chars to 8-bit, i.e. AnsiString)
+        makes sense.
+        See TBase64EncodingStream about encodings. }
+      WriteStr(Encode, 'Many hands make light work.');
+    finally FreeAndNil(Encode) end;
+    EncodeStr := S.DataString;
+    AssertEquals('TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu', EncodeStr);
+  finally FreeAndNil(S) end;
 end;
 
 initialization
